@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "agentest": {
+      "command": "npx",
+      "args": ["-y", "agentest"],
+      "description": "Android app UI testing via MCP: connects over ADB to a device (default 192.168.1.188:5555), reads the UI/accessibility tree, screenshots, taps elements, runs flows, pulls logs and app databases — used to drive and verify YLPA Console on a real device."
+    }
+  }
+}

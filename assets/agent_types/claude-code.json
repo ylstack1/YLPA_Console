@@ -1,0 +1,33 @@
+{
+  "id": "claude-code",
+  "displayName": "Claude Code",
+  "icon": "claude",
+  "version": 1,
+  "bridge": {
+    "serveCommand": "acpremote serve-command -- npx @agentclientprotocol/claude-agent-acp",
+    "defaultPort": 8770,
+    "installHint": "npm install -g @agentclientprotocol/claude-agent-acp"
+  },
+  "auth": {
+    "mode": "env",
+    "fields": [
+      {
+        "id": "apiKey",
+        "label": "Anthropic API key",
+        "env": "ANTHROPIC_API_KEY",
+        "type": "secret",
+        "required": false,
+        "help": "Leave empty to use the machine's `claude /login` OAuth session instead."
+      }
+    ],
+    "note": "Either an API key (env) or a logged-in `claude` session on the machine works."
+  },
+  "spawnOptions": [
+    { "id": "model", "label": "Default model", "type": "choice", "required": false, "dynamic": true, "help": "Resolved live from the agent's configOptions at session time." },
+    { "id": "cwd", "label": "Working directory", "type": "text", "required": true, "defaultValue": "~" }
+  ],
+  "links": {
+    "docs": "https://github.com/agentclientprotocol/claude-agent-acp",
+    "protocol": "https://agentclientprotocol.com"
+  }
+}

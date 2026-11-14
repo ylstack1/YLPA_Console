@@ -1,0 +1,24 @@
+{
+  "id": "codex",
+  "displayName": "Codex CLI",
+  "icon": "codex",
+  "version": 1,
+  "bridge": {
+    "serveCommand": "acpremote serve-command -- codex-acp",
+    "defaultPort": 8773,
+    "installHint": "npm install -g @zed-industries/codex-acp"
+  },
+  "auth": {
+    "mode": "oauth",
+    "fields": [],
+    "note": "Run `codex` once on the machine and sign in; the adapter reuses that login."
+  },
+  "spawnOptions": [
+    { "id": "model", "label": "Default model", "type": "choice", "required": false, "dynamic": true },
+    { "id": "cwd", "label": "Working directory", "type": "text", "required": true, "defaultValue": "~" }
+  ],
+  "links": {
+    "docs": "https://github.com/zed-industries/codex-acp",
+    "protocol": "https://agentclientprotocol.com"
+  }
+}

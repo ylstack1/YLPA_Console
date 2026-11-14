@@ -103,6 +103,14 @@ dependencies:
   # lib/core/services/voice/live/flutter_webrtc_transport.dart.
   flutter_webrtc: ^1.6.2+hotfix.3
 
+  # YLPA ACP core (Agent Client Protocol): manifest-driven agent-type catalog
+  # and a generic ACP client (JSON-RPC 2.0 over WebSocket) that lets the app
+  # talk to any ACP-compatible agent (Claude Code, OpenCode, Gemini CLI,
+  # Codex, Qwen Code, custom) alongside the existing Hermes Dashboard stack.
+  # Local path package: packages/ylpa_acp_core. Design: docs/ACP_CORE.md.
+  ylpa_acp_core:
+    path: packages/ylpa_acp_core
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -133,6 +141,11 @@ flutter:
     # icono completo (Acerca de). Fuentes editables: console_*.svg.
     - assets/branding/console_mark.png
     - assets/branding/console_icon.png
+    # YLPA ACP: agent-type manifests (the "plugin" catalog). Source of truth
+    # is packages/ylpa_acp_core/assets/agent_types/; this copy is what the
+    # app bundles. Loaded via rootBundle('assets/agent_types/<id>.json') and
+    # fed to AgentCatalog as InlineManifestSource. Keep both in sync.
+    - assets/agent_types/
     # The native splash icon itself: the first Flutter frame paints the same
     # mark so the system splash hands off without a cut (StartupHandoff).
     - android/app/src/main/res/drawable-nodpi/splash_logo.png

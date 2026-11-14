@@ -124,6 +124,29 @@ class SecureStorage {
     }
   }
 
+  // ── Secretos ACP (por instancia, p.ej. ANTHROPIC_API_KEY) ─────────────
+
+  static String _acpKey(String instanceId, String field) =>
+      'acp_${field}_$instanceId';
+
+  Future<String?> readAcpSecret(String instanceId, String field) =>
+      _storage.read(key: _acpKey(instanceId, field));
+
+  Future<void> writeAcpSecret(String instanceId, String field, String value) =>
+      _storage.write(key: _acpKey(instanceId, field), value: value);
+
+  Future<void> deleteAcpSecrets(String instanceId) async {
+    // Key pattern is deterministic: acp_<field>_<instanceId>. Enumerate
+    // readable keys and delete the instance's own (flutter_secure_storage
+    // exposes no prefix delete).
+    final all = await _storage.readAll();
+    for (final key in all.keys) {
+      if (key.startsWith('acp_') && key.endsWith('_$instanceId')) {
+        await _storage.delete(key: key);
+      }
+    }
+  }
+
   // ── Secretos app-level (no por conexión), p.ej. clave de ElevenLabs ───
 
   static String _appKey(String name) => 'app_secret_$name';

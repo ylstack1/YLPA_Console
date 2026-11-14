@@ -1,0 +1,19 @@
+name: ylpa_acp_core
+description: >-
+  YLPA Agent Core: a manifest-driven agent-type catalog plus a generic ACP
+  (Agent Client Protocol, agentclientprotocol.com) client for Dart. One
+  backend implementation serves every ACP-compatible agent — Claude Code,
+  OpenCode, Gemini CLI, Codex CLI, Qwen Code or any custom agent — because
+  agent-specific differences are data (manifests), never code.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  web_socket_channel: ^3.0.0
+  http: ^1.2.0
+
+dev_dependencies:
+  test: ^1.25.0

@@ -45,13 +45,14 @@ class ConnectWayCards extends StatelessWidget {
 
   /// The order every entry shares: the hosted account first; the camera
   /// last because it needs a code or a server on the same network.
-  static const order = [ConnectWay.nous, ConnectWay.manual, ConnectWay.scan];
+  static const order = [ConnectWay.nous, ConnectWay.manual, ConnectWay.scan, ConnectWay.acp];
 
   static IconData iconOf(ConnectWay way) => switch (way) {
     ConnectWay.nous => Icons.account_circle_outlined,
     ConnectWay.manual => Icons.language_rounded,
     ConnectWay.ssh => Icons.terminal_rounded,
     ConnectWay.scan => Icons.qr_code_scanner_rounded,
+    ConnectWay.acp => Icons.hub_outlined,
   };
 
   static String titleOf(Strings s, ConnectWay way) => switch (way) {
@@ -59,6 +60,7 @@ class ConnectWayCards extends StatelessWidget {
     ConnectWay.manual => s.nacWayManualTitle,
     ConnectWay.ssh => s.cnxTabSsh,
     ConnectWay.scan => s.nacWayScanTitle,
+    ConnectWay.acp => 'ACP agent',
   };
 
   static String bodyOf(Strings s, ConnectWay way) => switch (way) {
@@ -66,6 +68,7 @@ class ConnectWayCards extends StatelessWidget {
     ConnectWay.manual => s.nacWayManualBody,
     ConnectWay.ssh => s.nacWayManualBody,
     ConnectWay.scan => s.nacWayScanBody,
+    ConnectWay.acp => 'Connect any Agent Client Protocol agent (OpenCode, Claude Code, Gemini CLI, Codex)',
   };
 
   @override

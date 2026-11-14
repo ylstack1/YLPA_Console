@@ -1,0 +1,27 @@
+{
+  "id": "qwen-code",
+  "displayName": "Qwen Code",
+  "icon": "qwen",
+  "version": 1,
+  "bridge": {
+    "serveCommand": "acpremote serve-command -- qwen --acp",
+    "defaultPort": 8774,
+    "installHint": "npm install -g @qwen-code/qwen-code"
+  },
+  "auth": {
+    "mode": "env",
+    "fields": [
+      { "id": "apiKey", "label": "Qwen API key (or OPENAI-compatible key)", "env": "QWEN_API_KEY", "type": "secret", "required": false },
+      { "id": "baseUrl", "label": "OpenAI-compatible base URL (optional)", "env": "OPENAI_BASE_URL", "type": "text", "required": false }
+    ],
+    "note": "Qwen Code also supports OAuth device login on the machine."
+  },
+  "spawnOptions": [
+    { "id": "model", "label": "Default model", "type": "choice", "required": false, "dynamic": true },
+    { "id": "cwd", "label": "Working directory", "type": "text", "required": true, "defaultValue": "~" }
+  ],
+  "links": {
+    "docs": "https://github.com/QwenLM/qwen-code",
+    "protocol": "https://agentclientprotocol.com"
+  }
+}

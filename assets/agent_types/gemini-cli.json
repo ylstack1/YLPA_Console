@@ -1,0 +1,33 @@
+{
+  "id": "gemini-cli",
+  "displayName": "Gemini CLI",
+  "icon": "gemini",
+  "version": 1,
+  "bridge": {
+    "serveCommand": "acpremote serve-command -- gemini --experimental-acp",
+    "defaultPort": 8772,
+    "installHint": "npm install -g @google/gemini-cli"
+  },
+  "auth": {
+    "mode": "env",
+    "fields": [
+      {
+        "id": "apiKey",
+        "label": "Gemini API key",
+        "env": "GEMINI_API_KEY",
+        "type": "secret",
+        "required": false,
+        "help": "Leave empty to use `gemini` OAuth login on the machine."
+      }
+    ],
+    "note": "Google account login on the machine also works (free tier)."
+  },
+  "spawnOptions": [
+    { "id": "model", "label": "Default model", "type": "choice", "required": false, "dynamic": true },
+    { "id": "cwd", "label": "Working directory", "type": "text", "required": true, "defaultValue": "~" }
+  ],
+  "links": {
+    "docs": "https://github.com/google-gemini/gemini-cli",
+    "protocol": "https://agentclientprotocol.com"
+  }
+}
