@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -40,6 +41,11 @@ import 'onboarding/onboarding_motion.dart';
 import 'onboarding/onboarding_scanner.dart';
 import 'onboarding/onboarding_widgets.dart';
 import '../feedback/haptics.dart';
+
+import 'acp/acp_add_agent_screen.dart';
+import '../acp/acp_catalog_loader.dart';
+import '../acp/acp_instance_store.dart';
+import '../services/secure_storage.dart';
 
 enum _Step {
   welcome,
@@ -1040,7 +1046,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         unawaited(_manualConnect(way: ConnectWay.ssh));
       case ConnectWay.scan:
         unawaited(_scan());
+      case ConnectWay.acp:
+        unawaited(_openAcpOnboarding());
     }
+  }
+
+  /// ACP-only onboarding door: opens the Add-Agent wizard. When an agent is
+  /// saved, onboarding is marked complete (no Hermes connection required).
+  Future<void> _openAcpOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    final catalog = await AcpCatalogLoader.load();
+    if (!mounted) return;
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AcpAddAgentScreen(
+          catalog: catalog,
+          instanceStore: AcpInstanceStore(prefs),
+          secureStorage: SecureStorage(),
+        ),
+      ),
+    );
+    if (!mounted || saved != true) return;
+    widget.onDone();
   }
 
   /// The door the welcome marks: the code / find-my-server one once a
@@ -1848,6 +1875,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             key: const ValueKey('onboarding-help'),
             label: s.onbFlowPair,
             onTap: () => _go(_Step.help),
+          ),
+        ),
+        const SizedBox(height: HermesSpace.x1),
+        _rise(
+          4,
+          OnbTextButton(
+            key: const ValueKey('onboarding-skip'),
+            label: 'Continue without an agent (demo)',
+            onTap: () {
+              widget.onDone();
+            },
           ),
         ),
       ],

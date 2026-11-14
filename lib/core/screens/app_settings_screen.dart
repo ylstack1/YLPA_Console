@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../main.dart' show HermesAppState;
@@ -15,6 +16,10 @@ import '../widgets/owned_resource_host.dart';
 import 'about_screen.dart';
 import 'activity_screen.dart';
 import 'cache_settings_screen.dart';
+// ACP layer (additive): agents speaking the Agent Client Protocol.
+import 'acp/acp_hub_screen.dart';
+import '../acp/acp_instance_store.dart';
+import '../services/secure_storage.dart';
 import 'companion/mascotas_screen.dart';
 import 'extensions_center_screen.dart';
 import 'gateway_manager_screen.dart';
@@ -279,6 +284,26 @@ List<HermesToolDestination> buildAppSettingsDestinations({
       enabled: enabled(),
       disabledReason: disabledReason(),
       builder: (_) => SshScreen(connection: conn!),
+    ),
+    // ACP agents (additive, works without a Hermes connection): the hub for
+    // every Agent-Client-Protocol agent (Claude Code, OpenCode, Gemini CLI,
+    // Codex, custom). See docs/ACP_CORE.md.
+    HermesToolDestination(
+      id: 'acp_agents',
+      group: groupConnection,
+      icon: Icons.hub_outlined,
+      label: 'ACP agents (beta)',
+      subtitle: 'Any Agent Client Protocol agent — Claude Code, OpenCode, more',
+      enabled: true,
+      builder: (_) => FutureBuilder(
+        future: SharedPreferences.getInstance(),
+        builder: (context, prefs) => prefs.hasData
+            ? AcpHubScreen(
+                instanceStore: AcpInstanceStore(prefs.data!),
+                secureStorage: SecureStorage(),
+              )
+            : const Center(child: CircularProgressIndicator()),
+      ),
     ),
     settingsSection(
       id: 'security',

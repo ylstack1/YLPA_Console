@@ -1,0 +1,22 @@
+{
+  "id": "custom-acp",
+  "displayName": "Custom ACP agent",
+  "icon": "custom",
+  "version": 1,
+  "abstract": true,
+  "description": "Template used by the in-app custom agent-type editor. Duplicate it, rename the id, fill in the serve command and env fields — no app update needed.",
+  "bridge": {
+    "serveCommand": "acpremote serve-command -- <your-agent-command> <args>",
+    "defaultPort": 8799
+  },
+  "auth": {
+    "mode": "env",
+    "fields": []
+  },
+  "spawnOptions": [
+    { "id": "cwd", "label": "Working directory", "type": "text", "required": true, "defaultValue": "~" }
+  ],
+  "links": {
+    "protocol": "https://agentclientprotocol.com"
+  }
+}

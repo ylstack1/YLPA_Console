@@ -2836,7 +2836,6 @@ class HermesAppState extends State<HermesApp> with WidgetsBindingObserver {
   }
 
   Future<void> _finishOnboarding() async {
-    if (widget.connManager.getConnections().isEmpty) return;
     await widget.connManager.prefs.setBool('onboarding_done', true);
     if (mounted) {
       setState(() => _showOnboarding = false);

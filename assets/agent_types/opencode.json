@@ -1,0 +1,33 @@
+{
+  "id": "opencode",
+  "displayName": "OpenCode",
+  "icon": "opencode",
+  "version": 1,
+  "bridge": {
+    "serveCommand": "acpremote serve-command -- opencode acp",
+    "defaultPort": 8771,
+    "installHint": "curl -fsSL https://opencode.ai/install | bash"
+  },
+  "auth": {
+    "mode": "env",
+    "fields": [
+      {
+        "id": "apiKey",
+        "label": "Provider API key",
+        "env": "OPENCODE_API_KEY",
+        "type": "secret",
+        "required": false,
+        "help": "OpenCode also reads keys from its own config on the machine."
+      }
+    ],
+    "note": "If OpenCode is already authenticated on the machine, no key is needed here."
+  },
+  "spawnOptions": [
+    { "id": "model", "label": "Default model", "type": "choice", "required": false, "dynamic": true },
+    { "id": "cwd", "label": "Working directory", "type": "text", "required": true, "defaultValue": "~" }
+  ],
+  "links": {
+    "docs": "https://opencode.ai/docs",
+    "protocol": "https://agentclientprotocol.com"
+  }
+}
