@@ -1,0 +1,4032 @@
+import '../../utils/bot_mention_text.dart';
+// Notificaciones locales del agente — 100% on-device, sin FCM/Google/push.
+//
+// Las dispara la propia app para avisar de eventos importantes mientras está
+// en segundo plano: aprobaciones pendientes, ejecuciones terminadas y
+// respuestas listas. Privacidad: nada sale del dispositivo; no hay token de
+// push ni servidor intermedio. El usuario controla qué eventos avisan.
+import 'dart:async';
+import 'dart:convert';
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../utils/markdown_clipboard.dart';
+import '../../widgets/bot_face_identity.dart';
+import '../bot_mention_roster.dart';
+import '../bot_roster_store.dart' show BotRosterRegistry, agentNameFor;
+import 'bot_face_bitmap.dart';
+import 'bot_notification_presenter.dart';
+import 'chat_notification_read_sync.dart';
+import 'rich_notifications.dart';
+import '../new_session_launch_coordinator.dart';
+import '../sftp_downloads.dart' show sftpSafeFileName;
+import 'cron_notice_policy.dart';
+import 'notification_delivery_coordinator.dart';
+import 'notification_delivery_store.dart';
+import 'notification_mute_store.dart';
+import 'notification_payload_seal.dart';
+import 'notification_preview.dart';
+import 'live_turn_check.dart';
+import 'live_turn_notifications.dart';
+import 'notification_strings.dart';
+import 'session_attention.dart';
+
+/// Tipos de evento que pueden notificar (cada uno con su toggle).
+enum NotificationKind { approval, run, reply, test, localAgent, goal }
+
+/// Superficie propietaria de una sesión accionable.
+///
+/// Los payloads legacy no incluían este campo y se interpretan como [normal].
+enum NotificationChatSurface {
+  normal,
+  bot,
+  room;
+
+  static NotificationChatSurface fromWire(Object? raw) =>
+      switch (raw?.toString().trim().toLowerCase()) {
+        'bot' => bot,
+        'room' => room,
+        _ => normal,
+      };
+}
+
+/// Estado del canal de alertas a ojos del sistema (para el diagnóstico de la UI).
+enum ChannelStatus {
+  /// El canal existe y el sistema lo deja sonar (importancia > none).
+  active,
+
+  /// El canal existe pero el usuario lo bloqueó en los ajustes del sistema
+  /// (importancia = none): los avisos NO aparecerán aunque el permiso esté dado.
+  blocked,
+
+  /// El canal aún no se ha creado (init no corrió) o no se pudo consultar.
+  missing,
+}
+
+/// Destino de una notificación que el usuario pulsa: identifica la sesión (y su
+/// instancia) a la que navegar. Lo decodifica [NotificationService] del payload
+/// y lo entrega a quien haya registrado [NotificationService.onOpenSession].
+class NotificationOpen {
+  final String connId;
+  final String sessionId;
+  final String? title;
+  final String? profile;
+  final NotificationChatSurface surface;
+  final String? roomId;
+
+  /// Tarjeta Kanban exacta que debe abrirse al tocar el aviso.
+  final String? taskId;
+
+  /// Board of [taskId], when the notice knew it; the board screen otherwise
+  /// looks the card up on its current board.
+  final String? boardId;
+
+  /// ID de la ejecución (notificaciones antiguas de runs).
+  final String? runId;
+
+  /// Cron job fallback when no terminal session exists yet.
+  final String? jobId;
+
+  /// Solicitud autoritativa que la app debe enfocar; nunca se resuelve en tray.
+  final String? requestId;
+
+  /// Descarga SFTP terminada: el documento que el usuario eligió en
+  /// «Guardar como» (su Uri `content://`) y su nombre. Abre Abrir,
+  /// Compartir y Guardar otra copia… de ese documento.
+  final String? downloadUri;
+  final String? downloadName;
+
+  const NotificationOpen({
+    required this.connId,
+    this.sessionId = '',
+    this.title,
+    this.profile,
+    this.surface = NotificationChatSurface.normal,
+    this.roomId,
+    this.runId,
+    this.jobId,
+    this.requestId,
+    this.taskId,
+    this.boardId,
+    this.downloadUri,
+    this.downloadName,
+  });
+
+  String toPayload({String? base}) =>
+      jsonEncode(NotificationPayloadSeal.seal(_payloadFields(base: base)));
+
+  Map<String, dynamic> _payloadFields({String? base}) => {
+    'conn': connId,
+    if (sessionId.isNotEmpty) 'sid': sessionId,
+    if (title != null && title!.isNotEmpty) 'title': title,
+    if (runId != null && runId!.isNotEmpty) 'rid': runId,
+    if (jobId != null && jobId!.isNotEmpty) 'jid': jobId,
+    if (requestId != null && requestId!.isNotEmpty) 'aid': requestId,
+    if (taskId != null && taskId!.isNotEmpty) 'tid': taskId,
+    if (taskId != null &&
+        taskId!.isNotEmpty &&
+        boardId != null &&
+        boardId!.isNotEmpty)
+      'board': boardId,
+    if (profile != null && profile!.isNotEmpty) 'profile': profile,
+    'surface': surface.name,
+    if (roomId != null && roomId!.isNotEmpty) 'room': roomId,
+    if (downloadUri != null && downloadUri!.isNotEmpty) ...{
+      'dl': downloadUri,
+      'dln': downloadName ?? '',
+    },
+    if (base != null && base.isNotEmpty) 'base': base,
+  };
+
+  static final RegExp _unprintable = RegExp(r'[\s\u0000-\u001f\u007f]');
+
+  /// A document Uri of a provider: `content://authority/…`, printable,
+  /// without spaces, at most 2048 characters.
+  static bool _isDocumentUri(String value) {
+    if (value.length > 2048 || _unprintable.hasMatch(value)) return false;
+    final uri = Uri.tryParse(value);
+    return uri != null &&
+        uri.scheme == 'content' &&
+        uri.host.isNotEmpty &&
+        uri.path.length > 1;
+  }
+
+  static final RegExp _typedDestinationId = RegExp(
+    r'^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$',
+  );
+
+  /// Decodifica payloads actuales y legacy. Campos desconocidos se ignoran.
+  static NotificationOpen? tryParse(String? payload) {
+    if (payload == null || payload.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is! Map) return null;
+      final m = Map<String, dynamic>.from(decoded);
+      final conn = (m['conn'] ?? '').toString();
+      if (conn.isEmpty) return null;
+      final sid = (m['sid'] ?? '').toString();
+      final runId = (m['rid'] ?? '').toString();
+      final taskId = (m['tid'] ?? '').toString();
+      final rawJobId = m['jid'];
+      if (rawJobId != null && rawJobId is! String) return null;
+      final jobId = (rawJobId as String? ?? '').trim();
+      if (jobId.isNotEmpty && !_typedDestinationId.hasMatch(jobId)) return null;
+      final rawRequestId = m['aid'];
+      if (rawRequestId != null && rawRequestId is! String) return null;
+      final requestId = (rawRequestId as String? ?? '').trim();
+      if (requestId.isNotEmpty && !_typedDestinationId.hasMatch(requestId)) {
+        return null;
+      }
+      // A finished download: only a document Uri (`content://`, the place
+      // the user chose) with a name made safe; never a path or a file.
+      final rawDownload = m['dl'];
+      if (rawDownload != null && rawDownload is! String) return null;
+      final download = rawDownload as String? ?? '';
+      final rawDownloadName = m['dln'];
+      if (rawDownloadName != null && rawDownloadName is! String) return null;
+      final downloadName = rawDownloadName as String? ?? '';
+      if (download.isNotEmpty && !_isDocumentUri(download)) return null;
+      if (download.isNotEmpty &&
+          (downloadName.isEmpty ||
+              sftpSafeFileName(downloadName) != downloadName)) {
+        return null;
+      }
+      if (download.isEmpty && downloadName.isNotEmpty) return null;
+      final primaryDestinations = <bool>[
+        requestId.isNotEmpty,
+        requestId.isEmpty && runId.isNotEmpty,
+        taskId.isNotEmpty,
+        jobId.isNotEmpty,
+        requestId.isEmpty && runId.isEmpty && sid.isNotEmpty,
+        download.isNotEmpty,
+      ].where((present) => present).length;
+      if (primaryDestinations != 1 ||
+          (requestId.isNotEmpty && runId.isEmpty && sid.isEmpty) ||
+          (requestId.isNotEmpty && (taskId.isNotEmpty || jobId.isNotEmpty))) {
+        return null;
+      }
+      final title = m['title']?.toString();
+      final profile = m['profile']?.toString();
+      final roomId = m['room']?.toString();
+      final rawBoard = m['board'];
+      final boardId = rawBoard is String ? rawBoard.trim() : '';
+      return NotificationOpen(
+        connId: conn,
+        sessionId: sid,
+        title: title,
+        profile: profile?.isNotEmpty == true ? profile : null,
+        surface: NotificationChatSurface.fromWire(m['surface']),
+        roomId: roomId?.isNotEmpty == true ? roomId : null,
+        runId: runId.isNotEmpty ? runId : null,
+        jobId: jobId.isNotEmpty ? jobId : null,
+        requestId: requestId.isNotEmpty ? requestId : null,
+        taskId: taskId.isNotEmpty ? taskId : null,
+        boardId: taskId.isNotEmpty && boardId.isNotEmpty ? boardId : null,
+        downloadUri: download.isNotEmpty ? download : null,
+        downloadName: download.isNotEmpty ? downloadName : null,
+      );
+    } catch (e) {
+      // The exception text of a parse error quotes the payload it choked on
+      // (ids, titles): only its type, and only in debug builds.
+      if (kDebugMode) {
+        debugPrint('[hermes-notif] payload no válido (${e.runtimeType})');
+      }
+      return null;
+    }
+  }
+}
+
+/// Confirma el resultado real de la navegación. Un destino diferido permanece
+/// pendiente hasta que una ruta llegue a comprometerse.
+typedef NotificationOpenHandler =
+    FutureOr<NavigationDeliveryOutcome> Function(NotificationOpen open);
+
+/// Aviso discreto para mostrar DENTRO de la app (una tarjeta flotante con acción
+/// "Ir"), no como notificación del sistema. Se emite cuando un evento (respuesta
+/// lista, aprobación, fin de ejecución) ocurre en un chat distinto al que el
+/// usuario está mirando, con la app en primer plano (Regla 2): la notificación
+/// del sistema sería ruido, pero el usuario debe enterarse igualmente.
+class InAppNotice {
+  final NotificationKind kind;
+  final String title;
+  final String body;
+
+  /// Destino al que navegar si el usuario pulsa "Ir" (mismo payload que usaría
+  /// la notificación del sistema).
+  final NotificationOpen open;
+
+  const InAppNotice({
+    required this.kind,
+    required this.title,
+    required this.body,
+    required this.open,
+  });
+}
+
+class DurableDiscoveryNotification {
+  const DurableDiscoveryNotification({
+    required this.identity,
+    required this.destinationKind,
+    required this.kind,
+    required this.title,
+    required this.body,
+    this.sessionId,
+    this.runId,
+    this.taskId,
+    this.jobId,
+    this.requestId,
+    this.subText,
+    this.payload,
+    this.botRoutine,
+    this.rich,
+  });
+
+  final NotificationEventIdentity identity;
+  final String destinationKind;
+  final NotificationKind kind;
+  final String title;
+  final String body;
+  final String? sessionId;
+  final String? runId;
+  final String? taskId;
+  final String? jobId;
+  final String? requestId;
+  final String? subText;
+  final String? payload;
+
+  /// Set when a Bot owns the job (`[bot:x]` routine): the result is shown
+  /// as a message from that Bot in its conversation.
+  final BotRoutineDisplay? botRoutine;
+
+  /// Rich card for this event (neutral glyph or owner face).
+  final RichCardSpec? rich;
+}
+
+/// How a Hermes event is drawn as a rich conversation card (spec 070): one
+/// plain line, the face of [faceProfile] (resolved through the shared
+/// identity resolver) or the neutral ">_" glyph, the state accent/badge and
+/// verbs. Every system notification of the app carries one.
+class RichCardSpec {
+  const RichCardSpec({
+    required this.line,
+    this.state = BotFaceBitmapState.idle,
+    this.faceProfile,
+    this.openLabel,
+    this.retryJobId,
+    this.retryProfile,
+    this.reasonLabel,
+    this.conversationTitle,
+    this.senderLabel,
+    this.conversationKey,
+    this.row = false,
+    this.muteJobId,
+    this.muteTaskId,
+    this.muteProfile,
+    this.quiet = false,
+  });
+
+  final String line;
+
+  /// An automation result: a plain row Android folds with its siblings,
+  /// not a conversation (no shortcut of its own).
+  final bool row;
+
+  /// Never heads-up, whatever the state: a failure the user asked to be
+  /// told about at normal priority keeps its red accent but does not alert.
+  final bool quiet;
+
+  /// The scheduled job / board task "Silenciar" turns off, by its own
+  /// switch in `NotificationMuteStore`.
+  final String? muteJobId;
+  final String? muteTaskId;
+  final String? muteProfile;
+
+  /// Task/job name shown as the card's conversation title (Kanban, Cron).
+  final String? conversationTitle;
+
+  /// Sender name when no Bot owns the event ("Tareas", "Tareas
+  /// programadas"); falls back to the brand.
+  final String? senderLabel;
+
+  /// Stable per-task/job conversation (one shortcut per task or job).
+  final String? conversationKey;
+  final BotFaceBitmapState state;
+
+  /// Bot/profile whose face represents the event; null = neutral glyph.
+  final String? faceProfile;
+
+  /// Label of the open action ("Ver resultado", "Abrir tarea"…).
+  final String? openLabel;
+
+  /// Failed scheduled job: "Reintentar" triggers it again.
+  final String? retryJobId;
+  final String? retryProfile;
+
+  /// Second open action on failures ("Ver motivo").
+  final String? reasonLabel;
+
+  int get accent => switch (state) {
+    BotFaceBitmapState.done => RichAccent.done,
+    BotFaceBitmapState.failed => RichAccent.failed,
+    BotFaceBitmapState.needsYou => RichAccent.needsYou,
+    BotFaceBitmapState.working => RichAccent.working,
+    BotFaceBitmapState.idle => RichAccent.brand,
+  };
+}
+
+/// A scheduled routine result owned by a Bot (spec 070 § Notifications).
+class BotRoutineDisplay {
+  const BotRoutineDisplay({
+    required this.profile,
+    required this.routineTitle,
+    required this.ok,
+    this.summary = '',
+  });
+
+  final String profile;
+  final String routineTitle;
+  final bool ok;
+
+  /// Public preview of the result (already public display text).
+  final String summary;
+}
+
+enum _ShowOutcome {
+  alertShown,
+  inlineShown,
+  policySuppressed,
+  transientFailure,
+}
+
+/// Interfaz mínima que NotificationController necesita de NotificationService.
+/// Permite testear el controlador sin instanciar el servicio real.
+abstract interface class RunNotificationFacade {
+  bool get notifyRuns;
+  Future<void> runLive({
+    required String runId,
+    required String title,
+    required String body,
+    String? connId,
+    String? sessionId,
+  });
+  Future<void> runFinished({
+    required String title,
+    required bool ok,
+    String? connId,
+    String? sessionId,
+    String? runId,
+    String? profile,
+  });
+  Future<void> approvalPending({
+    required String tool,
+    String? instance,
+    String? connId,
+    String? sessionId,
+    String? sessionTitle,
+    String? runId,
+    String? approvalId,
+    String? base,
+    NotificationChatSurface surface = NotificationChatSurface.normal,
+    String? profile,
+    String? roomId,
+    bool blind = false,
+  });
+  Future<void> cancelRun(String runId);
+
+  /// Cancela aprobaciones por scope autoritativo exacto; identidad incompleta
+  /// falla cerrada y no cancela ninguna tarjeta.
+  Future<void> cancelApproval({
+    String? connId,
+    String? profile,
+    String? runId,
+    String? approvalId,
+    bool terminal = false,
+  });
+}
+
+class NotificationService
+    implements RunNotificationFacade, NotificationDeliveryPresenter {
+  final SharedPreferences _prefs;
+  late final NotificationDeliveryCoordinator _delivery;
+  late final NotificationMuteStore muteStore;
+  final Map<String, _DurableDisplay> _pendingDisplays =
+      <String, _DurableDisplay>{};
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
+
+  bool _inited = false;
+  bool _available = false;
+  Future<void>? _initFuture;
+
+  /// Evita adelantar la inicialización diferida durante los primeros frames
+  /// cuando la shell solo quiere recuperar un `onNewIntent` al volver al
+  /// foreground.
+  bool get initialized => _inited;
+
+  /// Si la app está en primer plano no molestamos con notificaciones (el
+  /// usuario ya ve la UI); las aprobaciones son la excepción configurable.
+  bool get appInForeground => _appInForeground;
+  set appInForeground(bool value) {
+    if (_appInForeground == value) return;
+    _appInForeground = value;
+    _onPresenceChanged();
+  }
+
+  bool _appInForeground = true;
+  bool _wasInForeground = true;
+
+  /// Sesión que el usuario está MIRANDO ahora mismo. La pantalla de chat la fija
+  /// al hacerse visible y la limpia al ocultarse (vía RouteAware + lifecycle).
+  /// Junto a [appInForeground] implementa la Regla 1/6: si un evento (aprobación,
+  /// respuesta, fin de ejecución) es de ESTE chat y la app está delante, la UI
+  /// inline ya lo muestra → NO duplicamos con una notificación del sistema.
+  /// Null = no hay ningún chat en pantalla (home, ajustes, otra pestaña…).
+  String? get visibleSessionId => visibleSession.value;
+  set visibleSessionId(String? value) => visibleSession.value = value;
+
+  /// Observable form of [visibleSessionId]; GPT-Live ends its session when the
+  /// chat that owns it stops being the visible one.
+  final ValueNotifier<String?> visibleSession = ValueNotifier<String?>(null);
+
+  /// Sesión cuya respuesta ya está cubierta por la tarjeta de conversación de
+  /// voz. Solo la fija el harness QA mientras esa superficie está activa.
+  ///
+  /// Evita que el mismo desenlace aparezca a la vez como tarjeta de voz y como
+  /// “Hermes respondió”. Otras sesiones conservan sus avisos y las aprobaciones
+  /// no pasan por esta regla.
+  String? activeVoiceSessionId;
+
+  /// Avisos discretos para mostrar DENTRO de la app cuando un evento es
+  /// de un chat distinto al visible y la app está en primer plano (Regla 2). La
+  /// shell de la app los escucha y muestra una tarjeta flotante con "Ir".
+  /// Broadcast: vive lo que viva el singleton; sin oyentes simplemente se ignora.
+  final StreamController<InAppNotice> _inApp =
+      StreamController<InAppNotice>.broadcast();
+  Stream<InAppNotice> get inAppNotices => _inApp.stream;
+
+  /// Diagnóstico: traza el ciclo de vida de cada notificación. Solo activo en
+  /// builds de debug (`kDebugMode`); silencioso en release.
+  static const bool _debugLog = kDebugMode;
+
+  void _log(String msg) {
+    if (_debugLog) debugPrint('[hermes-notif] $msg');
+  }
+
+  /// Acento de marca (ámbar) para teñir el icono y el encabezado.
+  static const Color _accent = Color(0xFFE8821C);
+
+  /// Grupo común: agrupa todas las notificaciones de Hermes bajo un mismo hilo
+  /// en la bandeja (en vez de sueltas).
+  static const String _groupKey = 'hermes';
+
+  /// ID fijo del resumen de grupo. Fuera de todos los rangos de alertas
+  /// (reply 6000+, approval 7001, run 7100+, live 9000+, kanban 10000+).
+  static const int _groupSummaryId = 500;
+
+  /// ID de la notificación de prueba (no es una alerta hija del grupo).
+  static const int _testNotificationId = 7000;
+
+  /// ID de la notificación ongoing de modo voz (espejo de
+  /// `VoiceNotificationController.notifId`): jerarquía D, nunca cuenta como
+  /// hija de alerta aunque comparta `groupKey`. Se duplica el literal para no
+  /// acoplar ambos servicios.
+  static const int _voiceOngoingId = 8801;
+
+  // Un canal POR TIPO para que el usuario ajuste sonido/importancia de cada
+  // clase por separado en los ajustes de Android (premium). El antiguo canal
+  // único `hermes_alerts` se borra en init (migración).
+  static const String _chApprovals = 'hermes_approvals';
+  static const String _chReplies = 'hermes_replies';
+  static const String _chRuns = 'hermes_runs';
+  static const String _legacyChannel = 'hermes_alerts';
+
+  // Canal de baja importancia (sin sonido) para el progreso de transferencias
+  // SFTP en segundo plano: barra de progreso silenciosa que no molesta.
+  // Nombre y descripción localizados (NotifL10n.chTransfers/chTransfersDesc).
+  static const String _transferChannelId = 'hermes_transfers';
+
+  // Operaciones locales largas iniciadas por el usuario (por ejemplo, instalar
+  // un modelo en el propio móvil). Es una notificación local ongoing independiente del
+  // foreground service: nunca adquiere, reconfigura ni detiene sus owners.
+  // Nombre y descripción localizados (NotifL10n.chOperations/chOperationsDesc).
+  static const String _operationChannelId = 'hermes_background_operations';
+
+  /// Llamado cuando el usuario pulsa una notificación con sesión asociada. Lo
+  /// cablea HermesAppState para navegar al chat correcto. Si es null al pulsar
+  /// (p.ej. la app se abrió desde cero por la notificación, antes de montar la
+  /// UI), el destino se guarda en [_pendingOpen] y se consume con
+  /// [takePendingOpen] tras el arranque.
+  NotificationOpenHandler? _onOpenSession;
+
+  set onOpenSession(NotificationOpenHandler? handler) {
+    _onOpenSession = handler;
+    if (handler != null) unawaited(retryPendingOpen());
+  }
+
+  NotificationOpen? _pendingOpen;
+  Future<NavigationDeliveryOutcome>? _pendingOpenDelivery;
+  String? _pendingOpenDeliveryPayload;
+  String? _lastPlatformOpenFingerprint;
+
+  /// Rich conversation renderer (`hermes/rich_notifications`, spec 070).
+  RichNotificationSink _rich = PlatformRichNotifications();
+  BotFaceBitmapCache _faces = BotFaceBitmapCache();
+  late BotChatRichNotifications _botChatRich = _newBotChatRich();
+
+  late LiveTurnNotifications _liveTurns = _newLiveTurns();
+
+  LiveTurnNotifications _newLiveTurns() => LiveTurnNotifications(
+    sink: _rich,
+    strings: () => NotifL10n.of(_prefs),
+    whoFor: (turn) => _agentName(turn.connId, turn.profile),
+    iconFor: (turn) => _richFace(
+      turn.connId,
+      RichCardSpec(
+        line: '',
+        state: BotFaceBitmapState.working,
+        faceProfile: turn.profile,
+      ),
+    ),
+  );
+
+  /// Who speaks in a chat of [profile]: the Bot by its name, or the brand
+  /// for the default profile.
+  String _agentName(String connId, String profile) {
+    final owner = profile.trim().toLowerCase();
+    if (owner.isEmpty || owner == 'default') return NotifL10n.of(_prefs).brand;
+    return _botName(connId, owner);
+  }
+
+  /// Notice titles identify both who replied and which conversation it was.
+  String sessionNoticeTitle(String connId, String profile, String? title) {
+    final conversation = compactSessionLabel(title);
+    if (conversation.isEmpty) return '';
+    return '${_agentName(connId, profile)}: $conversation';
+  }
+
+  /// The live row of a chat turn follows the same tray policy as every
+  /// other chat notice: none while the user is looking at that chat.
+  bool _liveTurnAllowed(LiveTurnSnapshot turn) =>
+      enabled &&
+      notifyReplies &&
+      shouldShowInForeground(
+        appInForeground: appInForeground,
+        bypassForeground: false,
+        evenInForeground: evenInForeground,
+        targetSessionId: turn.sessionId,
+        visibleSessionId: visibleSessionId,
+      );
+
+  /// The turn of the chat registered as [key] changed; null when it is over
+  /// (its row leaves the tray). Silent: only a request or a failure alerts.
+  void liveTurnChanged(String key, LiveTurnSnapshot? turn) {
+    unawaited(
+      _liveTurns
+          .update(
+            key,
+            turn,
+            show: turn != null && _liveTurnAllowed(turn),
+            hideSensitive: hideSensitiveContent,
+            background: !appInForeground,
+          )
+          .whenComplete(_syncLiveTurnCheck),
+    );
+  }
+
+  /// The background check (or another local signal) says the turn of
+  /// [sessionId] is over:
+  /// its live row leaves the tray even though the chat's socket, cut in the
+  /// background, never reported the end. See [LiveTurnNotifications.settle].
+  Future<void> liveTurnEnded(String sessionId, {int? endedAtMs}) async {
+    await _liveTurns.settle(sessionId, endedAtMs: endedAtMs);
+    _syncLiveTurnCheck();
+  }
+
+  /// The live row of a turn of [sessionId] is in the tray now.
+  bool liveTurnShown(String sessionId) {
+    final id = sessionId.trim();
+    return id.isNotEmpty &&
+        _liveTurns.shownTurns.any((turn) => turn.sessionId == id);
+  }
+
+  /// The background check found the turn of [sessionId] finished (its
+  /// socket was cut): told at once as «xPeta · terminó»
+  /// ([liveTurnFinishedCopy]) over the chat's title, or over the generic line
+  /// with content hidden. Same settings as every reply notice
+  /// ([notifyReplies], voice, foreground policy) and the same tray address
+  /// as the chat's reply notice.
+  Future<void> liveTurnFinished({
+    required String connId,
+    required String profile,
+    required String sessionId,
+    String? title,
+    String preview = '',
+  }) async {
+    if (!notifyReplies) return;
+    if (shouldSuppressReplyForActiveVoice(
+      activeVoiceSessionId: activeVoiceSessionId,
+      targetSessionId: sessionId,
+    )) {
+      return;
+    }
+    final owner = profile.trim().isEmpty
+        ? 'default'
+        : profile.trim().toLowerCase();
+    final noticeTitle = sessionNoticeTitle(connId, owner, title);
+    if (connId.trim().isNotEmpty &&
+        sessionId.trim().isNotEmpty &&
+        _richEligible(sessionId)) {
+      final hide = hideSensitiveContent;
+      final chat = _chatAddress(connId, owner, sessionId);
+      // The notice of this turn: the chat's result card with content shown,
+      // the generic reply notice (no tag) with it hidden.
+      final tag = hide ? null : chat.tag;
+      final id = hide
+          ? replyNotificationId(
+              connId: connId,
+              sessionId: sessionId,
+              session: compactSessionLabel(noticeTitle),
+            )
+          : RichNotificationIds.conversation;
+      final ledger = _chatReadSync;
+      await ledger?.beginPost(id, tag);
+      try {
+        final face = await _richFace(
+          connId,
+          RichCardSpec(
+            line: '',
+            state: BotFaceBitmapState.done,
+            faceProfile: owner,
+          ),
+        );
+        final plainFace = await _richFace(
+          connId,
+          RichCardSpec(line: '', faceProfile: owner),
+        );
+        final label = compactSessionLabel(title);
+        final posted = await _rich.postConversation(
+          RichNotificationBuilder(NotifL10n.of(_prefs)).turnFinished(
+            tag: tag,
+            id: id,
+            conversationId: chat.conversationId,
+            ownerKey: owner,
+            who: _turnOwnerName(connId, owner),
+            chatTitle: label,
+            hideSensitive: hide,
+            open: NotificationOpen(
+              connId: connId,
+              sessionId: sessionId,
+              title: hide || label.isEmpty ? null : label,
+              profile: owner == 'default' ? null : owner,
+            ),
+            action: _connectionReadOnly(connId)
+                ? null
+                : NotificationActionPayload(
+                    route: NotificationActionRoute.session,
+                    connId: connId,
+                    profile: owner,
+                    sessionId: sessionId,
+                  ),
+            iconPath: face,
+            shortcutIconPath: plainFace ?? face,
+            nowMs: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
+        if (posted) {
+          ledger?.record(
+            id: id,
+            tag: tag,
+            connId: connId,
+            profile: owner,
+            sessionId: sessionId,
+          );
+          return;
+        }
+      } catch (error) {
+        _log('fin de turno rico falló (${error.runtimeType})');
+      } finally {
+        ledger?.endPost(id, tag);
+      }
+    }
+    // No rich renderer (or not due as a system card): the plain reply notice.
+    await replyReady(
+      preview: preview,
+      session: noticeTitle,
+      connId: connId,
+      sessionId: sessionId,
+      profile: owner,
+    );
+  }
+
+  /// Who finished a turn of [profile]: the profile's own name (the main
+  /// one's too, «xPeta»), else the Bot's or the brand.
+  String _turnOwnerName(String connId, String profile) {
+    final named = _mainAgentName(connId, profile)?.trim() ?? '';
+    return named.isNotEmpty ? named : _agentName(connId, profile);
+  }
+
+  /// Schedules or cancels the native background check of the live rows.
+  LiveTurnCheckScheduler _liveCheck = const PlatformLiveTurnCheckScheduler();
+  bool _liveCheckScheduled = false;
+
+  /// This background period already spent its check window: no new chain
+  /// until the app has been in front again.
+  bool _liveCheckSpent = false;
+
+  @visibleForTesting
+  set liveTurnCheckSchedulerForTesting(LiveTurnCheckScheduler scheduler) =>
+      _liveCheck = scheduler;
+
+  /// Fires when the worker should have called back and did not (it gave up
+  /// waiting for a slow run and asks no more, WorkManager dropped it):
+  /// without it [_liveCheckScheduled] would stay set and no chain would
+  /// start until the app came to the front again.
+  Timer? _liveCheckWatchdog;
+
+  /// When this background period's first chain was scheduled: a chain the
+  /// watchdog restarts never outlives [LiveTurnCheckPolicy.window] from it.
+  DateTime? _liveCheckPeriodStart;
+
+  /// How long after a run is due the watchdog waits for it: the worker's
+  /// own 45 s wait plus WorkManager's slack.
+  @visibleForTesting
+  Duration Function(Duration due) liveCheckWatchdogAfter = (due) =>
+      due + const Duration(seconds: 90);
+
+  void _armLiveCheckWatchdog(Duration due) {
+    _liveCheckWatchdog?.cancel();
+    _liveCheckWatchdog = Timer(liveCheckWatchdogAfter(due), () {
+      _liveCheckWatchdog = null;
+      if (!_liveCheckScheduled || appInForeground) return;
+      _liveCheckScheduled = false;
+      final start = _liveCheckPeriodStart;
+      if (start != null &&
+          DateTime.now().difference(start) >= LiveTurnCheckPolicy.window) {
+        _liveCheckSpent = true;
+        return;
+      }
+      _syncLiveTurnCheck();
+    });
+  }
+
+  /// The turn keep-alive let go while a turn still runs (its cap, the
+  /// system's timeout, the socket lost): the bounded background check gets
+  /// a fresh window from now, as if the app had just left.
+  void restartLiveTurnCheck() {
+    if (appInForeground) return;
+    _liveCheckSpent = false;
+    _liveCheckPeriodStart = null;
+    _syncLiveTurnCheck();
+  }
+
+  /// In the background with a live row in the tray the bounded check runs;
+  /// in front, the chats' own sockets own the rows and it stops.
+  /// A chain whose rows all left in the background ends on its next run (it
+  /// finds nothing); only the return to the foreground cancels it.
+  void _syncLiveTurnCheck() {
+    if (appInForeground) {
+      _liveCheckSpent = false;
+      _liveCheckPeriodStart = null;
+      _liveCheckWatchdog?.cancel();
+      _liveCheckWatchdog = null;
+      if (!_liveCheckScheduled) return;
+      _liveCheckScheduled = false;
+      unawaited(_liveCheck.cancel().catchError((Object _) {}));
+      return;
+    }
+    if (_liveCheckScheduled ||
+        _liveCheckSpent ||
+        _liveTurns.shownKeys.isEmpty ||
+        // App Lock: the check never runs; the row's own bounded lifetime
+        // ends it.
+        liveTurnAppLocked(_prefs)) {
+      return;
+    }
+    _liveCheckScheduled = true;
+    _liveCheckPeriodStart ??= DateTime.now();
+    const first = LiveTurnCheckPolicy.firstDelay;
+    _armLiveCheckWatchdog(first);
+    unawaited(_liveCheck.schedule(first).catchError((Object _) {}));
+  }
+
+  /// One run of the background check, asked by the native worker: without
+  /// App Lock one bounded read per chat
+  /// ends the rows of turns that are over and tells them at once. A row
+  /// whose read failed to reach the server
+  /// [LiveTurnNotifications.offlineAfterFailures] times in a row says «Sin
+  /// conexión · reintentando…»; until then, and as soon as a read reaches
+  /// the server again, it keeps the last real state. Returns what the worker
+  /// needs: how many rows remain to check and when.
+  ///
+  /// [inTray] (from the worker; null from an older native side) are the
+  /// sessions whose row is still in the tray: a row already withdrawn
+  /// natively while this engine was frozen is settled here without a read
+  /// and without a notice.
+  Future<Map<String, Object?>> checkLiveTurnsInBackground({
+    int attempt = 0,
+    Duration elapsed = Duration.zero,
+    Set<String>? inTray,
+    LiveTurnBackgroundCheck? check,
+  }) async {
+    // The worker called back: the chain is alive.
+    _liveCheckWatchdog?.cancel();
+    _liveCheckWatchdog = null;
+    // In front the sockets reconcile on their own: the chain ends.
+    if (appInForeground) {
+      _liveCheckScheduled = false;
+      return const {'pending': 0};
+    }
+    if (inTray != null) {
+      // The native side already withdrew these rows: nothing to read,
+      // nothing to announce again.
+      for (final gone in _liveTurns.shownTurns) {
+        if (!inTray.contains(gone.sessionId)) {
+          await _liveTurns.settle(gone.sessionId);
+        }
+      }
+    }
+    final turns = _liveTurns.shownTurns;
+    if (turns.isEmpty) {
+      _liveCheckScheduled = false;
+      return const {'pending': 0};
+    }
+    try {
+      await _prefs.reload();
+    } catch (_) {}
+    final sink = NotificationSessionAttentionSink(this);
+    final pass =
+        await (check ??
+                LiveTurnBackgroundCheck.platform(_prefs, deliver: sink.deliver))
+            .run(turns, attempt: attempt);
+    for (final sessionId in pass.ended) {
+      await _liveTurns.settle(sessionId);
+    }
+    for (final sessionId in pass.reached) {
+      await _liveTurns.checkReached(sessionId);
+    }
+    for (final sessionId in pass.unreachable) {
+      await _liveTurns.checkFailed(sessionId);
+    }
+    final next = LiveTurnCheckPolicy.next(
+      attempt: attempt,
+      elapsed: elapsed,
+      pending: pass.pending,
+    );
+    if (next == null) {
+      _liveCheckScheduled = false;
+      _liveCheckSpent = pass.pending > 0;
+    } else {
+      _liveCheckScheduled = true;
+      _armLiveCheckWatchdog(next);
+    }
+    return {
+      'pending': next == null ? 0 : pass.pending,
+      'nextDelayMs': ?next?.inMilliseconds,
+    };
+  }
+
+  /// Asks the owner of the chats to report every running turn again. Set by
+  /// `ActiveChatService`: a chat opened mid-turn changes nothing while the
+  /// user reads it, so its turn is first reported when the user leaves.
+  VoidCallback? liveTurnSource;
+
+  /// The app went to the background or another chat came on screen.
+  void _onPresenceChanged() {
+    // Back in front: what another isolate wrote meanwhile (an item muted
+    // from its notification) is what the screens must show.
+    if (_appInForeground && !_wasInForeground) unawaited(_prefs.reload());
+    _wasInForeground = _appInForeground;
+    liveTurnSource?.call();
+    unawaited(
+      _liveTurns
+          .refresh(
+            _liveTurnAllowed,
+            hideSensitive: hideSensitiveContent,
+            background: !appInForeground,
+          )
+          .whenComplete(_syncLiveTurnCheck),
+    );
+  }
+
+  BotChatRichNotifications _newBotChatRich() => BotChatRichNotifications(
+    sink: _rich,
+    faces: _faces,
+    identityFor: (connId, profile) {
+      final loaded = BotMentionRoster.shared.profileFor(connId, profile);
+      return loaded == null ? null : BotFaceIdentity.ofProfile(loaded);
+    },
+  );
+
+  @visibleForTesting
+  void setRichForTesting(
+    RichNotificationSink sink, {
+    BotFaceBitmapCache? faces,
+  }) {
+    _rich = sink;
+    if (faces != null) _faces = faces;
+    _botChatRich = _newBotChatRich();
+    _liveTurns = _newLiveTurns();
+  }
+
+  /// Same foreground policy as [_show]: a system card only when the app is in
+  /// the background, or the user asked for foreground alerts and the event
+  /// belongs to another chat.
+  bool _richEligible(String? targetSessionId) {
+    if (!enabled) return false;
+    if (!appInForeground) return true;
+    if (targetSessionId != null && targetSessionId == visibleSessionId) {
+      return false;
+    }
+    return evenInForeground;
+  }
+
+  /// Read-only connections never get Approve / Reply buttons (spec 070).
+  bool _connectionReadOnly(String connId) {
+    for (final raw in _prefs.getStringList('saved_connections') ?? const []) {
+      try {
+        final map = jsonDecode(raw);
+        if (map is Map && map['id'] == connId) return map['read_only'] == true;
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  String _botName(String connId, String profile) {
+    final loaded = BotMentionRoster.shared.profileFor(connId, profile);
+    if (loaded != null && loaded.isMainProfile) return loaded.visibleName;
+    final display = loaded?.displayName.trim() ?? '';
+    return display.isNotEmpty ? display : profile;
+  }
+
+  /// The profile's own name for the generic agent titles («Hermes replied»),
+  /// when its roster is loaded; null keeps the title as it is.
+  String? _mainAgentName(String? connId, String? profile) => connId == null
+      ? null
+      : agentNameFor(BotRosterRegistry.shared.peek(connId), profile);
+
+  NotificationService(this._prefs, {NotificationDeliveryStore? deliveryStore}) {
+    _automationNotificationsOptedIn =
+        _prefs.getBool(backgroundListenPreferenceKey) ?? false;
+    _delivery = NotificationDeliveryCoordinator(
+      store: deliveryStore ?? NotificationDeliveryStore(),
+      presenter: this,
+    );
+    muteStore = NotificationMuteStore(_prefs);
+    visibleSession.addListener(_onPresenceChanged);
+  }
+
+  Future<void> closeDelivery() => _delivery.close();
+
+  ChatNotificationReadSync? _chatReadSync;
+
+  /// Retracts chat notifications once their chat is read (on Desktop via
+  /// the server's read state, or opened here). Null until
+  /// [enableChatReadSync]: only the main isolate records, so a background
+  /// isolate never writes a stale copy of the ledger.
+  ChatNotificationReadSync? get chatReadSync => _chatReadSync;
+
+  /// [locked] is App Lock's state: nothing is cleared while it is true.
+  ChatNotificationReadSync enableChatReadSync({
+    ValueListenable<bool>? locked,
+  }) => _chatReadSync ??= ChatNotificationReadSync(
+    _prefs,
+    cancel: (id, tag) => _cancelChatNotification(id, tag, 'chat read'),
+    locked: locked,
+  );
+
+  /// The ledger's own cancel: unlike [cancelById] it leaves the ledger
+  /// alone, which drops the entry only once this succeeds.
+  Future<void> _cancelChatNotification(
+    int id,
+    String? tag,
+    String reason,
+  ) async {
+    _log('CANCEL id=$id${tag == null ? '' : ' tag'} motivo="$reason"');
+    await _plugin.cancel(id, tag: tag);
+    if (tag == null) await _refreshGroupSummary();
+  }
+
+  /// The user is looking at [sessionId] on this phone: its chat
+  /// notifications posted so far are seen.
+  /// Under App Lock it waits for unlock and runs only if [stillWanted].
+  Future<void> clearChatNotifications({
+    required String connId,
+    String? profile,
+    required String sessionId,
+    Iterable<String> aliases = const [],
+    bool Function()? stillWanted,
+  }) async {
+    await _chatReadSync?.clearSession(
+      connId: connId,
+      profile: profile,
+      sessionId: sessionId,
+      aliases: aliases,
+      stillWanted: stillWanted,
+    );
+  }
+
+  Future<bool> deliverDiscoveryBatch({
+    required String scopeKey,
+    required String connId,
+    required String profile,
+    required String sourceKind,
+    required String objectId,
+    required String lastState,
+    required String sourceVersion,
+    required List<DurableDiscoveryNotification> events,
+    required bool suppressByPolicy,
+    bool versionEventsByPreviousSnapshot = false,
+    bool suppressEventsWhenVersionUnchanged = false,
+    bool suppressInitialEvents = true,
+
+    /// Spec 080: called with the events that were genuinely new but withheld
+    /// from the system tray by [suppressByPolicy] (the UI is in the
+    /// foreground), so the caller can surface an in-app notice instead.
+    void Function(List<DurableDiscoveryNotification> events)?
+    onForegroundSuppressed,
+  }) async {
+    final displayKeys = <String>{};
+    final eventsByKey = <String, DurableDiscoveryNotification>{};
+    _DurableDisplay displayFor(DurableDiscoveryNotification event) =>
+        _DurableDisplay(
+          kind: event.kind,
+          title: event.title,
+          body: event.body,
+          targetSessionId: event.sessionId,
+          subText: event.subText,
+          payload: event.payload,
+          botRoutine: event.botRoutine,
+          rich: event.rich,
+          neutralAvatar:
+              event.botRoutine == null &&
+              (event.destinationKind == 'cron_terminal' ||
+                  event.destinationKind == 'kanban_transition'),
+        );
+    for (final event in events) {
+      displayKeys.add(event.identity.eventKey);
+      _pendingDisplays[event.identity.eventKey] = displayFor(event);
+    }
+
+    SourceCursorUpdate updateFor(
+      int? previousGeneration,
+      String? previousVersion,
+    ) {
+      final specs = <DeliveryEventSpec>[];
+      for (final event in events) {
+        final original = event.identity;
+        final identity = versionEventsByPreviousSnapshot
+            ? NotificationEventIdentity(
+                connId: original.connId,
+                profile: original.profile,
+                sourceKind: original.sourceKind,
+                objectId: original.objectId,
+                eventKind: original.eventKind,
+                sourceVersion:
+                    '${original.sourceVersion}:after:${previousVersion ?? 'initial'}',
+              )
+            : original;
+        displayKeys.add(identity.eventKey);
+        eventsByKey[identity.eventKey] = event;
+        _pendingDisplays[identity.eventKey] = displayFor(event);
+        specs.add(
+          DeliveryEventSpec(
+            identity: identity,
+            destinationKind: event.destinationKind,
+            sessionId: event.sessionId,
+            runId: event.runId,
+            taskId: event.taskId,
+            jobId: event.jobId,
+            requestId: event.requestId,
+          ),
+        );
+      }
+      return SourceCursorUpdate(
+        scopeKey: scopeKey,
+        connId: connId,
+        profile: profile,
+        sourceKind: sourceKind,
+        objectId: objectId,
+        lastState: lastState,
+        lastVersion: sourceVersion,
+        generation: (previousGeneration ?? 0) + 1,
+        initialized: true,
+        events: specs,
+      );
+    }
+
+    try {
+      return await _delivery.ingestDiscovery(
+        scopeKey: scopeKey,
+        suppressByPolicy: suppressByPolicy,
+        buildUpdate: (previousGeneration) =>
+            updateFor(previousGeneration, null),
+        buildUpdateWithPrevious: versionEventsByPreviousSnapshot
+            ? updateFor
+            : null,
+        suppressEventsWhenVersionUnchanged:
+            versionEventsByPreviousSnapshot ||
+            suppressEventsWhenVersionUnchanged,
+        suppressInitialEvents: suppressInitialEvents,
+        onInserted: onForegroundSuppressed == null || !suppressByPolicy
+            ? null
+            : (keys, initialSuppressed) {
+                if (initialSuppressed || keys.isEmpty) return;
+                final fresh = <DurableDiscoveryNotification>[
+                  for (final key in keys) ?eventsByKey[key],
+                ];
+                if (fresh.isNotEmpty) onForegroundSuppressed(fresh);
+              },
+      );
+    } finally {
+      for (final key in displayKeys) {
+        _pendingDisplays.remove(key);
+      }
+    }
+  }
+
+  // ── Ajustes (persistidos) ───────────────────────────────────────────────
+  static const _kEnabled = 'notif_enabled';
+  static const _kApprovals = 'notif_approvals';
+  static const _kQuestions = 'notif_questions';
+  static const _kRuns = 'notif_runs';
+  static const _kKanbanResults = 'notif_kanban_results';
+  static const _kLocalAgentResults = 'notif_local_agent_results';
+  static const _kReplies = 'notif_replies';
+  static const _kForeground = 'notif_even_foreground';
+  static const _kKeepAlive = 'notif_keepalive_while_working';
+  static const _kHideSensitive = 'notif_hide_sensitive_content';
+  // Marca de que ya se pidió el permiso una vez (para no insistir en cada
+  // arranque; Android 13+ solo muestra el diálogo la primera vez de todos modos).
+  static const _kPermRequested = 'notif_perm_requested';
+
+  /// El descubrimiento de resultados cron necesita el listener persistente.
+  /// Compartir la clave evita que UI y servicio mantengan dos opt-ins distintos.
+  static const backgroundListenPreferenceKey = 'notif_background_listen';
+
+  bool get enabled => _prefs.getBool(_kEnabled) ?? true;
+  Future<void> setEnabled(bool v) => _prefs.setBool(_kEnabled, v);
+
+  /// 1.2.9: el protocolo SQLite cross-engine está disponible. Disponibilidad
+  /// no implica consentimiento: la entrega sigue cercada por el opt-in.
+  static const bool automationNotificationsAvailable = true;
+  static bool _automationNotificationsOptedIn = false;
+  static bool _debugAutomationNotificationsEnabled = false;
+
+  static bool get automationNotificationsEnabled =>
+      automationNotificationsAvailable &&
+      (_automationNotificationsOptedIn ||
+          (kDebugMode && _debugAutomationNotificationsEnabled));
+
+  static void setAutomationNotificationsOptedIn(bool enabled) {
+    _automationNotificationsOptedIn = enabled;
+  }
+
+  @visibleForTesting
+  static void setAutomationNotificationsEnabledForTest(bool enabled) {
+    assert(() {
+      _debugAutomationNotificationsEnabled = enabled;
+      return true;
+    }());
+  }
+
+  /// Aprobaciones pendientes. NO dependen de la escucha permanente: son un
+  /// aviso de la sesión con la app viva, no un descubrimiento por sondeo.
+  /// Antes iban tras el opt-in de automatizaciones y, con la escucha apagada,
+  /// el aviso se descartaba en silencio.
+  bool get notifyApprovals => _prefs.getBool(_kApprovals) ?? true;
+  Future<void> setNotifyApprovals(bool v) async {
+    // Las preguntas heredaban este interruptor: se congela su valor actual
+    // para que apagar las aprobaciones no apague también las preguntas.
+    if (!_prefs.containsKey(_kQuestions)) {
+      await _prefs.setBool(_kQuestions, notifyQuestions);
+    }
+    await _prefs.setBool(_kApprovals, v);
+  }
+
+  /// Preguntas del agente («necesita tu respuesta»). Interruptor propio; si
+  /// nunca se tocó hereda el de aprobaciones, que era el único que existía.
+  bool get notifyQuestions =>
+      _prefs.getBool(_kQuestions) ?? _prefs.getBool(_kApprovals) ?? true;
+  Future<void> setNotifyQuestions(bool v) => _prefs.setBool(_kQuestions, v);
+
+  @override
+  bool get notifyRuns => _prefs.getBool(_kRuns) ?? true;
+  Future<void> setNotifyRuns(bool v) => _prefs.setBool(_kRuns, v);
+
+  CronNoticeMode get cronNoticeMode => CronNoticePolicy.read(_prefs);
+  Future<void> setCronNoticeMode(CronNoticeMode mode) =>
+      _prefs.setString(CronNoticePolicy.preferenceKey, mode.name);
+
+  /// Compatibility for job detail and older callers: enabling inherits Auto.
+  bool get notifyCronResults => cronNoticeMode != CronNoticeMode.off;
+  Future<void> setNotifyCronResults(bool v) =>
+      setCronNoticeMode(v ? CronNoticeMode.automatic : CronNoticeMode.off);
+
+  Future<bool> _reserveCronNotice({
+    required String connId,
+    required String profile,
+    required String jobId,
+    required String messageId,
+    required bool ok,
+  }) async {
+    await _prefs.reload();
+    final mode = cronNoticeMode;
+    final allowed =
+        enabled &&
+        CronNoticePolicy.allows(
+          mode,
+          muteStore.cronPolicy(connId: connId, profile: profile, jobId: jobId),
+          ok: ok,
+        );
+    await _delivery.store.open();
+    return _delivery.store.reserveCronNotice(
+      connId: connId,
+      profile: profile,
+      jobId: jobId,
+      messageId: messageId,
+      ok: ok,
+      mode: mode,
+      allowed: allowed,
+    );
+  }
+
+  /// Kanban tiene opt-in propio, independiente del de Cron. Si el usuario
+  /// nunca lo tocó (p. ej. al actualizar desde una versión sin esta clave),
+  /// hereda el opt-in de automatizaciones —la escucha en segundo plano,
+  /// estable— para no silenciar avisos que ya estaban activos. Nunca consulta
+  /// la preferencia de Cron: apagar Cron no puede apagar Kanban.
+  bool get notifyKanbanResults =>
+      _prefs.getBool(_kKanbanResults) ??
+      (_prefs.getBool(backgroundListenPreferenceKey) ?? false);
+  Future<void> setNotifyKanbanResults(bool v) =>
+      _prefs.setBool(_kKanbanResults, v);
+
+  /// Standing goals (observed live while the app is open) and
+  /// `background.complete`. Own opt-in; if never touched it inherits the
+  /// retired listener's opt-in so an install that had it on keeps it.
+  bool get notifyLocalAgentResults =>
+      _prefs.getBool(_kLocalAgentResults) ??
+      (_prefs.getBool(backgroundListenPreferenceKey) ?? false);
+  Future<void> setNotifyLocalAgentResults(bool v) =>
+      _prefs.setBool(_kLocalAgentResults, v);
+
+  /// Silenciado por elemento concreto: un cron job o una tarea de Kanban
+  /// puede desactivar SU aviso sin tocar el toggle global de arriba, y
+  /// viceversa (apagar el global no borra estas preferencias).
+  bool isJobMuted(String jobId) => muteStore.isJobMuted(jobId);
+  bool isTaskMuted(String taskId) => muteStore.isTaskMuted(taskId);
+  Future<void> setJobMuted(String jobId, bool muted) =>
+      muteStore.setJobMuted(jobId, muted);
+  Future<void> setTaskMuted(String taskId, bool muted) =>
+      muteStore.setTaskMuted(taskId, muted);
+
+  bool get notifyReplies => _prefs.getBool(_kReplies) ?? true;
+  Future<void> setNotifyReplies(bool v) => _prefs.setBool(_kReplies, v);
+
+  /// «Mantener conexión mientras trabaja en segundo plano»: a running turn
+  /// keeps its socket while the app is away (`TurnKeepAliveController`).
+  /// On by default, like Desktop's keep-awake `'while-working'`
+  /// (`apps/desktop/electron/power-save.ts` `DEFAULT_KEEP_AWAKE_MODE`).
+  /// Read-only until the user moves the switch.
+  bool get keepAliveWhileWorking => _prefs.getBool(_kKeepAlive) ?? true;
+  Future<void> setKeepAliveWhileWorking(bool v) async {
+    await _prefs.setBool(_kKeepAlive, v);
+    onKeepAliveChanged?.call();
+  }
+
+  /// Told when [keepAliveWhileWorking] changes (the controller re-reads it).
+  VoidCallback? onKeepAliveChanged;
+
+  /// Copy of the keep-alive service's notification: no chat content.
+  ({String title, String text}) keepAliveNoticeCopy() {
+    final t = NotifL10n.of(_prefs);
+    return (title: t.keepAliveTitle, text: t.keepAliveText);
+  }
+
+  /// Avisar también con la app en primer plano (por defecto no, salvo aprobaciones).
+  bool get evenInForeground => _prefs.getBool(_kForeground) ?? false;
+  Future<void> setEvenInForeground(bool v) => _prefs.setBool(_kForeground, v);
+
+  /// Sustituye títulos y cuerpos por un aviso genérico en la bandeja del
+  /// sistema. Los banners dentro de la app conservan el contenido completo.
+  /// On unless the user switched it off: the text of a notice shows on the
+  /// lock screen, a watch and every notification listener, so hiding it is the
+  /// default (also for installs that never chose).
+  bool get hideSensitiveContent =>
+      forceHideSensitiveContent || (_prefs.getBool(_kHideSensitive) ?? true);
+
+  /// Set by the background listening while App Lock is on: a notice posted
+  /// with the app closed must not carry content the lock is there to protect,
+  /// whatever the user chose for the unlocked app (same rule as the
+  /// background turn check).
+  bool forceHideSensitiveContent = false;
+  Future<void> setHideSensitiveContent(bool v) =>
+      _prefs.setBool(_kHideSensitive, v);
+
+  bool get available => _available;
+
+  // ── Inicialización ──────────────────────────────────────────────────────
+  Future<void> init() async {
+    await _ensurePlatformInitialized();
+    try {
+      await _delivery.recoverAndDispatch();
+    } catch (error) {
+      // Local notification permission/replies must stay usable if durable
+      // automation recovery is temporarily unavailable. Producers still fail
+      // closed through the coordinator until a later successful open.
+      _log('delivery recovery unavailable (${error.runtimeType})');
+    }
+  }
+
+  Future<void> _ensurePlatformInitialized() async {
+    if (_inited) return;
+    final pending = _initFuture;
+    if (pending != null) return pending;
+    _initFuture = _doInit();
+    return _initFuture!;
+  }
+
+  Future<void> _doInit() async {
+    const android = AndroidInitializationSettings('ic_stat_hermes');
+    const settings = InitializationSettings(android: android);
+    try {
+      await _plugin.initialize(
+        settings,
+        // Tap con la app viva (primer plano o 2º plano): navega a la sesión.
+        // No hay acciones de fondo: las aprobaciones solo ofrecen "Abrir" y
+        // la decisión se toma siempre dentro de la app, nunca desde la
+        // bandeja ni desde la pantalla de bloqueo.
+        onDidReceiveNotificationResponse: _onNotificationTap,
+      );
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      final t = NotifL10n.of(_prefs);
+      // Migración: borra el canal único antiguo para que no quede huérfano en
+      // los ajustes del sistema. Sus notificaciones ya caducaron.
+      try {
+        await android?.deleteNotificationChannel(_legacyChannel);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('[hermes-notif] excepción silenciada (${e.runtimeType})');
+        }
+      }
+      // Un canal por tipo (nombres localizados). Aprobaciones y respuestas
+      // alertan (heads-up); ejecuciones es de importancia normal (menos ruido).
+      await android?.createNotificationChannel(
+        AndroidNotificationChannel(
+          _chApprovals,
+          t.chApprovals,
+          description: t.chApprovalsDesc,
+          importance: Importance.high,
+          ledColor: _accent,
+          enableLights: true,
+          enableVibration: true,
+          playSound: true,
+        ),
+      );
+      await android?.createNotificationChannel(
+        AndroidNotificationChannel(
+          _chReplies,
+          t.chReplies,
+          description: t.chRepliesDesc,
+          importance: Importance.high,
+          ledColor: _accent,
+          enableLights: true,
+          enableVibration: true,
+          playSound: true,
+        ),
+      );
+      await android?.createNotificationChannel(
+        AndroidNotificationChannel(
+          _chRuns,
+          t.chRuns,
+          description: t.chRunsDesc,
+          importance: Importance.defaultImportance,
+          ledColor: _accent,
+          enableLights: true,
+        ),
+      );
+      _log('canales por tipo creados (approvals/replies/runs)');
+      // Canales silenciosos (sin sonido, vibración ni globo en el icono de la
+      // app): progreso de fondo que informa sin molestar. Crear un canal ya
+      // existente solo actualiza su nombre/descripción localizados.
+      await android?.createNotificationChannel(
+        AndroidNotificationChannel(
+          _transferChannelId,
+          t.chTransfers,
+          description: t.chTransfersDesc,
+          importance: Importance.low,
+          enableVibration: false,
+          playSound: false,
+          showBadge: false,
+        ),
+      );
+      await android?.createNotificationChannel(
+        AndroidNotificationChannel(
+          _operationChannelId,
+          t.chOperations,
+          description: t.chOperationsDesc,
+          importance: Importance.low,
+          enableVibration: false,
+          playSound: false,
+          showBadge: false,
+        ),
+      );
+      // Si la app se ABRIÓ pulsando una notificación estando muerta, recupera el
+      // destino para navegar tras montar la UI (solo en el isolate de UI).
+      if (appInForeground) {
+        try {
+          final launch = await _plugin.getNotificationAppLaunchDetails();
+          if (launch?.didNotificationLaunchApp ?? false) {
+            final response = launch!.notificationResponse;
+            if (response != null) {
+              unawaited(
+                _handleOpenResponse(response, suppressRecentDuplicate: true),
+              );
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint(
+              '[hermes-notif] excepción silenciada (${e.runtimeType})',
+            );
+          }
+        }
+      }
+      _available = true;
+      _log('init OK (appInForeground=$appInForeground)');
+      // The permission is NOT asked here: opening the app is no moment to
+      // ask for notifications. See [requestPermissionWhenUseful].
+    } catch (e) {
+      _available = false;
+      _log('init FALLÓ: $e');
+    } finally {
+      _inited = true;
+      _initFuture = null;
+    }
+  }
+
+  /// Asks for POST_NOTIFICATIONS (Android 13+) once, with the system dialog
+  /// alone, at the first moment it means something: there is a Hermes to
+  /// hear from (`NotificationPermissionMoment`). Never at launch, and never
+  /// from the background isolate (no Activity to show the dialog). The
+  /// switches in the notification settings keep asking on their own when one
+  /// is turned on. Idempotent: Android does not show the dialog twice.
+  Future<void> requestPermissionWhenUseful() async {
+    if (!appInForeground) return;
+    if (_prefs.getBool(_kPermRequested) == true) return;
+    await _ensurePlatformInitialized();
+    // A platform that failed to initialise must not spend the one ask.
+    if (!_available || !appInForeground) return;
+    if (_prefs.getBool(_kPermRequested) == true) return;
+    await _prefs.setBool(_kPermRequested, true);
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    try {
+      final granted = await android?.requestNotificationsPermission();
+      _log('POST_NOTIFICATIONS asked in context → granted=$granted');
+    } catch (e) {
+      _log('POST_NOTIFICATIONS request falló: $e');
+    }
+  }
+
+  // ── Navegación al pulsar ────────────────────────────────────────────────
+
+  void _onNotificationTap(NotificationResponse response) {
+    unawaited(_handleOpenResponse(response));
+  }
+
+  Future<bool> _handleOpenResponse(
+    NotificationResponse response, {
+    bool suppressRecentDuplicate = false,
+  }) async {
+    // MainActivity is exported: any app can send a tap with a payload of
+    // its choosing. Only a payload this install sealed names a destination.
+    if (!NotificationPayloadSeal.verify(response.payload)) {
+      _log('tap ignorado: payload sin sello válido');
+      return false;
+    }
+    final open = _decodePayload(response.payload);
+    if (open == null) {
+      _log('tap ignorado: payload sin destino válido');
+      return false;
+    }
+    final fingerprint = '${response.id ?? -1}\u001f${response.payload ?? ''}';
+    final duplicate =
+        suppressRecentDuplicate && fingerprint == _lastPlatformOpenFingerprint;
+    if (duplicate) {
+      _log('tap de plataforma ya entregado; se omite duplicado inmediato');
+      return false;
+    }
+    _lastPlatformOpenFingerprint = fingerprint;
+    return await _deliverOrQueue(open) == NavigationDeliveryOutcome.delivered;
+  }
+
+  @visibleForTesting
+  Future<NavigationDeliveryOutcome> deliverOpenForTesting(
+    NotificationOpen open,
+  ) => _deliverOrQueue(open);
+
+  @visibleForTesting
+  bool get hasPendingOpenForTesting => _pendingOpen != null;
+
+  /// A tapped notification still waits for delivery (cold start, App Lock).
+  bool get hasPendingOpen => _pendingOpen != null;
+
+  /// Replaces the platform launch-intent read in tests.
+  @visibleForTesting
+  Future<bool> Function()? launchProbeForTesting;
+
+  /// Whether a notification tap started this process. Reads only the
+  /// launch intent (no channel creation, no [init]), so the shell can ask
+  /// on the first frame while [init] stays deferred. Never throws.
+  Future<bool> launchedFromNotification() async {
+    if (_pendingOpen != null) return true;
+    try {
+      final probe = launchProbeForTesting;
+      if (probe != null) return await probe();
+      final launch = await _plugin.getNotificationAppLaunchDetails();
+      return launch?.didNotificationLaunchApp ?? false;
+    } catch (error) {
+      _log('launch intent unavailable (${error.runtimeType})');
+      return false;
+    }
+  }
+
+  Future<NavigationDeliveryOutcome> _deliverOrQueue(NotificationOpen open) {
+    final payload = open.toPayload();
+    _pendingOpen = open;
+    final inFlight = _pendingOpenDelivery;
+    if (inFlight != null && _pendingOpenDeliveryPayload == payload) {
+      return inFlight;
+    }
+    final delivery = _attemptOpen(open);
+    _pendingOpenDelivery = delivery;
+    _pendingOpenDeliveryPayload = payload;
+    unawaited(
+      delivery.whenComplete(() {
+        if (identical(_pendingOpenDelivery, delivery)) {
+          _pendingOpenDelivery = null;
+          _pendingOpenDeliveryPayload = null;
+        }
+      }),
+    );
+    return delivery;
+  }
+
+  Future<NavigationDeliveryOutcome> _attemptOpen(NotificationOpen open) async {
+    final handler = _onOpenSession;
+    if (handler != null) {
+      try {
+        final outcome = await handler(open);
+        if (outcome == NavigationDeliveryOutcome.delivered) {
+          completePendingOpen(open);
+          _log('tap entregado a la navegación');
+          return outcome;
+        }
+      } catch (error) {
+        _log('navegación del tap no disponible todavía: $error');
+      }
+    }
+    _log('tap conservado para reintento');
+    return NavigationDeliveryOutcome.deferred;
+  }
+
+  /// Reintenta un toque que llegó antes de que la shell pudiera navegar.
+  Future<NavigationDeliveryOutcome> retryPendingOpen() {
+    final open = _pendingOpen;
+    if (open == null) {
+      return Future.value(NavigationDeliveryOutcome.deferred);
+    }
+    return _deliverOrQueue(open);
+  }
+
+  /// Acknowledges a queued tap only after real asynchronous navigation.
+  void completePendingOpen(NotificationOpen open) {
+    final pending = _pendingOpen;
+    if (pending != null && pending.toPayload() == open.toPayload()) {
+      _pendingOpen = null;
+      _log('tap confirmado tras navegación asíncrona');
+    }
+  }
+
+  /// Red de seguridad para Android: si `onNewIntent` reanudó la Activity pero
+  /// el callback del plugin no alcanzó el isolate de UI, vuelve a leer el
+  /// intent que conserva `flutter_local_notifications`. El callback vivo no se
+  /// deduplica; solo se impide que el mismo intent persistente sea recuperado
+  /// otra vez en cada `resumed` posterior.
+  Future<bool> recoverPlatformOpen() async {
+    await init();
+    if (await retryPendingOpen() == NavigationDeliveryOutcome.delivered) {
+      return true;
+    }
+    try {
+      final launch = await _plugin.getNotificationAppLaunchDetails();
+      if (!(launch?.didNotificationLaunchApp ?? false)) return false;
+      final response = launch!.notificationResponse;
+      if (response == null) return false;
+      return await _handleOpenResponse(response, suppressRecentDuplicate: true);
+    } catch (error) {
+      _log('no se pudo recuperar el tap de plataforma: $error');
+      return false;
+    }
+  }
+
+  /// Devuelve (y limpia) el destino pendiente de una notificación que abrió la
+  /// app. Lo llama HermesAppState tras el primer frame.
+  NotificationOpen? takePendingOpen() {
+    final o = _pendingOpen;
+    _pendingOpen = null;
+    return o;
+  }
+
+  static String? _encodePayload(
+    String? connId,
+    String? sessionId,
+    String? title, {
+    String? runId,
+    String? base,
+    String? profile,
+    NotificationChatSurface surface = NotificationChatSurface.normal,
+    String? roomId,
+    String? taskId,
+    String? jobId,
+    String? requestId,
+  }) {
+    if (connId == null || connId.isEmpty) return null;
+    final hasSid = sessionId != null && sessionId.isNotEmpty;
+    final hasRid = runId != null && runId.isNotEmpty;
+    final hasTaskId = taskId != null && taskId.isNotEmpty;
+    final hasJobId = jobId != null && jobId.isNotEmpty;
+    // Chat necesita sessionId; runs y automatizaciones llevan objeto autoritativo.
+    if (!hasSid && !hasRid && !hasTaskId && !hasJobId) return null;
+    // Exactly one primary route is encoded. A resolved cron session is more
+    // specific and tappable than its job fallback; approval keeps its run only
+    // as the required owner fence.
+    final useRequest = requestId != null && requestId.isNotEmpty;
+    final useRun = !useRequest && hasRid;
+    final useTask = !useRequest && !useRun && hasTaskId;
+    final useSession = !useRequest && !useRun && !useTask && hasSid;
+    final useJob =
+        !useRequest && !useRun && !useTask && !useSession && hasJobId;
+    return NotificationOpen(
+      connId: connId,
+      sessionId: useSession || (useRequest && hasSid) ? sessionId : '',
+      title: title,
+      profile: profile,
+      surface: surface,
+      roomId: roomId,
+      runId: useRequest || useRun ? runId : null,
+      jobId: useJob ? jobId : null,
+      requestId: useRequest ? requestId : null,
+      taskId: useTask ? taskId : null,
+    ).toPayload(base: base);
+  }
+
+  static NotificationOpen? _decodePayload(String? payload) =>
+      NotificationOpen.tryParse(payload);
+
+  /// Pide el permiso POST_NOTIFICATIONS (Android 13+). Devuelve si quedó
+  /// concedido. Idempotente y seguro de llamar varias veces.
+  Future<bool> requestPermission() async {
+    await _ensurePlatformInitialized();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    return await android?.requestNotificationsPermission() ?? false;
+  }
+
+  Future<bool> permissionGranted() async {
+    await _ensurePlatformInitialized();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    return await android?.areNotificationsEnabled() ?? false;
+  }
+
+  /// Estado del canal `hermes_alerts` según el sistema. Permite avisar al usuario
+  /// de que tiene el permiso global pero ha bloqueado ESTE canal (causa silenciosa
+  /// muy común de "no me llegan las notificaciones" en móviles reales).
+  Future<ChannelStatus> alertChannelStatus() => _channelStatus(_chApprovals);
+
+  /// Foreground-service channel used by the finite Android dataSync session.
+  Future<ChannelStatus> foregroundServiceChannelStatus() =>
+      _channelStatus('hermes_service_v2');
+
+  Future<ChannelStatus> _channelStatus(String channelId) async {
+    await init();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (android == null) return ChannelStatus.missing;
+    try {
+      final channels = await android.getNotificationChannels() ?? const [];
+      AndroidNotificationChannel? ch;
+      for (final c in channels) {
+        if (c.id == channelId) ch = c;
+      }
+      if (ch == null) return ChannelStatus.missing;
+      return ch.importance == Importance.none
+          ? ChannelStatus.blocked
+          : ChannelStatus.active;
+    } catch (e) {
+      _log('no se pudo leer el estado del canal $channelId: $e');
+      return ChannelStatus.missing;
+    }
+  }
+
+  // ── Disparadores de alto nivel ──────────────────────────────────────────
+
+  /// El agente pide aprobar una herramienta. Importante: por defecto avisa
+  /// aunque la app esté en primer plano (es accionable y sensible al tiempo).
+  @override
+  Future<void> approvalPending({
+    required String tool,
+    String? instance,
+    String? connId,
+    String? sessionId,
+    String? sessionTitle,
+    String? runId,
+    String? approvalId,
+    String? base,
+    NotificationChatSurface surface = NotificationChatSurface.normal,
+    String? profile,
+    String? roomId,
+    List<String>? approvalChoices,
+    String? command,
+    String? description,
+    bool blind = false,
+  }) async {
+    if (!notifyApprovals) return;
+    final connection = connId?.trim() ?? '';
+    final normalizedProfile = profile?.trim().isNotEmpty == true
+        ? profile!.trim().toLowerCase()
+        : 'default';
+    final run = runId?.trim() ?? '';
+    final version = approvalId?.trim() ?? '';
+    if (connection.isEmpty ||
+        normalizedProfile.isEmpty ||
+        run.isEmpty ||
+        version.isEmpty) {
+      _log(
+        'approval suprimida: identidad durable incompleta o no autoritativa',
+      );
+      return;
+    }
+    final identity = NotificationEventIdentity(
+      connId: connection,
+      profile: normalizedProfile,
+      sourceKind: 'approval',
+      objectId: run,
+      eventKind: 'pending',
+      sourceVersion: version,
+    );
+    final t = NotifL10n.of(_prefs);
+    // A run label names the tool but never carries the command.
+    // Approving something unseen is the one action an injected prompt wants:
+    // such a card only offers Deny and Open, and approving happens in the app
+    // where the command is on screen. The same holds when the card hides
+    // the command («ocultar contenido», the default), Bot chats included:
+    // the payload itself then carries Deny only.
+    final requested = approvalChoices ?? const ['once', 'deny'];
+    final choices = blind || hideSensitiveContent
+        ? <String>[if (requested.contains('deny')) 'deny']
+        : requested;
+    if (surface == NotificationChatSurface.bot &&
+        (sessionId?.isNotEmpty ?? false) &&
+        _richEligible(sessionId)) {
+      final posted = await _botChatRich.approval(
+        t: t,
+        connId: connection,
+        profile: normalizedProfile,
+        botName: _botName(connection, normalizedProfile),
+        sessionId: sessionId!,
+        requestId: version,
+        offered: choices,
+        command: tool,
+        hideSensitive: hideSensitiveContent,
+        readOnly: _connectionReadOnly(connection),
+      );
+      if (posted) return;
+    }
+    // A normal chat gets the same card a Bot chat does: what is asked, and
+    // Permitir / Rechazar answered by request id (unlock required). Only a
+    // card whose request this build cannot describe falls back below.
+    if (surface == NotificationChatSurface.normal &&
+        (sessionId?.isNotEmpty ?? false) &&
+        _richEligible(sessionId)) {
+      final chat = _chatAddress(connection, normalizedProfile, sessionId!);
+      final who = _agentName(connection, normalizedProfile);
+      final title = compactSessionLabel(sessionTitle);
+      final posted = await _postNeedsYou(
+        requestId: version,
+        tag: chat.tag,
+        args: RichNotificationBuilder(t).approval(
+          tag: chat.tag,
+          conversationId: chat.conversationId,
+          conversationTitle: title.isEmpty ? who : title,
+          isGroup: title.isNotEmpty,
+          botKey: 'hermes:$normalizedProfile',
+          botName: who,
+          botIconPath: await _needsYouFace(connection, normalizedProfile),
+          command: command,
+          description: command == null || command.trim().isEmpty
+              ? description
+              : null,
+          action: NotificationActionPayload(
+            route: NotificationActionRoute.chat,
+            connId: connection,
+            profile: normalizedProfile,
+            sessionId: sessionId,
+            requestId: version,
+            choices: choices,
+          ),
+          open: NotificationOpen(
+            connId: connection,
+            sessionId: sessionId,
+            title: title.isEmpty ? null : title,
+            profile: normalizedProfile == 'default' ? null : normalizedProfile,
+          ),
+          offered: _connectionReadOnly(connection) ? const [] : choices,
+          nowMs: DateTime.now().millisecondsSinceEpoch,
+          hideSensitive: hideSensitiveContent,
+        ),
+      );
+      if (posted) return;
+    }
+    final where = (instance != null && instance.isNotEmpty)
+        ? ' · $instance'
+        : '';
+    _pendingDisplays[identity.eventKey] = _DurableDisplay(
+      kind: NotificationKind.approval,
+      title: t.approvalTitleFor(_mainAgentName(connection, normalizedProfile)),
+      body: t.approvalBody(tool, where),
+      ongoingFeel: true,
+      bypassForeground: true,
+      targetSessionId: sessionId,
+      payload: _encodePayload(
+        connection,
+        sessionId,
+        null,
+        runId: run,
+        profile: normalizedProfile,
+        surface: surface,
+        roomId: roomId,
+        requestId: version,
+      ),
+      actions: <AndroidNotificationAction>[
+        AndroidNotificationAction(
+          'open',
+          t.actOpen,
+          showsUserInterface: true,
+          cancelNotification: true,
+        ),
+      ],
+    );
+    try {
+      await _delivery.ingestAndDispatch(<SourceCursorUpdate>[
+        SourceCursorUpdate(
+          scopeKey: '$connection/$normalizedProfile/approval/$run/$version',
+          connId: connection,
+          profile: normalizedProfile,
+          sourceKind: 'approval',
+          objectId: run,
+          lastState: 'pending',
+          lastVersion: version,
+          generation: 1,
+          initialized: true,
+          events: <DeliveryEventSpec>[
+            DeliveryEventSpec(
+              identity: identity,
+              destinationKind: 'approval',
+              // El durable exige UN dueño: la ejecución. La sesión viaja en
+              // la carga del aviso (`targetSessionId`); con las dos, el
+              // fallback fallaba con un ArgumentError que solo se veía con la
+              // escucha activa.
+              runId: run,
+              requestId: version,
+            ),
+          ],
+        ),
+      ]);
+    } finally {
+      _pendingDisplays.remove(identity.eventKey);
+    }
+  }
+
+  /// Tray address and conversation of a normal chat: its live row, its
+  /// requests and its result all live under one tag.
+  ({String tag, String conversationId}) _chatAddress(
+    String connId,
+    String profile,
+    String sessionId,
+  ) {
+    final tag = RichNotificationIds.chatTag(connId, profile, sessionId);
+    return (tag: tag, conversationId: 'chat-${tag.split('.').last}');
+  }
+
+  Future<String?> _needsYouFace(String connId, String profile) => _richFace(
+    connId,
+    RichCardSpec(
+      line: '',
+      state: BotFaceBitmapState.needsYou,
+      faceProfile: profile,
+    ),
+  );
+
+  /// Where the card of a pending request (approval or question) was posted,
+  /// by request id, so its answer from anywhere takes it down.
+  final Map<String, String> _needsYouTags = <String, String>{};
+
+  Future<bool> _postNeedsYou({
+    required String requestId,
+    required String tag,
+    required Map<String, Object?> args,
+  }) async {
+    try {
+      final posted = await _rich.postConversation(args);
+      if (posted) {
+        _needsYouTags[requestId] = tag;
+        while (_needsYouTags.length > 64) {
+          _needsYouTags.remove(_needsYouTags.keys.first);
+        }
+      }
+      return posted;
+    } catch (error) {
+      _log('needs-you rica falló (${error.runtimeType})');
+      return false;
+    }
+  }
+
+  void _withdrawNeedsYou(String requestId) {
+    final tag = _needsYouTags.remove(requestId);
+    if (tag == null) return;
+    unawaited(
+      _rich.cancel(id: RichNotificationIds.approval(requestId), tag: tag),
+    );
+  }
+
+  /// The agent stopped to ask the user something (clarify). Alerts like an
+  /// approval. [question] with an inline answer (and the [choices] the
+  /// request carries) when it is one open question; without [answerable]
+  /// (several questions at once, a password or secret prompt) the card only
+  /// says the agent waits and opens the chat. The lock screen shows who.
+  Future<void> questionPending({
+    required String connId,
+    required String sessionId,
+    required String requestId,
+    String? profile,
+    String? sessionTitle,
+    String? question,
+    List<String> choices = const [],
+    bool answerable = true,
+    NotificationChatSurface surface = NotificationChatSurface.normal,
+  }) async {
+    if (!notifyQuestions) return;
+    final connection = connId.trim();
+    final request = requestId.trim();
+    if (connection.isEmpty || sessionId.isEmpty || request.isEmpty) return;
+    // A room has its own watcher and cards.
+    if (surface == NotificationChatSurface.room) return;
+    final normalizedProfile = profile?.trim().isNotEmpty == true
+        ? profile!.trim().toLowerCase()
+        : 'default';
+    final t = NotifL10n.of(_prefs);
+    final who = _agentName(connection, normalizedProfile);
+    final title = compactSessionLabel(sessionTitle);
+    final open = NotificationOpen(
+      connId: connection,
+      sessionId: sessionId,
+      title: title.isEmpty ? null : title,
+      profile: normalizedProfile == 'default' ? null : normalizedProfile,
+      surface: surface,
+    );
+    if (!_richEligible(sessionId)) {
+      // In front and about another chat: the in-app notice, like any other
+      // request. In front of this very chat its own card is enough.
+      if (enabled && appInForeground && sessionId != visibleSessionId) {
+        _inApp.add(
+          InAppNotice(
+            kind: NotificationKind.approval,
+            title: t.needsYou(who),
+            body: plainNotificationText(question, max: 120),
+            open: open,
+          ),
+        );
+      }
+      return;
+    }
+    final bot = surface == NotificationChatSurface.bot;
+    final tag = bot
+        ? RichNotificationIds.botTag(connection, normalizedProfile)
+        : _chatAddress(connection, normalizedProfile, sessionId).tag;
+    final conversationId = bot
+        ? BotChatRichNotifications.conversationId(connection, normalizedProfile)
+        : _chatAddress(connection, normalizedProfile, sessionId).conversationId;
+    await _postNeedsYou(
+      requestId: request,
+      tag: tag,
+      args: RichNotificationBuilder(t).question(
+        tag: tag,
+        conversationId: conversationId,
+        conversationTitle: bot || title.isEmpty ? who : title,
+        isGroup: !bot && title.isNotEmpty,
+        botKey: bot ? 'bot:$normalizedProfile' : 'hermes:$normalizedProfile',
+        botName: who,
+        botIconPath: await _needsYouFace(connection, normalizedProfile),
+        requestId: request,
+        question: question,
+        choices: choices,
+        answerAction: answerable && !_connectionReadOnly(connection)
+            ? NotificationActionPayload(
+                route: NotificationActionRoute.session,
+                connId: connection,
+                profile: normalizedProfile,
+                sessionId: sessionId,
+                requestId: request,
+              )
+            : null,
+        open: open,
+        nowMs: DateTime.now().millisecondsSinceEpoch,
+        hideSensitive: hideSensitiveContent,
+      ),
+    );
+  }
+
+  /// The question [requestId] was answered, withdrawn or expired.
+  void cancelQuestion(String requestId) {
+    _withdrawNeedsYou(requestId.trim());
+  }
+
+  /// Una ejecución terminó (ok o con error).
+  @override
+  Future<void> runFinished({
+    required String title,
+    required bool ok,
+    String? connId,
+    String? sessionId,
+    String? runId,
+    String? profile,
+  }) async {
+    if (!notifyRuns) return;
+    final connection = connId?.trim() ?? '';
+    final normalizedProfile = profile?.trim().isNotEmpty == true
+        ? profile!.trim().toLowerCase()
+        : 'default';
+    final run = runId?.trim() ?? '';
+    if (connection.isEmpty || run.isEmpty) {
+      _log('run terminal suprimida: identidad durable incompleta');
+      return;
+    }
+    final identity = NotificationEventIdentity(
+      connId: connection,
+      profile: normalizedProfile,
+      sourceKind: 'run',
+      objectId: run,
+      eventKind: 'terminal',
+      sourceVersion: ok ? 'completed' : 'failed',
+    );
+    final t = NotifL10n.of(_prefs);
+    _pendingDisplays[identity.eventKey] = _DurableDisplay(
+      kind: NotificationKind.run,
+      title: ok ? t.runCompleted : t.runFailed,
+      body: title,
+      targetSessionId: sessionId,
+      payload: _encodePayload(
+        connection,
+        sessionId,
+        title,
+        runId: run,
+        profile: normalizedProfile,
+      ),
+    );
+    try {
+      await _delivery.ingestAndDispatch(<SourceCursorUpdate>[
+        SourceCursorUpdate(
+          scopeKey: '$connection/$normalizedProfile/run/$run/terminal',
+          connId: connection,
+          profile: normalizedProfile,
+          sourceKind: 'run',
+          objectId: run,
+          lastState: ok ? 'completed' : 'failed',
+          lastVersion: ok ? 'completed' : 'failed',
+          generation: 1,
+          initialized: true,
+          events: <DeliveryEventSpec>[
+            DeliveryEventSpec(
+              identity: identity,
+              destinationKind: 'run_terminal',
+              sessionId: sessionId,
+              runId: run,
+            ),
+          ],
+        ),
+      ]);
+    } finally {
+      _pendingDisplays.remove(identity.eventKey);
+    }
+  }
+
+  /// Un standing goal (`/goal`) cambió a un estado que necesita atención:
+  /// paused, blocked, waiting o done. Console lo observa en vivo mientras el
+  /// socket de la sesión sigue conectado ([ActiveChatService._syncGoalWatch])
+  /// — a diferencia de cron/kanban, no hay un sondeo en segundo plano con la
+  /// app totalmente cerrada, porque `session.control.read` es un RPC del
+  /// canal de control (requiere conexión activa), no un endpoint REST que el
+  /// isolate de servicio pueda sondear igual que `plugins/kanban/board`.
+  /// Límite honesto: si el proceso muere del todo, no hay aviso hasta la
+  /// próxima vez que se abra esa sesión.
+  Future<void> goalTransition({
+    required String title,
+    required String status,
+    String? connId,
+    String? sessionId,
+    String? profile,
+  }) async {
+    if (!notifyLocalAgentResults) return;
+    final connection = connId?.trim() ?? '';
+    final normalizedProfile = profile?.trim().isNotEmpty == true
+        ? profile!.trim().toLowerCase()
+        : 'default';
+    final session = sessionId?.trim() ?? '';
+    if (connection.isEmpty || session.isEmpty) {
+      _log('goal transition suprimida: identidad durable incompleta');
+      return;
+    }
+    final identity = NotificationEventIdentity(
+      connId: connection,
+      profile: normalizedProfile,
+      sourceKind: 'local_agent',
+      objectId: session,
+      eventKind: 'status',
+      sourceVersion: status,
+    );
+    final t = NotifL10n.of(_prefs);
+    final notifTitle = switch (status) {
+      'done' => t.goalDone,
+      'paused' => t.goalPaused,
+      'waiting' => t.goalWaiting,
+      _ => t.goalBlocked,
+    };
+    _pendingDisplays[identity.eventKey] = _DurableDisplay(
+      kind: NotificationKind.goal,
+      title: notifTitle,
+      body: t.goalBody(title),
+      targetSessionId: session,
+      payload: _encodePayload(
+        connection,
+        session,
+        title,
+        profile: normalizedProfile,
+      ),
+      rich: goalRichSpec(
+        t: t,
+        title: title,
+        status: status,
+        profile: normalizedProfile,
+      ),
+    );
+    try {
+      await _delivery.ingestAndDispatch(<SourceCursorUpdate>[
+        SourceCursorUpdate(
+          scopeKey: '$connection/$normalizedProfile/local_agent/$session',
+          connId: connection,
+          profile: normalizedProfile,
+          sourceKind: 'local_agent',
+          objectId: session,
+          lastState: status,
+          lastVersion: status,
+          generation: 1,
+          initialized: true,
+          events: <DeliveryEventSpec>[
+            DeliveryEventSpec(
+              identity: identity,
+              destinationKind: 'goal_transition',
+              sessionId: session,
+            ),
+          ],
+        ),
+      ]);
+    } finally {
+      _pendingDisplays.remove(identity.eventKey);
+    }
+  }
+
+  /// Resultado de una automatización cron descubierta desde las sesiones de
+  /// Hermes Desktop. Usa su propio opt-in ([notifyCronResults]), independiente
+  /// del de Kanban y del toggle de runs iniciadas desde Task Center.
+  ///
+  /// Local terminal results share the cron notice policy and durable success
+  /// budget.
+  @visibleForTesting
+  Future<void> cronFinished({
+    required String title,
+    required bool ok,
+    required String connId,
+    required String sessionId,
+    required String executionId,
+    required String jobId,
+    String? profile,
+    String? preview,
+  }) async {
+    final normalizedProfile = profile?.trim().isNotEmpty == true
+        ? profile!.trim().toLowerCase()
+        : 'default';
+    if (connId.trim().isEmpty ||
+        executionId.trim().isEmpty ||
+        jobId.trim().isEmpty) {
+      _log('cron suprimida: identidad durable incompleta');
+      return;
+    }
+    final identity = NotificationEventIdentity(
+      connId: connId.trim(),
+      profile: normalizedProfile,
+      sourceKind: 'cron',
+      objectId: executionId.trim(),
+      eventKind: 'terminal',
+      sourceVersion: ok ? 'completed' : 'failed',
+    );
+    if (!await _reserveCronNotice(
+      connId: connId,
+      profile: normalizedProfile,
+      jobId: jobId,
+      messageId: 'local:${identity.eventKey}',
+      ok: ok,
+    )) {
+      return;
+    }
+    final t = NotifL10n.of(_prefs);
+    _pendingDisplays[identity.eventKey] = _DurableDisplay(
+      kind: NotificationKind.run,
+      title: ok ? t.cronCompleted : t.cronFailed,
+      body: compactAutomationPreview(preview, fallback: title),
+      targetSessionId: sessionId,
+      subText: compactSessionLabel(title),
+      payload: _encodePayload(
+        connId,
+        sessionId,
+        title,
+        profile: normalizedProfile,
+        jobId: sessionId.isEmpty ? jobId : null,
+      ),
+      neutralAvatar: true,
+      rich: cronRichSpec(
+        t: t,
+        title: title,
+        ok: ok,
+        jobId: jobId,
+        profile: normalizedProfile,
+        preview: preview,
+      ),
+    );
+    try {
+      await _delivery.ingestAndDispatch(<SourceCursorUpdate>[
+        SourceCursorUpdate(
+          scopeKey:
+              '${connId.trim()}/$normalizedProfile/cron/${executionId.trim()}',
+          connId: connId.trim(),
+          profile: normalizedProfile,
+          sourceKind: 'cron',
+          objectId: executionId.trim(),
+          lastState: ok ? 'completed' : 'failed',
+          lastVersion: ok ? 'completed' : 'failed',
+          generation: 1,
+          initialized: true,
+          events: <DeliveryEventSpec>[
+            DeliveryEventSpec(
+              identity: identity,
+              destinationKind: 'cron_terminal',
+              sessionId: sessionId.isEmpty ? null : sessionId,
+              jobId: sessionId.isEmpty ? jobId.trim() : null,
+            ),
+          ],
+        ),
+      ]);
+    } finally {
+      _pendingDisplays.remove(identity.eventKey);
+    }
+  }
+
+  /// Rich card of a non-Bot scheduled job: neutral glyph, one line, green
+  /// or red, "Ver resultado" / "Reintentar" + "Ver motivo".
+  static RichCardSpec cronRichSpec({
+    required NotifL10n t,
+    required String title,
+    required bool ok,
+    required String jobId,
+    String? profile,
+    String? preview,
+  }) {
+    final job = compactSessionLabel(title);
+    final id = jobId.trim().isEmpty ? null : jobId.trim();
+    final owner = profile?.trim().isNotEmpty == true ? profile!.trim() : null;
+    // The state, then what the run said first (never the job's name again).
+    final said = firstLinePlain(preview, max: 140);
+    final line = [
+      t.cronHead(ok),
+      if (said.isNotEmpty && said != job) said,
+    ].join(' · ');
+    return ok
+        ? RichCardSpec(
+            line: line,
+            state: BotFaceBitmapState.done,
+            openLabel: t.actViewResult,
+            conversationTitle: job.isEmpty ? null : job,
+            senderLabel: t.senderScheduled,
+            row: true,
+            muteJobId: id,
+            muteProfile: owner,
+          )
+        : RichCardSpec(
+            line: line,
+            state: BotFaceBitmapState.failed,
+            retryJobId: id,
+            retryProfile: profile == 'default' ? null : profile,
+            reasonLabel: t.actViewReason,
+            conversationTitle: job.isEmpty ? null : job,
+            senderLabel: t.senderScheduled,
+            row: true,
+            muteJobId: id,
+            muteProfile: owner,
+          );
+  }
+
+  /// Row of a standing goal: the goal's own text and its state. A blocked
+  /// goal alerts; the rest are silent.
+  static RichCardSpec goalRichSpec({
+    required NotifL10n t,
+    required String title,
+    required String status,
+    String? profile,
+  }) {
+    final goal = compactSessionLabel(title);
+    final owner = profile?.trim().toLowerCase() ?? '';
+    return RichCardSpec(
+      line: t.goalHead(status),
+      conversationTitle: goal.isEmpty ? null : goal,
+      senderLabel: t.senderGoals,
+      faceProfile: owner.isEmpty || owner == 'default' ? null : owner,
+      state: switch (status) {
+        'done' => BotFaceBitmapState.done,
+        'paused' || 'waiting' => BotFaceBitmapState.idle,
+        _ => BotFaceBitmapState.failed,
+      },
+      row: true,
+    );
+  }
+
+  /// Rich card of a Kanban transition: the assignee Bot's face when the task
+  /// has one, else the neutral glyph; "Abrir tarea".
+  /// Title of a Kanban status notice. [eventKinds] are the terminal events
+  /// read with it: `gave_up` / `block_loop_detected` say why the task is
+  /// blocked or in triage, as Desktop's completion-notify.ts does.
+  static String kanbanTitle(
+    NotifL10n t,
+    String status, {
+    Set<String> eventKinds = const <String>{},
+  }) => switch (status) {
+    'done' => t.kanbanCompleted,
+    'blocked' when eventKinds.contains('gave_up') => t.kanbanGaveUp,
+    'blocked' => t.kanbanBlocked,
+    'triage' when eventKinds.contains('block_loop_detected') =>
+      t.kanbanBlockLoop,
+    'triage' => t.kanbanNeedsAttention,
+    _ => t.kanbanUpdated,
+  };
+
+  static RichCardSpec kanbanRichSpec({
+    required NotifL10n t,
+    required String title,
+    required String status,
+    String? assignee,
+    String? taskId,
+    Set<String> eventKinds = const <String>{},
+    String? retry,
+  }) {
+    final who = assignee?.trim().toLowerCase();
+    final task = compactSessionLabel(title);
+    final id = taskId?.trim() ?? '';
+    return RichCardSpec(
+      line: t.kanbanHead(status, eventKinds: eventKinds, retry: retry),
+      conversationTitle: task.isEmpty ? null : task,
+      senderLabel: t.senderTasks,
+      row: true,
+      muteTaskId: id.isEmpty ? null : id,
+      state: switch (status) {
+        'done' => BotFaceBitmapState.done,
+        'blocked' => BotFaceBitmapState.failed,
+        'triage' => BotFaceBitmapState.needsYou,
+        _ => BotFaceBitmapState.idle,
+      },
+      faceProfile: who == null || who.isEmpty ? null : who,
+      openLabel: t.actOpenTask,
+    );
+  }
+
+  /// Convierte la respuesta final del agente en texto legible para la bandeja.
+  /// Nunca usa el prompt del job como fallback: si el Dashboard no publica el
+  /// último turno del asistente, muestra únicamente el nombre de la tarea.
+  static String compactAutomationPreview(
+    String? raw, {
+    required String fallback,
+  }) {
+    final source = stripBotMentionNote(raw ?? '')
+        .replaceAll(RegExp(r'[\u0000-\u001F\u007F-\u009F]'), ' ')
+        .replaceAll(RegExp(r'[\u202A-\u202E\u2066-\u2069]'), ' ');
+    final compact = markdownToCompactText(source).trim();
+    final visible = compact.isEmpty ? compactSessionLabel(fallback) : compact;
+    const maxRunes = 280;
+    final runes = visible.runes.toList(growable: false);
+    if (runes.length <= maxRunes) return visible;
+    return '${String.fromCharCodes(runes.take(maxRunes - 1))}…';
+  }
+
+  /// Transición relevante del Kanban oficial de Hermes Agent 0.20. El aviso
+  /// lleva el `taskId` autoritativo en el payload: el tap abre la tarjeta
+  /// exacta en TasksScreen, sin inventar un destino de Task Center.
+  /// Opt-in propio ([notifyKanbanResults]), independiente del de Cron.
+  ///
+  /// Not a delivery path: Kanban notices are discovered only by the
+  /// background listener, which shares [kanbanTitle] and [kanbanRichSpec].
+  @visibleForTesting
+  Future<void> kanbanTransition({
+    required String connId,
+    required String taskId,
+    required String title,
+    required String status,
+    String profile = 'default',
+    String sourceVersion = 'current',
+    String? assignee,
+  }) async {
+    if (!notifyKanbanResults) return;
+    if (isTaskMuted(taskId)) return;
+    final connection = connId.trim();
+    final task = taskId.trim();
+    final normalizedProfile = profile.trim().toLowerCase();
+    final version = sourceVersion.trim();
+    if (connection.isEmpty ||
+        task.isEmpty ||
+        normalizedProfile.isEmpty ||
+        version.isEmpty) {
+      _log('kanban suprimida: identidad durable incompleta');
+      return;
+    }
+    final identity = NotificationEventIdentity(
+      connId: connection,
+      profile: normalizedProfile,
+      sourceKind: 'kanban',
+      objectId: task,
+      eventKind: status.trim().toLowerCase(),
+      sourceVersion: version,
+    );
+    final t = NotifL10n.of(_prefs);
+    final notificationTitle = kanbanTitle(t, status);
+    _pendingDisplays[identity.eventKey] = _DurableDisplay(
+      kind: NotificationKind.run,
+      title: notificationTitle,
+      body: title,
+      subText: 'Kanban · $task',
+      payload: _encodePayload(connection, null, title, taskId: task),
+      neutralAvatar: true,
+      rich: kanbanRichSpec(
+        t: t,
+        title: title,
+        status: status,
+        assignee: assignee,
+        taskId: task,
+      ),
+    );
+    try {
+      await _delivery.ingestAndDispatch(<SourceCursorUpdate>[
+        SourceCursorUpdate(
+          scopeKey: '$connection/$normalizedProfile/kanban/$task',
+          connId: connection,
+          profile: normalizedProfile,
+          sourceKind: 'kanban',
+          objectId: task,
+          lastState: status.trim().toLowerCase(),
+          lastVersion: version,
+          generation: 1,
+          initialized: true,
+          events: <DeliveryEventSpec>[
+            DeliveryEventSpec(
+              identity: identity,
+              destinationKind: 'kanban_transition',
+              taskId: task,
+            ),
+          ],
+        ),
+      ]);
+    } finally {
+      _pendingDisplays.remove(identity.eventKey);
+    }
+  }
+
+  /// Notificación de progreso de una ejecución en curso (Task Center). Rango
+  /// de IDs reservado: 9000–9511 (no colisiona con BackgroundListener 7100–8123).
+  /// [onlyAlertOnce: true] para no repetir sonido en cada actualización.
+  @override
+  Future<void> runLive({
+    required String runId,
+    required String title,
+    required String body,
+    String? connId,
+    String? sessionId,
+  }) {
+    if (!notifyRuns) return Future.value();
+    return _show(
+      kind: NotificationKind.run,
+      id: runNotificationId(runId),
+      title: title,
+      body: body,
+      ongoingFeel: true,
+      targetSessionId: sessionId,
+      payload: _encodePayload(connId, sessionId, title, runId: runId),
+    );
+  }
+
+  /// Cancela la notificación de progreso de un run (si la hay).
+  @override
+  Future<void> cancelRun(String runId) =>
+      cancelById(runNotificationId(runId), 'cancelRun');
+
+  /// Otra superficie (Desktop, otra Console, TUI) terminó de trabajar en una
+  /// sesión — cross-surface, sin tomar propiedad de ella. `phase` es
+  /// 'completed'/'failed'/'interrupted' (ver [sessionActivityPhaseWire]).
+  ///
+  /// No se nombra la superficie de origen: la proyección de actividad global
+  /// es deliberadamente ciega a esa identidad (privacy-bounded), así que
+  /// afirmarlo sería inventar un dato que no tenemos. Reusa el toggle y canal
+  /// de Runs — es la misma categoría de aviso ("algo terminó en segundo
+  /// plano") y evita una fila más de ajustes para algo que el usuario no pidió
+  /// separar.
+  Future<void> sessionActivityFinished({
+    required String phase,
+    String? connId,
+    String? sessionId,
+    String? profile,
+  }) {
+    if (!notifyRuns) return Future.value();
+    final t = NotifL10n.of(_prefs);
+    return _show(
+      kind: NotificationKind.localAgent,
+      id: eventNotificationId(
+        base: 7000,
+        span: 512,
+        parts: [connId ?? '', sessionId ?? ''],
+      ),
+      title: switch (phase) {
+        'failed' => t.sessionActivityFailedTitle,
+        'interrupted' => t.sessionActivityInterruptedTitle,
+        _ => t.sessionActivityFinishedTitle,
+      },
+      body: t.sessionActivityBody,
+      targetSessionId: sessionId,
+      payload: _encodePayload(connId, sessionId, null, profile: profile),
+      compact: true,
+      readScope: _ChatReadScope.of(connId, profile, sessionId),
+    );
+  }
+
+  /// Una tarea de `prompt.background` lanzada desde el Agent Center terminó.
+  /// Igual que [sessionActivityFinished], nunca se repite el texto de
+  /// respuesta en la bandeja del sistema — solo el estado; el resultado
+  /// completo vive dentro de la app.
+  Future<void> backgroundTaskFinished({
+    required bool isError,
+    String? connId,
+    String? sessionId,
+    String? taskId,
+    String? profile,
+  }) {
+    if (!notifyRuns) return Future.value();
+    final t = NotifL10n.of(_prefs);
+    return _show(
+      kind: NotificationKind.localAgent,
+      id: eventNotificationId(
+        base: 7600,
+        span: 512,
+        parts: [connId ?? '', taskId ?? ''],
+      ),
+      title: isError
+          ? t.backgroundTaskFailedTitle
+          : t.backgroundTaskFinishedTitle,
+      body: t.backgroundTaskBody,
+      targetSessionId: sessionId,
+      payload: _encodePayload(connId, sessionId, null, profile: profile),
+      compact: true,
+      readScope: _ChatReadScope.of(connId, profile, sessionId),
+    );
+  }
+
+  /// La respuesta del asistente está lista (app en segundo plano). [session] es
+  /// el título legible de la sesión: si se conoce, lo nombramos para que el
+  /// usuario sepa de qué chat se trata sin abrir la app.
+  ///
+  /// A normal chat gets its own conversation card with the first line of
+  /// the reply; [replyable] (the chat runs on the gateway, where a stored
+  /// session takes a new message) adds the inline reply.
+  Future<void> replyReady({
+    required String preview,
+    String? instance,
+    String? session,
+    String? connId,
+    String? sessionId,
+    NotificationChatSurface surface = NotificationChatSurface.normal,
+    String? profile,
+    String? roomId,
+    bool replyable = false,
+  }) {
+    if (!notifyReplies) return Future.value();
+    if (shouldSuppressReplyForActiveVoice(
+      activeVoiceSessionId: activeVoiceSessionId,
+      targetSessionId: sessionId,
+    )) {
+      return Future.value();
+    }
+    final t = NotifL10n.of(_prefs);
+    final label = compactSessionLabel(session);
+    final visibleLabel = _replyIdentity(instance: instance, session: label);
+    final botProfile = profile?.trim() ?? '';
+    if (surface == NotificationChatSurface.bot &&
+        botProfile.isNotEmpty &&
+        (connId?.isNotEmpty ?? false) &&
+        (sessionId?.isNotEmpty ?? false) &&
+        _richEligible(sessionId)) {
+      return () async {
+        final posted = await _botChatRich.replyReady(
+          t: t,
+          connId: connId!,
+          profile: botProfile,
+          botName: _botName(connId, botProfile),
+          sessionId: sessionId!,
+          preview: preview,
+          hideSensitive: hideSensitiveContent,
+          readOnly: _connectionReadOnly(connId),
+        );
+        // Deliberately not recorded in [chatReadSync]: this card lives at the
+        // Bot's conversation address (conversation id + botTag), which Bot
+        // routine results also post to, from the background listener's
+        // isolate as well, where this ledger cannot see them. Retracting the
+        // address on a chat read could take down an unseen routine result,
+        // so the card stays until the user opens or dismisses it. The plain
+        // fallback below has its own per-chat address and is recorded.
+        if (posted) return;
+        await _replyFallback(
+          t,
+          label,
+          visibleLabel,
+          connId,
+          sessionId,
+          surface,
+          profile,
+          roomId,
+          preview: preview,
+        );
+      }();
+    }
+    if (_chatResultEligible(surface, connId, sessionId)) {
+      return () async {
+        final line = firstLinePlain(preview, max: 160);
+        final posted = await _postChatResult(
+          t: t,
+          connId: connId!,
+          profile: profile,
+          sessionId: sessionId!,
+          title: label,
+          // Never an empty card: a reply with no plain first line (only an
+          // image, a table) still says it is ready.
+          line: line.isEmpty ? t.replyReadyBody : line,
+          failed: false,
+          replyable: replyable,
+        );
+        if (posted) return;
+        await _replyFallback(
+          t,
+          label,
+          visibleLabel,
+          connId,
+          sessionId,
+          surface,
+          profile,
+          roomId,
+          preview: preview,
+        );
+      }();
+    }
+    return _replyFallback(
+      t,
+      label,
+      visibleLabel,
+      connId,
+      sessionId,
+      surface,
+      profile,
+      roomId,
+      preview: preview,
+    );
+  }
+
+  Future<void> _replyFallback(
+    NotifL10n t,
+    String label,
+    String? visibleLabel,
+    String? connId,
+    String? sessionId,
+    NotificationChatSurface surface,
+    String? profile,
+    String? roomId, {
+    String preview = '',
+  }) {
+    return _show(
+      kind: NotificationKind.reply,
+      id: replyNotificationId(
+        connId: connId,
+        sessionId: sessionId,
+        session: label,
+      ),
+      title: t.replyTitle(visibleLabel, agent: _mainAgentName(connId, profile)),
+      body: notificationPreview(preview).isEmpty
+          ? t.replyReadyBody
+          : notificationPreview(preview),
+      targetSessionId: sessionId,
+      payload: _encodePayload(
+        connId,
+        sessionId,
+        label,
+        profile: profile,
+        surface: surface,
+        roomId: roomId,
+      ),
+      compact: true,
+      readScope: _ChatReadScope.of(connId, profile, sessionId),
+    );
+  }
+
+  /// El turno del agente falló (app en segundo plano). Se agrupa con las
+  /// respuestas (mismo toggle [notifyReplies]) porque es el desenlace —fallido—
+  /// del mensaje que el usuario envió.
+  Future<void> replyFailed({
+    required String session,
+    String? instance,
+    String? detail,
+    String? connId,
+    String? sessionId,
+    NotificationChatSurface surface = NotificationChatSurface.normal,
+    String? profile,
+    String? roomId,
+  }) {
+    if (!notifyReplies) return Future.value();
+    final t = NotifL10n.of(_prefs);
+    final label = compactSessionLabel(session);
+    final visibleLabel = _replyIdentity(instance: instance, session: label);
+    final title = t.replyFailedTitle(
+      visibleLabel,
+      agent: _mainAgentName(connId, profile),
+    );
+    Future<void> plain() => _show(
+      kind: NotificationKind.reply,
+      id: replyNotificationId(
+        connId: connId,
+        sessionId: sessionId,
+        session: label,
+      ),
+      title: title,
+      // El detalle puede contener salida parcial, Markdown, rutas o mensajes de
+      // transporte. La causa completa permanece dentro del chat; la bandeja
+      // solo comunica el estado y la conversación afectada.
+      body: t.replyFailedBody,
+      targetSessionId: sessionId,
+      payload: _encodePayload(
+        connId,
+        sessionId,
+        label,
+        profile: profile,
+        surface: surface,
+        roomId: roomId,
+      ),
+      compact: true,
+      // A failure is never a quiet card: the failed state makes it alert.
+      rich: RichCardSpec(
+        line: _defaultRichSpec(
+          NotificationKind.reply,
+          title,
+          t.replyFailedBody,
+        ).line,
+        state: BotFaceBitmapState.failed,
+      ),
+      readScope: _ChatReadScope.of(connId, profile, sessionId),
+    );
+    if (!_chatResultEligible(surface, connId, sessionId)) return plain();
+    return () async {
+      final posted = await _postChatResult(
+        t: t,
+        connId: connId!,
+        profile: profile,
+        sessionId: sessionId!,
+        title: label,
+        line: t.resultFailedLine,
+        failed: true,
+        replyable: false,
+      );
+      if (!posted) await plain();
+    }();
+  }
+
+  /// A normal chat's result gets its own conversation card when a system
+  /// card is due at all and its text may be shown; with content hidden the
+  /// generic card stays.
+  bool _chatResultEligible(
+    NotificationChatSurface surface,
+    String? connId,
+    String? sessionId,
+  ) =>
+      surface == NotificationChatSurface.normal &&
+      !hideSensitiveContent &&
+      (connId?.trim().isNotEmpty ?? false) &&
+      (sessionId?.trim().isNotEmpty ?? false) &&
+      _richEligible(sessionId);
+
+  /// The result of a normal chat's turn, in that chat's conversation and at
+  /// its tray address, where it takes the place of the turn's live row: the
+  /// first line of the reply (silent, with Reply and Mark read) or that it
+  /// failed (alerts). The lock screen names who, never the chat. Recorded in
+  /// [chatReadSync] like every chat notification. False = nothing posted.
+  Future<bool> _postChatResult({
+    required NotifL10n t,
+    required String connId,
+    required String? profile,
+    required String sessionId,
+    required String title,
+    required String line,
+    required bool failed,
+    required bool replyable,
+  }) async {
+    final owner = profile?.trim().isNotEmpty == true
+        ? profile!.trim().toLowerCase()
+        : 'default';
+    final chat = _chatAddress(connId, owner, sessionId);
+    final who = _agentName(connId, owner);
+    final action = _connectionReadOnly(connId)
+        ? null
+        : NotificationActionPayload(
+            route: NotificationActionRoute.session,
+            connId: connId,
+            profile: owner,
+            sessionId: sessionId,
+          );
+    const id = RichNotificationIds.conversation;
+    final ledger = _chatReadSync;
+    // Fences the address: no ledger cancel lands on this post.
+    await ledger?.beginPost(id, chat.tag);
+    try {
+      final face = await _richFace(
+        connId,
+        RichCardSpec(
+          line: '',
+          state: failed ? BotFaceBitmapState.failed : BotFaceBitmapState.done,
+          faceProfile: owner,
+        ),
+      );
+      // The conversation keeps the plain face: it outlives this result.
+      final plainFace = await _richFace(
+        connId,
+        RichCardSpec(line: '', faceProfile: owner),
+      );
+      final posted = await _rich.postConversation(
+        RichNotificationBuilder(t).conversation(
+          tag: chat.tag,
+          conversationId: chat.conversationId,
+          conversationTitle: title.isEmpty ? who : title,
+          isGroup: title.isNotEmpty,
+          messages: [
+            RichMessage(
+              senderKey: 'hermes:$owner',
+              senderName: who,
+              text: line,
+              iconPath: face,
+              timeMs: DateTime.now().millisecondsSinceEpoch,
+            ),
+          ],
+          open: NotificationOpen(
+            connId: connId,
+            sessionId: sessionId,
+            title: title.isEmpty ? null : title,
+            profile: owner == 'default' ? null : owner,
+          ),
+          replyTo: who,
+          replyAction: replyable && !failed ? action : null,
+          action: action,
+          extraActions: failed ? const [] : [RichAction('read', t.actMarkRead)],
+          alert: failed,
+          accent: failed ? RichAccent.failed : RichAccent.done,
+          openLabel: failed ? t.actViewReason : null,
+          subText: failed ? null : t.resultDone,
+          publicTitle: who,
+          shortcutIconPath: plainFace ?? face,
+        ),
+      );
+      if (posted) {
+        ledger?.record(
+          id: id,
+          tag: chat.tag,
+          connId: connId,
+          profile: profile,
+          sessionId: sessionId,
+        );
+      }
+      return posted;
+    } catch (error) {
+      _log('reply rica falló (${error.runtimeType})');
+      return false;
+    } finally {
+      ledger?.endPost(id, chat.tag);
+    }
+  }
+
+  /// Una alerta por conversación: el éxito y el fallo del mismo turno se
+  /// reemplazan entre sí, mientras chats distintos pueden convivir. El rango
+  /// 0x10000000–0x1FFFFFFF (28 bits) queda separado de alertas fijas, runs y
+  /// modo voz; con 512 huecos, dos chats compartían aviso a partir de pocas
+  /// decenas (cumpleaños).
+  @visibleForTesting
+  static int replyNotificationId({
+    String? connId,
+    String? sessionId,
+    String? session,
+  }) {
+    final identity = [
+      connId?.trim() ?? '',
+      sessionId?.trim() ?? '',
+      session?.trim() ?? '',
+    ].join('\u001f');
+    // `String.hashCode` no forma parte de un contrato persistente entre
+    // procesos. Una función FNV-1a fija evita que, tras reiniciar Android, el
+    // mismo chat deje dos avisos en vez de reemplazar el anterior.
+    var hash = 0x811c9dc5;
+    for (final byte in utf8.encode(identity)) {
+      hash ^= byte;
+      hash = (hash * 0x01000193) & 0xffffffff;
+    }
+    return 0x10000000 + (hash & 0x0fffffff);
+  }
+
+  /// Aviso de un run: estable entre procesos (FNV-1a, no `String.hashCode`)
+  /// y en su propio rango de 28 bits, 0x20000000–0x2FFFFFFF.
+  @visibleForTesting
+  static int runNotificationId(String runId) {
+    var hash = 0x811c9dc5;
+    for (final byte in utf8.encode(runId)) {
+      hash ^= byte;
+      hash = (hash * 0x01000193) & 0xffffffff;
+    }
+    return 0x20000000 + (hash & 0x0fffffff);
+  }
+
+  /// ID estable entre procesos derivado solo de identidad autoritativa.
+  @visibleForTesting
+  static int eventNotificationId({
+    required int base,
+    required int span,
+    required List<String> parts,
+  }) {
+    var hash = 0x811c9dc5;
+    for (final byte in utf8.encode(parts.join('\u001f'))) {
+      hash ^= byte;
+      hash = (hash * 0x01000193) & 0xffffffff;
+    }
+    return base + (hash % span);
+  }
+
+  /// Los títulos proceden del servidor y pueden contener Markdown, controles o
+  /// varias líneas. La bandeja solo necesita una etiqueta breve y legible.
+  static String compactSessionLabel(String? raw) {
+    final source = stripBotMentionNote(raw ?? '')
+        .replaceAll(RegExp(r'[\u0000-\u001F\u007F-\u009F]'), ' ')
+        .replaceAll(RegExp(r'[\u202A-\u202E\u2066-\u2069]'), ' ');
+    final compact = markdownToCompactText(
+      source,
+    ).replaceAll(RegExp(r'\s+'), ' ').trim();
+    const maxRunes = 56;
+    final runes = compact.runes.toList(growable: false);
+    if (runes.length <= maxRunes) return compact;
+    return '${String.fromCharCodes(runes.take(maxRunes - 1))}…';
+  }
+
+  static String _replyIdentity({String? instance, String? session}) {
+    final instanceLabel = compactSessionLabel(instance);
+    final sessionLabel = compactSessionLabel(session);
+    if (instanceLabel.isEmpty) return sessionLabel;
+    if (sessionLabel.isEmpty || sessionLabel == instanceLabel) {
+      return instanceLabel;
+    }
+    return '$instanceLabel · $sessionLabel';
+  }
+
+  /// La instalación del agente local terminó (éxito o fallo). Solo avisa si la
+  /// app NO está en primer plano (segundo plano, pantalla apagada o bloqueada):
+  /// es para enterarse del desenlace de una operación larga que el usuario dejó
+  /// corriendo; si está mirando la pantalla ya lo ve y no hace falta molestar.
+  /// No usa bypassForeground, así que respeta la supresión en primer plano.
+  Future<void> localInstallFinished({required bool ok, String? detail}) {
+    final t = NotifL10n.of(_prefs);
+    final reason = detail?.trim();
+    return _show(
+      kind: NotificationKind.localAgent,
+      id: 7200,
+      title: ok ? t.localInstalled : t.localInstallError,
+      body: ok
+          ? t.localInstalledBody
+          : (reason != null && reason.isNotEmpty
+                ? reason
+                : t.localInstallErrorBody),
+    );
+  }
+
+  /// La desinstalación del agente local terminó (éxito o con restos). Mismas
+  /// reglas que [localInstallFinished]: solo avisa con la app en segundo plano.
+  Future<void> localUninstallFinished({required bool ok, String? detail}) {
+    final t = NotifL10n.of(_prefs);
+    final reason = detail?.trim();
+    return _show(
+      kind: NotificationKind.localAgent,
+      id: 7201,
+      title: ok ? t.localRemoved : t.localRemoveError,
+      body: ok
+          ? t.localRemovedBody
+          : (reason != null && reason.isNotEmpty
+                ? reason
+                : t.localRemoveErrorBody),
+    );
+  }
+
+  /// Notificación de prueba (desde Ajustes), para que el usuario vea el estilo.
+  Future<bool> sendTest() async {
+    final t = NotifL10n.of(_prefs);
+    final outcome = await _show(
+      kind: NotificationKind.test,
+      id: 7000,
+      title: t.testTitle,
+      body: t.testBody,
+      bypassForeground: true,
+      // La prueba muestra también el botón interactivo "Abrir" (las reales lo
+      // traen por su destino vía payload).
+      actions: [
+        AndroidNotificationAction(
+          'open',
+          t.actOpen,
+          showsUserInterface: true,
+          cancelNotification: true,
+        ),
+      ],
+    );
+    return outcome == _ShowOutcome.alertShown;
+  }
+
+  // ── Transferencias SFTP (progreso silencioso) ────────────────────────────
+
+  /// Notificación de progreso de una transferencia (barra). [progress] y [max]
+  /// en la misma unidad (p.ej. bytes/1024). [indeterminate] si no se sabe el
+  /// total. Canal de baja importancia: no suena ni vibra. Se muestra también en
+  /// primer plano (es informativa, no molesta) para que persista al salir.
+  Future<void> transferProgress({
+    required int id,
+    required String title,
+    required String body,
+    required int progress,
+    required int max,
+    bool indeterminate = false,
+  }) async {
+    await init();
+    if (!_available || !await permissionGranted()) return;
+    final t = NotifL10n.of(_prefs);
+    final details = AndroidNotificationDetails(
+      _transferChannelId,
+      t.chTransfers,
+      channelDescription: t.chTransfersDesc,
+      importance: Importance.low,
+      priority: Priority.low,
+      icon: 'ic_stat_hermes',
+      color: _accent,
+      onlyAlertOnce: true,
+      ongoing: true,
+      autoCancel: false,
+      showProgress: true,
+      maxProgress: max <= 0 ? 100 : max,
+      progress: progress.clamp(0, max <= 0 ? 100 : max),
+      indeterminate: indeterminate,
+      category: AndroidNotificationCategory.progress,
+    );
+    await _plugin.show(id, title, body, NotificationDetails(android: details));
+  }
+
+  /// Notificación final de una transferencia (completada o con error). Reemplaza
+  /// la de progreso (mismo [id]). Avisa con sonido si la app está en 2º plano.
+  Future<void> transferDone({
+    required int id,
+    required String title,
+    required String body,
+    required bool ok,
+  }) async {
+    await init();
+    if (!_available || !await permissionGranted()) return;
+    final foreground = appInForeground;
+    final t = NotifL10n.of(_prefs);
+    final alert = ok && !foreground; // suena solo al terminar OK en 2º plano
+    final details = AndroidNotificationDetails(
+      alert ? _chRuns : _transferChannelId,
+      alert ? t.chRuns : t.chTransfers,
+      channelDescription: alert ? t.chRunsDesc : t.chTransfersDesc,
+      importance: foreground ? Importance.low : Importance.high,
+      priority: foreground ? Priority.low : Priority.high,
+      icon: 'ic_stat_hermes',
+      color: _accent,
+      onlyAlertOnce: true,
+      ongoing: false,
+      autoCancel: true,
+      category: AndroidNotificationCategory.status,
+    );
+    await _plugin.show(id, title, body, NotificationDetails(android: details));
+  }
+
+  /// Una descarga SFTP terminada: como [transferDone] (bien), y al pulsarla
+  /// ofrece Abrir, Compartir y Guardar otra copia… del documento ([open]).
+  Future<void> downloadReady({
+    required int id,
+    required String title,
+    required String body,
+    required NotificationOpen open,
+  }) async {
+    await init();
+    if (!_available || !await permissionGranted()) return;
+    final foreground = appInForeground;
+    final t = NotifL10n.of(_prefs);
+    final details = AndroidNotificationDetails(
+      foreground ? _transferChannelId : _chRuns,
+      foreground ? t.chTransfers : t.chRuns,
+      channelDescription: foreground ? t.chTransfersDesc : t.chRunsDesc,
+      importance: foreground ? Importance.low : Importance.high,
+      priority: foreground ? Priority.low : Priority.high,
+      icon: 'ic_stat_hermes',
+      color: _accent,
+      onlyAlertOnce: true,
+      ongoing: false,
+      autoCancel: true,
+      category: AndroidNotificationCategory.status,
+    );
+    await _plugin.show(
+      id,
+      title,
+      body,
+      NotificationDetails(android: details),
+      payload: open.toPayload(),
+    );
+  }
+
+  Future<void> cancelTransfer(int id) => cancelById(id, 'transfer');
+
+  Future<void> operationProgress({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    await init();
+    if (!_available || !await permissionGranted()) return;
+    final t = NotifL10n.of(_prefs);
+    final details = AndroidNotificationDetails(
+      _operationChannelId,
+      t.chOperations,
+      channelDescription: t.chOperationsDesc,
+      importance: Importance.low,
+      priority: Priority.low,
+      icon: 'ic_stat_hermes',
+      color: _accent,
+      onlyAlertOnce: true,
+      ongoing: true,
+      autoCancel: false,
+      showProgress: true,
+      maxProgress: 100,
+      progress: 0,
+      indeterminate: true,
+      category: AndroidNotificationCategory.progress,
+    );
+    await _plugin.show(id, title, body, NotificationDetails(android: details));
+  }
+
+  Future<void> cancelOperation(int id) => cancelById(id, 'operation');
+
+  /// ¿Debe mostrarse una notificación del sistema, dada la situación de primer
+  /// plano? Pura y testeable: concentra las Reglas 1/2/6.
+  ///
+  ///  - App en 2º plano → siempre se evalúa mostrar (true): el usuario no ve la UI.
+  ///  - App en primer plano y el evento es del chat que está MIRANDO → false:
+  ///    la tarjeta/respuesta inline ya lo muestra; notificar sería un duplicado.
+  ///  - App en primer plano y el evento es de OTRO chat (o ninguno): solo si el
+  ///    evento lo exige ([bypassForeground], p.ej. aprobaciones) o el usuario
+  ///    activó avisos incluso en primer plano ([evenInForeground]). El aviso
+  ///    discreto in-app de "otro chat" (Regla 2) lo gestiona la capa de UI.
+  @visibleForTesting
+  static bool shouldShowInForeground({
+    required bool appInForeground,
+    required bool bypassForeground,
+    required bool evenInForeground,
+    required String? targetSessionId,
+    required String? visibleSessionId,
+  }) {
+    if (!appInForeground) return true;
+    final viewingThisChat =
+        targetSessionId != null &&
+        targetSessionId.isNotEmpty &&
+        targetSessionId == visibleSessionId;
+    if (viewingThisChat) return false;
+    return bypassForeground || evenInForeground;
+  }
+
+  /// Una respuesta exitosa del chat propietario ya se representa y se narra en
+  /// la sesión de voz. No suprime otros chats ni eventos de aprobación/error.
+  @visibleForTesting
+  static bool shouldSuppressReplyForActiveVoice({
+    required String? activeVoiceSessionId,
+    required String? targetSessionId,
+  }) {
+    final active = activeVoiceSessionId?.trim() ?? '';
+    final target = targetSessionId?.trim() ?? '';
+    return active.isNotEmpty && target.isNotEmpty && active == target;
+  }
+
+  /// Canal (id/nombre/descripción/importancia) según el tipo de evento.
+  ({
+    String id,
+    String name,
+    String desc,
+    Importance importance,
+    Priority priority,
+  })
+  _channelFor(NotificationKind kind, NotifL10n t) {
+    switch (kind) {
+      case NotificationKind.approval:
+      case NotificationKind.test:
+        return (
+          id: _chApprovals,
+          name: t.chApprovals,
+          desc: t.chApprovalsDesc,
+          importance: Importance.high,
+          priority: Priority.high,
+        );
+      case NotificationKind.reply:
+        return (
+          id: _chReplies,
+          name: t.chReplies,
+          desc: t.chRepliesDesc,
+          importance: Importance.high,
+          priority: Priority.high,
+        );
+      case NotificationKind.run:
+      case NotificationKind.localAgent:
+      case NotificationKind.goal:
+        return (
+          id: _chRuns,
+          name: t.chRuns,
+          desc: t.chRunsDesc,
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        );
+    }
+  }
+
+  /// Bot-owned routine result as a message from that Bot in its own
+  /// conversation (face + state accent). False when the rich renderer is
+  /// unavailable; the caller then falls back to the plain card.
+  @visibleForTesting
+  Future<bool> presentBotRoutine({
+    required String connId,
+    required String sessionId,
+    required BotRoutineDisplay routine,
+  }) {
+    final profile = routine.profile.trim().toLowerCase();
+    return _botChatRich.routineResult(
+      t: NotifL10n.of(_prefs),
+      connId: connId,
+      profile: profile,
+      botName: _botName(connId, profile),
+      sessionId: sessionId,
+      routineTitle: routine.routineTitle,
+      ok: routine.ok,
+      summary: hideSensitiveContent ? '' : stripBotMentionNote(routine.summary),
+      hideSensitive: hideSensitiveContent,
+    );
+  }
+
+  @override
+  Future<DeliveryPresentation> show(DeliveryEventRecord event) async {
+    final t = NotifL10n.of(_prefs);
+    final durablePayload = _encodePayload(
+      event.connId,
+      event.sessionId,
+      null,
+      runId: event.runId,
+      profile: event.profile,
+      taskId: event.taskId,
+      jobId: event.jobId,
+      requestId: event.requestId,
+    );
+    final pendingDisplay = _pendingDisplays[event.eventKey];
+    final display =
+        pendingDisplay ??
+        _DurableDisplay(
+          kind: event.destinationKind == 'approval'
+              ? NotificationKind.approval
+              : NotificationKind.run,
+          title: event.destinationKind == 'approval'
+              ? t.approvalTitleFor(_mainAgentName(event.connId, event.profile))
+              : t.privateTitle,
+          body: t.privateBody,
+          ongoingFeel: event.destinationKind == 'approval',
+          bypassForeground: event.destinationKind == 'approval',
+          targetSessionId: event.sessionId,
+          payload: durablePayload,
+        );
+    final routine = display.botRoutine;
+    final routineSession = display.targetSessionId ?? event.sessionId;
+    if (routine != null &&
+        routineSession != null &&
+        routineSession.isNotEmpty &&
+        _richEligible(routineSession)) {
+      final posted = await presentBotRoutine(
+        connId: event.connId,
+        sessionId: routineSession,
+        routine: routine,
+      );
+      if (posted) return DeliveryPresentation.alert;
+    }
+    final outcome = await _show(
+      kind: display.kind,
+      id: event.androidId,
+      androidTag: event.androidTag,
+      largeIconPath: display.neutralAvatar
+          ? await _faces.neutralGlyphPath()
+          : null,
+      rich: display.rich,
+      title: display.title,
+      body: display.body,
+      ongoingFeel: display.ongoingFeel,
+      bypassForeground: display.bypassForeground,
+      payload: display.payload ?? durablePayload,
+      targetSessionId: display.targetSessionId ?? event.sessionId,
+      subText: display.subText,
+      actions: display.actions,
+    );
+    return switch (outcome) {
+      _ShowOutcome.alertShown => DeliveryPresentation.alert,
+      _ShowOutcome.inlineShown => DeliveryPresentation.inline,
+      _ShowOutcome.policySuppressed => DeliveryPresentation.suppressed,
+      _ShowOutcome.transientFailure => DeliveryPresentation.retry,
+    };
+  }
+
+  @override
+  Future<void> cancel(DeliveryEventRecord event) =>
+      _plugin.cancel(event.androidId, tag: event.androidTag);
+
+  /// Spec for callers that did not describe their card: the title (and a
+  /// short body) as the line, neutral glyph, no state.
+  static RichCardSpec _defaultRichSpec(
+    NotificationKind kind,
+    String title,
+    String body,
+  ) {
+    final line = body.trim().isEmpty || body.length > 80
+        ? title
+        : '$title · ${body.trim()}';
+    return RichCardSpec(
+      line: line,
+      state: kind == NotificationKind.approval
+          ? BotFaceBitmapState.needsYou
+          : BotFaceBitmapState.idle,
+    );
+  }
+
+  /// Face of [spec]: the owner's configured face (shared resolver) or the
+  /// neutral glyph, both with the state badge.
+  Future<String?> _richFace(String? connId, RichCardSpec spec) async {
+    final profile = spec.faceProfile?.trim().toLowerCase() ?? '';
+    if (profile.isNotEmpty && profile != 'default' && connId != null) {
+      final loaded = BotMentionRoster.shared.profileFor(connId, profile);
+      return botFacePath(
+        faces: _faces,
+        connId: connId,
+        profile: profile,
+        state: spec.state,
+        identityFor: (_, _) =>
+            loaded == null ? null : BotFaceIdentity.ofProfile(loaded),
+      );
+    }
+    return _faces.neutralGlyphPath(state: spec.state);
+  }
+
+  String _richSender(String? connId, RichCardSpec spec) {
+    final profile = spec.faceProfile?.trim().toLowerCase() ?? '';
+    if (profile.isEmpty || profile == 'default' || connId == null) {
+      return spec.senderLabel ?? NotifL10n.of(_prefs).brand;
+    }
+    return _botName(connId, profile);
+  }
+
+  Future<bool> _postRichCard({
+    required NotificationKind kind,
+    required int id,
+    required String? androidTag,
+    required String title,
+    required String body,
+    required bool redact,
+    required String? payload,
+    required RichCardSpec spec,
+  }) async {
+    final open = _decodePayload(payload);
+    final connId = open?.connId;
+    final t = NotifL10n.of(_prefs);
+    final conversationKey = spec.conversationKey?.replaceAll(
+      RegExp(r'[^A-Za-z0-9_.-]'),
+      '_',
+    );
+    final identityKey = conversationKey != null && conversationKey.isNotEmpty
+        ? 'hermes-${conversationKey.length > 80 ? conversationKey.substring(0, 80) : conversationKey}'
+        : 'hermes-${kind.name}-${(spec.faceProfile ?? 'hermes').toLowerCase()}';
+    final actions = <RichAction>[
+      if (spec.retryJobId != null && !redact) RichAction('retry', t.actRetry),
+      RichAction('open', spec.reasonLabel ?? spec.openLabel ?? t.actOpen),
+    ];
+    if (spec.row) {
+      final sender = _richSender(connId, spec);
+      final job = spec.retryJobId ?? spec.muteJobId;
+      final muted = spec.muteJobId ?? spec.muteTaskId;
+      final owned = (spec.faceProfile?.trim() ?? '').isNotEmpty;
+      try {
+        return await _rich.postConversation(
+          RichNotificationBuilder(t).automationRow(
+            tag: androidTag,
+            id: id,
+            title: spec.conversationTitle ?? sender,
+            line: spec.line,
+            source: sender,
+            open: open ?? const NotificationOpen(connId: ''),
+            accent: spec.accent,
+            actions: [
+              ...actions,
+              if (muted != null) RichAction('mute', t.actMute),
+            ],
+            action: connId == null || (job == null && muted == null)
+                ? null
+                : NotificationActionPayload(
+                    route: job != null
+                        ? NotificationActionRoute.cron
+                        : NotificationActionRoute.kanban,
+                    connId: connId,
+                    taskId: job ?? muted,
+                    profile: spec.muteProfile ?? spec.retryProfile,
+                  ),
+            alert:
+                !spec.quiet &&
+                (spec.state == BotFaceBitmapState.failed ||
+                    spec.state == BotFaceBitmapState.needsYou),
+            hideSensitive: redact,
+            // Only the Bot that owns it: a neutral row needs no picture.
+            largeIconPath: owned ? await _richFace(connId, spec) : null,
+          ),
+        );
+      } catch (error) {
+        _log('${kind.name} fila falló (${error.runtimeType})');
+        return false;
+      }
+    }
+    try {
+      return await _rich.postConversation(
+        RichNotificationBuilder(t).hermesCard(
+          tag: androidTag,
+          id: id,
+          identityKey: identityKey,
+          senderName: _richSender(connId, spec),
+          line: redact ? title : spec.line,
+          open: open ?? const NotificationOpen(connId: ''),
+          accent: spec.accent,
+          iconPath: await _richFace(connId, spec),
+          conversationTitle: redact ? null : spec.conversationTitle,
+          actions: actions,
+          action: spec.retryJobId == null || connId == null
+              ? null
+              : NotificationActionPayload(
+                  route: NotificationActionRoute.cron,
+                  connId: connId,
+                  taskId: spec.retryJobId,
+                  profile: spec.retryProfile,
+                ),
+          alert:
+              kind == NotificationKind.approval ||
+              (!spec.quiet &&
+                  (spec.state == BotFaceBitmapState.failed ||
+                      spec.state == BotFaceBitmapState.needsYou)),
+          channel: kind == NotificationKind.approval
+              ? 'approvals'
+              : 'conversations',
+          nowMs: DateTime.now().millisecondsSinceEpoch,
+        ),
+      );
+    } catch (error) {
+      _log('${kind.name} rica falló (${error.runtimeType})');
+      return false;
+    }
+  }
+
+  // ── Núcleo ──────────────────────────────────────────────────────────────
+  /// Posts through [_showUnrecorded] and keeps [chatReadSync] in step with
+  /// the tray: a chat notification ([readScope]) is recorded at its address,
+  /// anything else posted there replaces (forgets) what was recorded.
+  Future<_ShowOutcome> _show({
+    required NotificationKind kind,
+    required int id,
+    String? androidTag,
+    required String title,
+    required String body,
+    bool ongoingFeel = false,
+    bool bypassForeground = false,
+    String? payload,
+    String? targetSessionId,
+    String? subText,
+    List<AndroidNotificationAction>? actions,
+    bool compact = false,
+    String? largeIconPath,
+    RichCardSpec? rich,
+    _ChatReadScope? readScope,
+  }) async {
+    final ledger = _chatReadSync;
+    // Fences the address: no ledger cancel lands on this post.
+    await ledger?.beginPost(id, androidTag);
+    try {
+      final outcome = await _showUnrecorded(
+        kind: kind,
+        id: id,
+        androidTag: androidTag,
+        title: title,
+        body: body,
+        ongoingFeel: ongoingFeel,
+        bypassForeground: bypassForeground,
+        payload: payload,
+        targetSessionId: targetSessionId,
+        subText: subText,
+        actions: actions,
+        compact: compact,
+        largeIconPath: largeIconPath,
+        rich: rich,
+      );
+      if (ledger != null && outcome == _ShowOutcome.alertShown) {
+        if (readScope == null) {
+          ledger.forget(id, androidTag);
+        } else {
+          ledger.record(
+            id: id,
+            tag: androidTag,
+            connId: readScope.connId,
+            profile: readScope.profile,
+            sessionId: readScope.sessionId,
+          );
+        }
+      }
+      return outcome;
+    } finally {
+      ledger?.endPost(id, androidTag);
+    }
+  }
+
+  Future<_ShowOutcome> _showUnrecorded({
+    required NotificationKind kind,
+    required int id,
+    String? androidTag,
+    required String title,
+    required String body,
+    bool ongoingFeel = false,
+    bool bypassForeground = false,
+    String? payload,
+    String? targetSessionId,
+    String? subText,
+    List<AndroidNotificationAction>? actions,
+    bool compact = false,
+    String? largeIconPath,
+    RichCardSpec? rich,
+  }) async {
+    await _ensurePlatformInitialized();
+    // Cada return false registra el motivo: es el único modo de saber por qué un
+    // aviso no aparece cuando la app está en 2º plano (sin UI que observar).
+    if (!enabled) {
+      _log(
+        '${kind.name} suprimida: notificaciones desactivadas por el usuario',
+      );
+      return _ShowOutcome.policySuppressed;
+    }
+    // Regla 2: evento de OTRO chat con la app en primer plano → aviso discreto
+    // DENTRO de la app (banner con "Ir"), no notificación del sistema. Se decide
+    // aquí, antes de los chequeos de permiso/disponibilidad del sistema, porque
+    // el banner informa aunque el usuario haya denegado POST_NOTIFICATIONS. Si el
+    // usuario activó "avisar incluso en primer plano" ([evenInForeground]) se
+    // respeta su preferencia y se deja caer al camino de notificación del sistema.
+    if (appInForeground &&
+        !evenInForeground &&
+        targetSessionId != null &&
+        targetSessionId.isNotEmpty &&
+        targetSessionId != visibleSessionId) {
+      final open = _decodePayload(payload);
+      if (open != null) {
+        _inApp.add(
+          InAppNotice(kind: kind, title: title, body: body, open: open),
+        );
+        _log('${kind.name} → aviso in-app (otro chat, no al sistema)');
+        return _ShowOutcome.inlineShown;
+      }
+    }
+    if (!_available) {
+      _log('${kind.name} suprimida: servicio no disponible (init falló)');
+      return _ShowOutcome.transientFailure;
+    }
+    if (!await permissionGranted()) {
+      _log('${kind.name} suprimida: POST_NOTIFICATIONS no concedido');
+      return _ShowOutcome.transientFailure;
+    }
+    // Decisión de primer plano centralizada (testeable): Regla 1/6 (mismo chat
+    // visible → la UI inline ya lo muestra, no duplicar) + la regla previa de
+    // "en primer plano solo si lo pidió o el evento lo exige".
+    if (!shouldShowInForeground(
+      appInForeground: appInForeground,
+      bypassForeground: bypassForeground,
+      evenInForeground: evenInForeground,
+      targetSessionId: targetSessionId,
+      visibleSessionId: visibleSessionId,
+    )) {
+      _log(
+        '${kind.name} suprimida en primer plano '
+        '(targetKnown=${targetSessionId?.isNotEmpty == true}, '
+        'visibleMatch=${targetSessionId == visibleSessionId}, '
+        'bypass=$bypassForeground, even=$evenInForeground)',
+      );
+      return _ShowOutcome.policySuppressed;
+    }
+
+    // Acciones: por defecto un botón "Open" en toda notificación accionable
+    // (no permanente y con destino), para que sean interactivas de un toque.
+    // `showsUserInterface` trae la app al frente → el tap dispara el mismo
+    // payload que tocar el cuerpo (sin manejo extra en segundo plano).
+    final t = NotifL10n.of(_prefs);
+    final isApproval = kind == NotificationKind.approval;
+    final redact = hideSensitiveContent || isApproval;
+    // Approval titles are fixed generic copy; preserve that useful signal while
+    // redacting every body/preview and keeping lock-screen visibility secret.
+    final displayTitle = isApproval ? title : (redact ? t.privateTitle : title);
+    final displayBody = redact ? t.privateBody : body;
+    final effectiveActions = compact
+        ? null
+        : redact
+        // Con contenido oculto nunca se resuelve nada desde la bandeja: solo
+        // "Abrir" (la app decide tras el desbloqueo).
+        ? ((actions != null || !ongoingFeel) && payload != null
+              ? <AndroidNotificationAction>[
+                  AndroidNotificationAction(
+                    'open',
+                    t.actOpen,
+                    showsUserInterface: true,
+                    cancelNotification: true,
+                  ),
+                ]
+              : null)
+        : actions ??
+              ((!ongoingFeel && payload != null)
+                  ? <AndroidNotificationAction>[
+                      AndroidNotificationAction(
+                        'open',
+                        t.actOpen,
+                        showsUserInterface: true,
+                        cancelNotification: true,
+                      ),
+                    ]
+                  : null);
+
+    // Every notification is a rich conversation card (face + state accent +
+    // verbs + public version). The plain template below is only the
+    // fallback when the native renderer is unavailable.
+    {
+      final posted = await _postRichCard(
+        kind: kind,
+        id: id,
+        androidTag: androidTag,
+        title: displayTitle,
+        body: displayBody,
+        redact: redact,
+        payload: payload,
+        spec: rich ?? _defaultRichSpec(kind, title, body),
+      );
+      if (posted) {
+        _log('${kind.name} MOSTRADA rica (id=$id, fg=$appInForeground)');
+        return _ShowOutcome.alertShown;
+      }
+    }
+
+    final ch = _channelFor(kind, t);
+    final summary = redact
+        ? t.brand
+        : (subText != null && subText.trim().isNotEmpty)
+        ? subText.trim()
+        : t.brand;
+
+    final details = AndroidNotificationDetails(
+      ch.id,
+      ch.name,
+      channelDescription: ch.desc,
+      importance: ongoingFeel ? Importance.max : ch.importance,
+      priority: ongoingFeel ? Priority.max : ch.priority,
+      icon: 'ic_stat_hermes',
+      largeIcon: largeIconPath == null
+          ? null
+          : FilePathAndroidBitmap(largeIconPath),
+      tag: androidTag,
+      color: _accent,
+      colorized: false,
+      subText: compact ? null : summary,
+      groupKey: _groupKey,
+      // Re-publicar el mismo objeto actualiza la tarjeta sin repetir sonido.
+      onlyAlertOnce: true,
+      category: compact
+          ? AndroidNotificationCategory.status
+          : ongoingFeel
+          ? AndroidNotificationCategory.call
+          : AndroidNotificationCategory.message,
+      styleInformation: compact
+          ? null
+          : BigTextStyleInformation(
+              displayBody,
+              contentTitle: '<b>$displayTitle</b>',
+              htmlFormatContentTitle: true,
+              summaryText: summary,
+              htmlFormatSummaryText: false,
+            ),
+      ticker: displayTitle,
+      actions: effectiveActions,
+      visibility: redact
+          ? NotificationVisibility.secret
+          : NotificationVisibility.private,
+    );
+    await _plugin.show(
+      id,
+      displayTitle,
+      displayBody,
+      NotificationDetails(android: details),
+      payload: payload,
+    );
+    _log('${kind.name} MOSTRADA (id=$id, fg=$appInForeground)');
+    // Jerarquía D→A: las alertas hijas conservan su tap individual; con 2+
+    // activas se publica un resumen de grupo silencioso que las agrupa.
+    if (!compact && kind != NotificationKind.test) {
+      await _refreshGroupSummary(channelId: ch.id, t: t);
+    }
+    return _ShowOutcome.alertShown;
+  }
+
+  /// Publica o retira el resumen del grupo según las alertas hijas REALMENTE
+  /// activas en la bandeja del sistema. Consultar al SO —en vez de memoria del
+  /// isolate— lo hace coherente entre productores (UI, listener, foreground
+  /// service), tras recrear el proceso y cuando el usuario descarta una hija a
+  /// mano. Silencioso ([GroupAlertBehavior.children]) y estable: nunca compite
+  /// con el contenido de las hijas. Sin [channelId]/[t] solo puede retirar el
+  /// resumen (camino de cancelación), nunca publicarlo.
+  Future<void> _refreshGroupSummary({String? channelId, NotifL10n? t}) async {
+    final children = await _countActiveChildren();
+    if (children < 2) {
+      await _plugin.cancel(_groupSummaryId);
+      return;
+    }
+    if (channelId == null || t == null) return;
+    final details = AndroidNotificationDetails(
+      channelId,
+      channelId,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+      icon: 'ic_stat_hermes',
+      color: _accent,
+      groupKey: _groupKey,
+      setAsGroupSummary: true,
+      groupAlertBehavior: GroupAlertBehavior.children,
+      onlyAlertOnce: true,
+    );
+    await _plugin.show(
+      _groupSummaryId,
+      t.brand,
+      t.groupSummaryCount(children),
+      NotificationDetails(android: details),
+    );
+  }
+
+  /// ¿Es esta notificación activa una ALERTA hija del grupo (jerarquía A/B)?
+  /// Excluye el resumen, la prueba, las respuestas compactas (canal replies),
+  /// los servicios ongoing (voz, FGS) y las transferencias: ninguno debe
+  /// disparar ni sostener el resumen. Pura y testeable.
+  @visibleForTesting
+  static bool isAlertChildNotification({
+    required int? id,
+    required String? channelId,
+    required String? groupKey,
+  }) {
+    if (groupKey != _groupKey) return false;
+    if (id == null || id == _groupSummaryId || id == _testNotificationId) {
+      return false;
+    }
+    if (channelId == _chApprovals || channelId == _chRuns) return true;
+    // API < 26 no expone channelId: degradar al rango de IDs de alerta.
+    if (channelId == null) {
+      return id == 7001 || (id >= 7100 && id != _voiceOngoingId);
+    }
+    return false;
+  }
+
+  /// Cuenta las alertas hijas activas consultando la bandeja del sistema.
+  /// Ante cualquier fallo de plataforma devuelve 0 (degrada a "sin resumen",
+  /// nunca bloquea la alerta que se acaba de mostrar).
+  Future<int> _countActiveChildren() async {
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (android == null) return 0;
+    try {
+      final active = await android.getActiveNotifications();
+      return active
+          .where(
+            (n) => isAlertChildNotification(
+              id: n.id,
+              channelId: n.channelId,
+              groupKey: n.groupKey,
+            ),
+          )
+          .length;
+    } catch (e) {
+      _log('no se pudieron consultar las notificaciones activas: $e');
+      return 0;
+    }
+  }
+
+  @override
+  Future<void> cancelApproval({
+    String? connId,
+    String? profile,
+    String? runId,
+    String? approvalId,
+    bool terminal = false,
+  }) async {
+    final connection = connId?.trim() ?? '';
+    final normalizedProfile = profile?.trim().isNotEmpty == true
+        ? profile!.trim().toLowerCase()
+        : 'default';
+    final run = runId?.trim() ?? '';
+    final request = approvalId?.trim() ?? '';
+    if (connection.isEmpty || normalizedProfile.isEmpty || run.isEmpty) {
+      _log('cancelApproval ignorada: scope durable incompleto');
+      return;
+    }
+    if (request.isNotEmpty) {
+      // Bot Chat approvals may be rich conversation cards (spec 070): clear
+      // them in place wherever the request was answered.
+      unawaited(
+        _rich.cancel(
+          id: RichNotificationIds.approval(request),
+          tag: RichNotificationIds.botTag(connection, normalizedProfile),
+        ),
+      );
+      // A normal chat's card lives at the chat's own address.
+      _withdrawNeedsYou(request);
+    }
+    if (terminal) {
+      await _delivery.cancelApprovalForRun(
+        connId: connection,
+        profile: normalizedProfile,
+        runId: run,
+      );
+    } else {
+      if (request.isEmpty) {
+        _log('cancelApproval ignorada: request durable incompleto');
+        return;
+      }
+      await _delivery.cancelApproval(
+        connId: connection,
+        profile: normalizedProfile,
+        runId: run,
+        requestId: request,
+      );
+    }
+    await _refreshGroupSummary();
+  }
+
+  /// Cancela una notificación por id dejando rastro de QUIÉN y POR QUÉ. Es el
+  /// único camino permitido para cancelar: así cualquier borrado programático
+  /// queda en el log con su pila de llamadas, para depurar desapariciones
+  /// inesperadas (p.ej. una notificación que se borra sola a los pocos ms).
+  Future<void> cancelById(int id, String reason) async {
+    _chatReadSync?.forget(id, null);
+    _log('CANCEL id=$id motivo="$reason"\n${StackTrace.current}');
+    await _plugin.cancel(id);
+    await _refreshGroupSummary();
+  }
+}
+
+/// Which chat a notification is about (see [ChatNotificationReadSync]).
+class _ChatReadScope {
+  const _ChatReadScope(this.connId, this.profile, this.sessionId);
+
+  final String connId;
+  final String? profile;
+  final String sessionId;
+
+  static _ChatReadScope? of(String? connId, String? profile, String? sid) {
+    final conn = connId?.trim() ?? '';
+    final session = sid?.trim() ?? '';
+    if (conn.isEmpty || session.isEmpty) return null;
+    return _ChatReadScope(conn, profile, session);
+  }
+}
+
+class _DurableDisplay {
+  const _DurableDisplay({
+    required this.kind,
+    required this.title,
+    required this.body,
+    this.ongoingFeel = false,
+    this.bypassForeground = false,
+    this.payload,
+    this.targetSessionId,
+    this.subText,
+    this.actions,
+    this.botRoutine,
+    this.neutralAvatar = false,
+    this.rich,
+  });
+
+  final NotificationKind kind;
+  final String title;
+  final String body;
+  final bool ongoingFeel;
+  final bool bypassForeground;
+  final String? payload;
+  final String? targetSessionId;
+  final String? subText;
+  final List<AndroidNotificationAction>? actions;
+  final BotRoutineDisplay? botRoutine;
+
+  /// Cron / Kanban without a Bot owner: neutral glyph as the large icon,
+  /// never the app portrait.
+  final bool neutralAvatar;
+  final RichCardSpec? rich;
+}

@@ -1,0 +1,109 @@
+name: Release policy verification (no candidate artifacts)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-policy-verification-${{ github.ref }}
+  cancel-in-progress: false
+
+# CI verification only. Signed APK/AAB creation, comparison, attestation and
+# staging stay on an owner-controlled private machine until publication.
+jobs:
+  verify:
+    name: Verify immutable release source and policy
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Verify tag, source identity and authoritative lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$RELEASE_REF_TYPE" == "tag" ]]
+          [[ "$GITHUB_REF" == "refs/tags/$RELEASE_TAG" ]]
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+          echo "48d6da0ead3f18dc1aa599fdfe314b5ff7825fa834653e5aacd94322300cbe35  pubspec.lock" \
+            | sha256sum --strict -c -
+          checkout_commit="$(git rev-parse "$GITHUB_SHA^{commit}")"
+          tag_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+          build_number="$(sed -nE 's/^version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+\+([0-9]+)[[:space:]]*$/\1/p' pubspec.yaml)"
+          [[ "$build_number" =~ ^(0|[1-9][0-9]*)$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/commits/$checkout_commit" \
+            --jq '{authorLogin:.author.login,committerLogin:.committer.login,verification:(.commit.verification | {verified,reason,signature,payload,verified_at})}' \
+            > "$RUNNER_TEMP/source-verification.json"
+          python3 tool/release/verify_release_identity.py \
+            --tag "$RELEASE_TAG" \
+            --pubspec pubspec.yaml \
+            --build-number "$build_number" \
+            --expected-commit "$GITHUB_SHA" \
+            --checkout-commit "$checkout_commit" \
+            --tag-commit "$tag_commit" \
+            --verification-json "$RUNNER_TEMP/source-verification.json" \
+            --policy tool/release/release_contract.json
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.47.1'
+          channel: stable
+
+      - name: Install locked dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Install and verify REUSE
+        run: |
+          python3 -m pip install --disable-pip-version-check reuse==6.2.0
+          reuse lint
+
+      - name: Scan Git history with pinned scanners
+        env:
+          GITLEAKS_IMAGE: zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+        run: |
+          set -Eeuo pipefail
+          # A clean scan only counts if the same config still catches a fresh token.
+          tool/security/gitleaks_canary.sh
+          # Scan only the history of the commit under test: a clone that holds
+          # nothing but that commit and its ancestors (other remote branches
+          # are not part of this build).
+          rm -rf "$RUNNER_TEMP/scan" && mkdir "$RUNNER_TEMP/scan"
+          git -C "$RUNNER_TEMP/scan" init -q
+          git -C "$RUNNER_TEMP/scan" fetch -q --no-tags "$GITHUB_WORKSPACE" HEAD
+          git -C "$RUNNER_TEMP/scan" checkout -q --detach FETCH_HEAD
+          cp "$GITHUB_WORKSPACE/.gitleaks.toml" "$RUNNER_TEMP/scan/.gitleaks.toml" 2>/dev/null || true
+          docker run --rm \
+            -v "$RUNNER_TEMP/scan:/repo:ro" \
+            "$GITLEAKS_IMAGE" \
+            git /repo --config /repo/.gitleaks.toml --no-banner --redact=100
+          docker run --rm \
+            -v "$RUNNER_TEMP/scan:/repo:ro" \
+            trufflesecurity/trufflehog@sha256:674b2f187620a19df77f44cf9a7d77efcc581a5662accef2f2739cbb46ba4a3a \
+            --no-update --fail --fail-on-scan-errors \
+            --exclude-detectors=URI --results=verified,unknown \
+            --json git --exclude-paths=/repo/tool/security/trufflehog_exclude_paths.txt file:///repo > "$RUNNER_TEMP/trufflehog.jsonl"
+          test ! -s "$RUNNER_TEMP/trufflehog.jsonl"
+
+      - name: Verify Gradle wrapper and checked-in SBOMs
+        run: |
+          set -Eeuo pipefail
+          echo "76805e32c009c0cf0dd5d206bddc9fb22ea42e84db904b764f3047de095493f3  android/gradle/wrapper/gradle-wrapper.jar" \
+            | sha256sum --strict -c -
+          ./tool/sbom/generate.sh
+          git diff --exit-code -- sbom
+
+      - name: Run policy gates, analysis and tests
+        run: |
+          python3 -m unittest discover -s test -p '*_test.py'
+          flutter analyze --fatal-infos
+          flutter test --concurrency=1 -x opt-in

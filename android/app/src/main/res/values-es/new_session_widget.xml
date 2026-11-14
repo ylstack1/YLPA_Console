@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- El acceso directo del lanzador y dos textos que aún usan los widgets de
+     bots. Los widgets del lanzador tienen su archivo:
+     launcher_widgets_strings.xml. -->
+<resources>
+    <string name="new_session_shortcut_short_label">Nueva conversación</string>
+    <string name="new_session_shortcut_long_label">Iniciar una conversación nueva con Hermes</string>
+    <string name="hermes_widget_not_configured">Sin configurar</string>
+    <string name="hermes_widget_setup_action">Configurar Hermes</string>
+</resources>

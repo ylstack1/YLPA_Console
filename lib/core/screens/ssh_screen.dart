@@ -1,0 +1,401 @@
+// Hub del módulo SSH de una instancia: estado de configuración y accesos a
+// terminal, archivos (SFTP) y edición de credenciales. Entrada desde el drawer.
+import 'package:flutter/material.dart';
+
+import '../../l10n/app_localizations.dart';
+import '../../main.dart';
+import '../services/connection_manager.dart';
+import '../services/ssh_manager.dart';
+import '../theme/app_theme.dart';
+import '../widgets/hermes_app_bar.dart';
+import '../widgets/hermes_premium_ui.dart' show HermesEmptyState;
+import 'sftp_browser_screen.dart';
+import 'ssh_credentials_screen.dart';
+import 'ssh_terminal_screen.dart';
+import '../widgets/console_loader.dart';
+import '../widgets/workspace/chat_workspace_host.dart'
+    show ChatWorkspaceMenuEntry, ChatWorkspacePaneScope, ChatWorkspaceToolbar;
+import '../design/hermes_design.dart'
+    show HermesDialogAction, HermesDialogActionStyle, showHermesDialog;
+import '../feedback/feedback_policy.dart';
+
+class SshScreen extends StatefulWidget {
+  final SavedConnection connection;
+
+  /// Set when the hub was opened from a chat: Files gets a notch back to it.
+  final VoidCallback? onBackToChat;
+
+  const SshScreen({required this.connection, this.onBackToChat, super.key});
+
+  @override
+  State<SshScreen> createState() => _SshScreenState();
+}
+
+class _SshScreenState extends State<SshScreen> {
+  SshConfig? _config;
+  bool _loading = true;
+
+  /// The settings could not be read (secure storage failed). Desktop's
+  /// pattern: say it could not be read and offer «Intentar de nuevo».
+  bool _loadFailed = false;
+
+  SshManager get _mgr =>
+      context.findAncestorStateOfType<HermesAppState>()!.sshManager;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    SshConfig? cfg;
+    var failed = false;
+    try {
+      cfg = await _mgr.loadConfig(widget.connection.id);
+    } catch (e) {
+      debugPrint('[ssh-screen] settings unreadable (${e.runtimeType})');
+      failed = true;
+    }
+    if (!mounted) return;
+    setState(() {
+      _config = cfg;
+      _loadFailed = failed;
+      _loading = false;
+    });
+  }
+
+  void _retryLoad() {
+    setState(() {
+      _loading = true;
+      _loadFailed = false;
+    });
+    _load();
+  }
+
+  Future<void> _configure() async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => SshCredentialsScreen(connection: widget.connection),
+      ),
+    );
+    if (saved == true) _load();
+  }
+
+  void _terminal() => Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => SshTerminalScreen(connection: widget.connection),
+    ),
+  );
+
+  void _sftp() => Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => SftpBrowserScreen(
+        connection: widget.connection,
+        onBackToChat: widget.onBackToChat,
+      ),
+    ),
+  );
+
+  Future<void> _forgetHostKey() async {
+    await _mgr.forgetFingerprint(widget.connection.id);
+    if (mounted) {
+      AppFeedback.of(
+        context,
+      ).notify(FeedbackKind.routine, Strings.of(context).ssh2HostKeyForgotten);
+    }
+  }
+
+  Future<void> _remove() async {
+    final sessions = context
+        .findAncestorStateOfType<HermesAppState>()!
+        .sshSessions;
+    final ok = await showHermesDialog<bool>(
+      context: context,
+      title: Strings.of(context).ssh2RemoveSsh,
+      message: Strings.of(context).ssh2RemoveSshBody,
+      actions: [
+        HermesDialogAction(
+          label: Strings.of(context).commonCancel,
+          value: false,
+          style: HermesDialogActionStyle.cancel,
+        ),
+        HermesDialogAction(
+          label: Strings.of(context).ssh2Remove,
+          value: true,
+          style: HermesDialogActionStyle.destructive,
+        ),
+      ],
+    );
+    if (ok == true) {
+      // Close the live shell too (including a connect in flight): otherwise
+      // the terminal would reattach to it without credentials or App Lock.
+      sessions.close(widget.connection.id);
+      await _mgr.clear(widget.connection.id);
+      _load();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).hermes;
+    // In the workspace pane (v25) the Terminal tab is the terminal itself,
+    // not this hub: what the hub offers around it moves to the floating
+    // bar's «⋯». Without SSH set up, the hub's empty state stays.
+    final inPane = ChatWorkspacePaneScope.isInPane(context);
+    final config = _config;
+    if (inPane && !_loading && !_loadFailed && config != null) {
+      return SshTerminalScreen(
+        key: ValueKey('ssh-pane-terminal-${config.target}'),
+        connection: widget.connection,
+        paneTitle: config.target,
+        paneMenu: [
+          ChatWorkspaceMenuEntry(
+            key: const ValueKey('ssh-pane-menu-credentials'),
+            label: Strings.of(context).ssh2EditCreds,
+            icon: Icons.edit_outlined,
+            onSelected: _configure,
+          ),
+          ChatWorkspaceMenuEntry(
+            key: const ValueKey('ssh-pane-menu-host-key'),
+            label: Strings.of(context).ssh2ForgetHostKey,
+            icon: Icons.gpp_maybe_outlined,
+            onSelected: _forgetHostKey,
+          ),
+          ChatWorkspaceMenuEntry(
+            key: const ValueKey('ssh-pane-menu-remove'),
+            label: Strings.of(context).ssh2RemoveSsh,
+            icon: Icons.delete_outline,
+            onSelected: _remove,
+            destructive: true,
+          ),
+        ],
+      );
+    }
+    if (inPane) {
+      // Nothing of a terminal's on the bar while there is none.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ChatWorkspacePaneScope.publish(context, ChatWorkspaceToolbar.none);
+        }
+      });
+    }
+    return Scaffold(
+      backgroundColor: ChatWorkspacePaneScope.backgroundOf(
+        context,
+        colors.background,
+      ),
+      // In the pane the tab already says what this is; a header pill of its
+      // own sat over the first card there.
+      appBar: inPane ? null : HermesAppBar(title: const Text('SSH')),
+      body: _loading
+          ? const Center(child: ConsoleLoader.large())
+          : _loadFailed
+          ? Center(
+              child: HermesEmptyState(
+                key: const ValueKey('ssh-hub-load-error'),
+                icon: Icons.error_outline,
+                title: Strings.of(context).sftpUnreadableTitle,
+                body: Strings.of(context).sshHubLoadError,
+                primaryLabel: Strings.of(context).sftpTryAgain,
+                primaryIcon: Icons.refresh,
+                onPrimary: _retryLoad,
+              ),
+            )
+          : _config == null
+          ? _empty(colors)
+          : _configured(colors, _config!),
+    );
+  }
+
+  Widget _empty(HermesThemeColors colors) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.terminal_rounded, size: 48, color: colors.accent),
+            const SizedBox(height: 16),
+            Text(
+              Strings.of(context).ssh2AccessTitle,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              Strings.of(context).ssh2AccessBody(widget.connection.label),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                color: colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 22),
+            FilledButton.icon(
+              onPressed: _configure,
+              icon: const Icon(Icons.settings_ethernet_rounded, size: 18),
+              label: Text(Strings.of(context).ssh2Configure),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _configured(HermesThemeColors colors, SshConfig cfg) {
+    return ListView(
+      clipBehavior: hermesUnderHeader,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colors.surfaceVariant.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.dns_outlined, size: 22, color: colors.secondary),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      cfg.target,
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontFamily: 'monospace',
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      Strings.of(
+                        context,
+                      ).sshAuthMethodLabel(switch (cfg.method) {
+                        SshAuthMethod.key => Strings.of(context).sshcPrivateKey,
+                        SshAuthMethod.password => Strings.of(
+                          context,
+                        ).commonPassword,
+                      }),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        _action(
+          colors,
+          icon: Icons.terminal_rounded,
+          title: Strings.of(context).ssh2OpenTerminal,
+          subtitle: Strings.of(context).ssh2OpenTerminalSub,
+          onTap: _terminal,
+          primary: true,
+        ),
+        _action(
+          colors,
+          icon: Icons.folder_open_outlined,
+          title: Strings.of(context).sshFilesSftp,
+          subtitle: Strings.of(context).ssh2FilesSub,
+          onTap: _sftp,
+        ),
+        _action(
+          colors,
+          icon: Icons.edit_outlined,
+          title: Strings.of(context).ssh2EditCreds,
+          subtitle: Strings.of(context).ssh2EditCredsSub,
+          onTap: _configure,
+        ),
+        const SizedBox(height: 8),
+        const Divider(),
+        _action(
+          colors,
+          icon: Icons.gpp_maybe_outlined,
+          title: Strings.of(context).ssh2ForgetHostKey,
+          subtitle: Strings.of(context).ssh2ForgetHostKeySub,
+          onTap: _forgetHostKey,
+        ),
+        _action(
+          colors,
+          icon: Icons.delete_outline,
+          title: Strings.of(context).ssh2RemoveSsh,
+          subtitle: Strings.of(context).ssh2RemoveSshSub,
+          onTap: _remove,
+          danger: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _action(
+    HermesThemeColors colors, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    bool primary = false,
+    bool danger = false,
+  }) {
+    final tint = danger
+        ? colors.error
+        : primary
+        ? colors.accent
+        : colors.textSecondary;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon, size: 22, color: tint),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w500,
+                          color: danger ? colors.error : colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, size: 18, color: colors.textTertiary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

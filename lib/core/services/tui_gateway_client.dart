@@ -1,0 +1,11228 @@
+import '../bots/data/gateway_socket_meter.dart';
+import '../browser/agent_preview_protocol.dart';
+import '../bots/state/bot_chat_target.dart';
+import 'bot_room_link.dart';
+import 'connection_status.dart';
+import 'server_warmup.dart' show isServerStartingError;
+import 'bot_mention_roster.dart';
+import 'bot_profile_client.dart';
+// Cliente del protocolo oficial usado por Hermes Desktop y el Dashboard.
+//
+// Transporte: WebSocket `/api/ws` + JSON-RPC 2.0. Este canal conserva una
+// referencia al AIAgent vivo y expone `session.redirect` (con `session.steer`
+// solo para compatibilidad antigua).
+// ignore_for_file: prefer_initializing_formals
+
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io' show WebSocketException;
+import 'dart:math' show Random, min;
+
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
+import 'package:web_socket_channel/io.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+
+import '../models/command_descriptor.dart';
+import '../models/composer_reference.dart';
+import '../models/agent_profile.dart';
+import '../models/admin_integrations.dart';
+import '../models/bot_visual_identity.dart';
+import '../models/desktop_active_session.dart';
+import '../models/desktop_compression_result.dart';
+import '../models/desktop_compression_outcome.dart';
+import '../models/desktop_control_center.dart';
+import '../models/desktop_context_breakdown.dart';
+import '../models/desktop_model_catalog.dart';
+import '../models/desktop_session_config.dart';
+import '../models/free_tier_status.dart';
+import '../models/desktop_session_snapshot.dart';
+import '../models/session_workspace_move.dart';
+import '../models/interactive_prompt.dart';
+import '../models/hosted_groups.dart';
+import '../models/profile_pet.dart';
+import '../models/project_files.dart';
+import 'capability_payload_sanitizer.dart';
+import 'connection_manager.dart';
+import 'connection_request_gateway.dart';
+import 'delegation_control.dart';
+import 'desktop_control_gateway.dart';
+import '../models/foreign_session.dart';
+import '../models/git_hub.dart';
+import '../models/git_review.dart';
+import '../models/message_reaction.dart';
+import 'session_pull_requests.dart';
+import 'git_hub_gateway.dart';
+import 'git_review_gateway.dart';
+import 'desktop_gateway_capabilities.dart';
+import 'json_rpc_wire.dart';
+import 'transcript_rehydrate_cost.dart' show kJsonDecodeOffMainBytes;
+import 'prompt_client_surface.dart';
+import 'recovery_proof.dart';
+import 'replay_batch_proof.dart';
+import 'replay_coordinator.dart';
+import 'server_restart_signal.dart';
+import 'session_authority.dart';
+import 'subagent_live_watch.dart';
+import '../utils/transport_privacy.dart';
+import '../utils/server_path.dart';
+
+class TuiGatewayRpcError implements Exception {
+  static const int steerRejectedCode = -32901;
+  final String method;
+  final int? code;
+  final String message;
+  final Map<String, dynamic> data;
+  final CompressionFailureOrigin origin;
+  final TuiGatewayRpcFailureKind? failureKind;
+  CompressionFailureReason get compressionReason =>
+      data['reason'] == 'SESSION_NOT_OWNED'
+      ? CompressionFailureReason.sessionNotOwned
+      : data['reason'] == 'EXCLUSIVE_SUBMIT_CAPABILITY_DENIED'
+      ? CompressionFailureReason.exclusiveSubmitCapabilityDenied
+      : CompressionFailureReason.unknown;
+
+  const TuiGatewayRpcError(
+    this.method,
+    this.message, {
+    this.code,
+    this.data = const <String, dynamic>{},
+    this.origin = CompressionFailureOrigin.unknown,
+    this.failureKind,
+  });
+
+  String? get reason {
+    final value = data['reason'];
+    if (value is! String) return null;
+    final normalized = value.trim();
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  /// Local roster proof that the durable session has no live runtime: Hermes
+  /// reaped it (for example after its orphan grace window) and nothing is
+  /// left to rejoin. It is neither a transport failure nor an identity fault.
+  bool get rosterSessionNotActive =>
+      origin == CompressionFailureOrigin.localPreflight &&
+      data['reason'] == rosterSessionNotActiveReason;
+
+  @override
+  String toString() => 'TuiGatewayRpcError($method, $code): $message';
+}
+
+const String rosterSessionNotActiveReason = 'ROSTER_SESSION_NOT_ACTIVE';
+
+/// Non-sensitive local failure metadata for policies that must not inspect copy.
+enum TuiGatewayRpcFailureKind { timeout, connectionLost }
+
+abstract final class SanitizedRpcFailureFactory {
+  static final Object _certificate = Object();
+  static const Set<String> sensitiveMethods = {
+    'sudo.respond',
+    'secret.respond',
+    // Credential vault: a login / card secret or a master password rides
+    // the params, so a refusal keeps only its code (never Hermes' text).
+    'vault.add',
+    'vault.unlock',
+  };
+
+  static TuiGatewayRpcError remote(String method, {int? safeCode}) {
+    _requireSensitive(method);
+    return _SanitizedRpcFailure(
+      _certificate,
+      method,
+      'Hermes rejected the sensitive response',
+      code: safeCode,
+      origin: CompressionFailureOrigin.remoteRpc,
+    );
+  }
+
+  static TuiGatewayRpcError transport(String method) {
+    _requireSensitive(method);
+    return _SanitizedRpcFailure(
+      _certificate,
+      method,
+      'Sensitive response transport failed',
+      failureKind: TuiGatewayRpcFailureKind.connectionLost,
+    );
+  }
+
+  static TuiGatewayRpcError timeout(String method) {
+    _requireSensitive(method);
+    return _SanitizedRpcFailure(
+      _certificate,
+      method,
+      'Timeout waiting for sensitive response',
+      failureKind: TuiGatewayRpcFailureKind.timeout,
+    );
+  }
+
+  static bool isCertified(Object error) =>
+      error is _SanitizedRpcFailure &&
+      identical(error._certificate, _certificate);
+
+  static void _requireSensitive(String method) {
+    if (!sensitiveMethods.contains(method)) {
+      throw ArgumentError.value(method, 'method', 'not a sensitive RPC method');
+    }
+  }
+}
+
+final class _SanitizedRpcFailure extends TuiGatewayRpcError {
+  final Object _certificate;
+
+  const _SanitizedRpcFailure(
+    this._certificate,
+    super.method,
+    super.message, {
+    super.code,
+    super.origin,
+    super.failureKind,
+  });
+}
+
+/// Close codes Console sends on `/api/ws`. `package:web_socket`'s dart:io
+/// adapter (behind `IOWebSocketChannel`) only accepts 1000 or 3000-4999: any
+/// other code (1001, 1002…) throws asynchronously, no close frame is sent and
+/// the server later logs the socket as 1006. Error paths therefore use the
+/// private 4xxx range with a stable reason so server logs say why.
+abstract final class TuiGatewayCloseCodes {
+  static const normal = 1000;
+  static const transportError = 4000;
+  static const heartbeatTimeout = 4001;
+  static const probeTimeout = 4002;
+  static const protocolViolation = 4003;
+  static const networkChanged = 4004;
+}
+
+/// Reconnect backoff shared by every Desktop gateway socket owner.
+///
+/// Exponential (base 300 ms, ×2) with full jitter, as Desktop's
+/// `apps/shared/src/reconnect-backoff.ts`: each attempt sleeps a random time in
+/// `[0, min(cap, base·2^attempt))`, so the sockets of several chats that drop
+/// together never redial in lockstep. The cap is 15 s in the foreground and
+/// 60 s while the app (or the background listener isolate) is in the
+/// background.
+/// [markHealthy] is for owners that observed [stableInterval] of continuous
+/// health, never for a single good read.
+class GatewayReconnectBackoff {
+  static const stableInterval = Duration(seconds: 30);
+
+  /// conn-registry E5: a socket that stayed open this long resets the ladder
+  /// when it is lost. Desktop `RECONNECT_STABLE_OPEN_MS` = 5 000
+  /// (apps/shared/src/reconnect-backoff.ts:33): with 30 s a network that
+  /// drops every few seconds pushed every gap to the 15 s ceiling and kept
+  /// the chat disconnected longer than the outage itself.
+  static const stableOpenInterval = Duration(seconds: 5);
+  static const baseDelay = Duration(milliseconds: 300);
+  static const foregroundCap = Duration(seconds: 15);
+  static const backgroundCap = Duration(seconds: 60);
+
+  /// Test hook: scales every new backoff's base (real-socket suites that
+  /// drive many reconnects use milliseconds instead of seconds).
+  @visibleForTesting
+  static Duration? debugBaseOverride;
+
+  /// True while this isolate runs without a visible UI (app paused or the
+  /// foreground-service isolate). Widens the ceiling to [backgroundCap].
+  static bool backgroundCadence = false;
+
+  final double Function() _random;
+  final Duration _base;
+  int _attempt = 0;
+
+  GatewayReconnectBackoff({double Function()? random, Duration? base})
+    : _random = random ?? Random().nextDouble,
+      _base = base ?? debugBaseOverride ?? baseDelay;
+
+  int get attempt => _attempt;
+
+  Duration get _cap {
+    final cap = backgroundCadence ? backgroundCap : foregroundCap;
+    // Keep the base:cap ratio for scaled test bases.
+    return _base * (cap.inMilliseconds ~/ baseDelay.inMilliseconds);
+  }
+
+  Duration nextDelay() {
+    final exponent = _attempt.clamp(0, 16);
+    _attempt += 1;
+    final ceilingUs = min(
+      _base.inMicroseconds * (1 << exponent),
+      _cap.inMicroseconds,
+    );
+    return Duration(
+      microseconds: (_random().clamp(0.0, 1.0) * ceilingUs).floor(),
+    );
+  }
+
+  void markHealthy() => _attempt = 0;
+}
+
+class TuiGatewayEvent {
+  final String type;
+  final String sessionId;
+  final int? sequence;
+  final int? transportGeneration;
+  final Object? producerChannel;
+  final Map<String, dynamic> payload;
+
+  /// dp-G: delivered from a reconnect replay batch (`session.events.since`
+  /// plus the live frames held while it ran), not produced live on this
+  /// socket after the chat was listening.
+  final bool replayed;
+
+  const TuiGatewayEvent({
+    required this.type,
+    required this.sessionId,
+    this.sequence,
+    this.transportGeneration,
+    this.producerChannel,
+    required this.payload,
+    this.replayed = false,
+  });
+}
+
+/// dp-G: a gateway that can tell whether an event came live on the socket it
+/// holds now, and which replay epoch numbers its per-session sequences.
+abstract interface class HermesDesktopLiveTransportGateway {
+  /// [generation]/[producerChannel] are the socket this client holds now and
+  /// it is connected.
+  bool isCurrentLiveTransport(int? generation, Object? producerChannel);
+
+  /// Epoch of the server's per-session sequence numbers (they restart when
+  /// it rotates).
+  String get currentReplayEpoch;
+}
+
+int? _protocolInteger(Object? value, {bool positive = false}) {
+  try {
+    return SafeJsonInt.require(value, positive: positive);
+  } on JsonRpcWireFormatException {
+    return null;
+  }
+}
+
+/// Alias compatible con los consumidores legacy. Los gateways reales devuelven
+/// ahora también el snapshot tipado completo de Hermes Agent 0.19.
+class DesktopSessionBinding extends DesktopSessionSnapshot {
+  const DesktopSessionBinding({
+    required super.runtimeSessionId,
+    required super.storedSessionId,
+    super.storedSessionIdProvenance,
+    required super.created,
+    super.lineageRootId,
+    super.identityAliasesConsistent,
+    super.storedSessionIdentityExplicit,
+    super.messages,
+    super.messagesProvided,
+    super.messagesFullyParsed,
+    super.messageCount,
+    super.hydrating,
+    super.inflight,
+    super.queued,
+    super.pendingClarify,
+    super.pendingClarifyProvided,
+    super.pendingApproval,
+    super.pendingApprovalProvided,
+    super.pendingConnection,
+    super.pendingConnectionProvided,
+    super.openRequests,
+    super.todoState,
+    super.running,
+    super.status,
+    super.startedAt,
+    super.turnStartedAt,
+    super.info,
+    super.raw,
+  });
+
+  factory DesktopSessionBinding.fromSnapshot(DesktopSessionSnapshot snapshot) {
+    return DesktopSessionBinding(
+      runtimeSessionId: snapshot.runtimeSessionId,
+      storedSessionId: snapshot.storedSessionId,
+      storedSessionIdProvenance: snapshot.storedSessionIdProvenance,
+      created: snapshot.created,
+      lineageRootId: snapshot.lineageRootId,
+      identityAliasesConsistent: snapshot.identityAliasesConsistent,
+      storedSessionIdentityExplicit: snapshot.storedSessionIdentityExplicit,
+      messages: snapshot.messages,
+      messagesProvided: snapshot.messagesProvided,
+      messagesFullyParsed: snapshot.messagesFullyParsed,
+      messageCount: snapshot.messageCount,
+      hydrating: snapshot.hydrating,
+      inflight: snapshot.inflight,
+      queued: snapshot.queued,
+      pendingClarify: snapshot.pendingClarify,
+      pendingClarifyProvided: snapshot.pendingClarifyProvided,
+      pendingApproval: snapshot.pendingApproval,
+      pendingApprovalProvided: snapshot.pendingApprovalProvided,
+      pendingConnection: snapshot.pendingConnection,
+      pendingConnectionProvided: snapshot.pendingConnectionProvided,
+      openRequests: snapshot.openRequests,
+      todoState: snapshot.todoState,
+      running: snapshot.running,
+      status: snapshot.status,
+      startedAt: snapshot.startedAt,
+      turnStartedAt: snapshot.turnStartedAt,
+      info: snapshot.info,
+      raw: snapshot.raw,
+    );
+  }
+}
+
+/// Reads the server→client requests still open on a live runtime without
+/// replaying its events (`session.events.since` past the newest sequence, as
+/// Desktop's room prompts do). Separate so legacy fakes stay valid.
+abstract class HermesDesktopOpenRequestsGateway {
+  Future<List<Map<String, dynamic>>> openServerRequests(
+    String runtimeSessionId,
+  );
+}
+
+/// Interfaz pequeña para poder probar [ActiveChat] sin abrir sockets reales.
+abstract class HermesDesktopGateway {
+  Stream<TuiGatewayEvent> get events;
+  bool get isConnected;
+
+  Future<void> connect();
+
+  Future<DesktopSessionBinding> resumeSession(
+    String storedSessionId, {
+    String profile = '',
+    List<Map<String, dynamic>> seedMessages = const [],
+    String model = '',
+  });
+
+  Future<void> submitPrompt(String runtimeSessionId, String text);
+
+  Future<void> steer(String runtimeSessionId, String text);
+
+  Future<void> interrupt(String runtimeSessionId);
+
+  Future<void> resolveApproval(
+    String runtimeSessionId,
+    String choice, {
+    bool resolveAll = false,
+    String? requestId,
+  });
+
+  Future<void> close();
+}
+
+/// User-action connect (send, Retry, Stop): skips a reconnect backoff on the
+/// real client; legacy fakes only implement [HermesDesktopGateway.connect].
+extension HermesDesktopGatewayForeground on HermesDesktopGateway {
+  Future<void> connectForeground() {
+    final gateway = this;
+    return gateway is TuiGatewayClient
+        ? gateway.connectForeground()
+        : connect();
+  }
+}
+
+/// Optional read surface; legacy transports retain their REST fallback.
+abstract class HermesDesktopSessionHistoryGateway {
+  /// [sessionId] is the runtime returned by resume/activate, never a stored id.
+  Future<SessionMessagesPage> sessionHistory({
+    required String sessionId,
+    String? profile,
+  });
+}
+
+final class DesktopApprovalResult {
+  final int resolved;
+
+  /// False when the choice went out as a bare response frame to an approval
+  /// server request: nothing acknowledges it, so a transport loss right after
+  /// the write leaves its delivery unknown.
+  final bool deliveryAcknowledged;
+
+  const DesktopApprovalResult({
+    required this.resolved,
+    this.deliveryAcknowledged = true,
+  });
+
+  factory DesktopApprovalResult.fromJson(Map<String, dynamic> json) {
+    final resolved = json['resolved'];
+    if (resolved is! int || (resolved != 0 && resolved != 1)) {
+      throw const FormatException('invalid approval response');
+    }
+    return DesktopApprovalResult(resolved: resolved);
+  }
+}
+
+/// Optional checked approval response. Legacy gateway doubles may keep the
+/// original void API while real Desktop transports expose first-wins evidence.
+abstract class HermesDesktopApprovalResultGateway {
+  Future<DesktopApprovalResult> resolveApprovalChecked(
+    String runtimeSessionId,
+    String choice, {
+    required String requestId,
+  });
+}
+
+/// Fail-closed admission proof required before any RPC that can acquire or
+/// mutate a live session runtime.
+abstract class HermesDesktopExclusiveSubmitCapabilityGateway {
+  Future<void> ensureExclusiveSubmitCapability();
+}
+
+/// Corrección de un turno vivo con la semántica actual de Hermes Desktop.
+///
+/// `session.redirect` conserva herramientas y trabajo completado, pero vuelve
+/// a pedir al modelo que continúe teniendo en cuenta el nuevo texto. Se
+/// mantiene como capacidad separada para no romper gateways antiguos que solo
+/// implementan `session.steer`.
+abstract class HermesDesktopRedirectGateway {
+  Future<DesktopRedirectDisposition> redirect(
+    String runtimeSessionId,
+    String text,
+  );
+}
+
+enum DesktopRedirectDisposition { redirected, queued, rejected }
+
+/// Envío que sigue a una interrupción de la reproducción de voz.
+///
+/// Hermes Desktop marca ese turno con `interrupted: true`; Hermes Agent usa la
+/// señal únicamente en el mensaje destinado al modelo para aclarar que la
+/// respuesta anterior no llegó a oírse completa. El texto persistido y visible
+/// permanece intacto.
+abstract class HermesDesktopInterruptedPromptGateway {
+  Future<void> submitInterruptedPrompt(String runtimeSessionId, String text);
+}
+
+/// Submit with surface metadata (`surface` / `voice_context`).
+///
+/// Optional, separate capability: a gateway without it receives the turn as
+/// before and the metadata is dropped. Typed sends never use it, so the server
+/// clears the surface on every ordinary submit.
+abstract class HermesDesktopClientSurfacePromptGateway {
+  Future<void> submitPromptWithSurface(
+    String runtimeSessionId,
+    String text,
+    PromptClientSurface surface,
+  );
+
+  Future<DesktopTurnAck> submitPromptIdempotentWithSurface(
+    String runtimeSessionId,
+    String text,
+    String clientTurnId,
+    PromptClientSurface surface,
+  );
+
+  Future<void> submitInterruptedPromptWithSurface(
+    String runtimeSessionId,
+    String text,
+    PromptClientSurface surface,
+  );
+
+  Future<void> submitQueuedPromptWithSurface(
+    String runtimeSessionId,
+    String text,
+    PromptClientSurface surface,
+  );
+
+  Future<DesktopTurnAck> submitQueuedPromptIdempotentWithSurface(
+    String runtimeSessionId,
+    String text,
+    String clientTurnId,
+    PromptClientSurface surface,
+  );
+}
+
+/// Lifecycle moderno y explícito de sesión.
+///
+/// Se mantiene fuera de [HermesDesktopGateway] para no romper gateways/fakes
+/// antiguos. Recuperación, warm-up y apertura de historial deben usar
+/// [resumeExisting], que jamás cae implícitamente en `session.create`.
+/// [createForFirstSubmit] queda reservado al primer envío de un borrador.
+abstract class HermesDesktopSessionLifecycleGateway {
+  Future<DesktopSessionSnapshot> resumeExisting(
+    String storedSessionId, {
+    String profile = '',
+    bool omitMessages = false,
+    // Hermes Agent 0.20 puede devolver un ack inmediato y completar la
+    // hidratación mediante `session.resume_progress`. Solicitamos los
+    // mensajes (`omitMessages=false`) y además reparamos abajo los markers
+    bool deferHistory = false,
+  });
+
+  Future<DesktopSessionSnapshot> createForFirstSubmit({
+    String profile = '',
+    List<Map<String, dynamic>> seedMessages = const [],
+    String model = '',
+  });
+}
+
+/// Optional exact runtime release. It is separate to preserve old fakes and
+/// must only be called after the owner has revalidated release authority.
+abstract class HermesDesktopSessionCloseGateway {
+  Future<bool> closeSession(String runtimeSessionId);
+}
+
+/// Recovery-only resume whose runtime anchor is committed by the caller only
+/// after its turn generation is still current.
+abstract class HermesDesktopRecoverySessionLifecycleGateway {
+  Future<DesktopSessionSnapshot> resumeExistingForRecovery(
+    String storedSessionId, {
+    String profile = '',
+  });
+
+  /// Legacy callers cannot demonstrate snapshot coverage and therefore never
+  /// release quarantine.
+  @Deprecated('Use HermesDesktopTypedRecoveryGateway')
+  void commitRecoveryRuntime(String runtimeSessionId);
+}
+
+/// Exact-transport recovery attachment authorized by a fresh active roster.
+///
+/// Implementations must obtain `session.active_list` and `session.resume` on
+/// one unchanged socket/channel/replay epoch and reject absent, duplicate,
+/// malformed, or identity-mismatched rows without reconnecting in between.
+/// An absent row is reported with [TuiGatewayRpcError.rosterSessionNotActive].
+abstract class HermesDesktopRosterBoundRecoveryGateway {
+  Future<DesktopRosterBoundRecovery> resumeAdvertisedExistingForRecovery(
+    String storedSessionId, {
+    String profile = '',
+  });
+
+  bool consumeRosterBoundRecovery(DesktopRosterBoundRecovery recovery);
+
+  bool consumeRosterBoundViewerAttachment(DesktopRosterBoundRecovery recovery);
+}
+
+/// Proof carried by a canonical recovery: the exact socket the snapshot was
+/// cut on. A snapshot from another socket cannot be consumed.
+final class _CanonicalRecoveryProof {
+  final int generation;
+  final WebSocketChannel channel;
+  final int token;
+  const _CanonicalRecoveryProof(this.generation, this.channel, this.token);
+}
+
+final class DesktopRosterBoundRecovery {
+  final DesktopSessionSnapshot snapshot;
+  final Object _issuer;
+  final Object? _transportProof;
+  bool _consumed = false;
+
+  DesktopRosterBoundRecovery._(
+    this.snapshot,
+    this._issuer,
+    this._transportProof,
+  );
+
+  @visibleForTesting
+  DesktopRosterBoundRecovery.forTesting(this.snapshot, Object issuer)
+    : _issuer = issuer,
+      _transportProof = null;
+}
+
+/// Optional typed authority boundary layered over the legacy recovery API.
+/// Keeping it separate preserves source compatibility for existing gateways
+/// while ensuring a runtime String can never release quarantine.
+abstract class HermesDesktopTypedRecoveryGateway {
+  RecoveryProof recoveryProofForSnapshot(
+    DesktopSessionSnapshot snapshot, {
+    required String connectionId,
+    required String profile,
+    required int bindGeneration,
+    required int sessionGeneration,
+    required int turnGeneration,
+    required Set<RecoveryDomain> coverage,
+    int? postSnapshotSequence,
+  });
+
+  bool validateRecovery(RecoveryProof proof);
+  bool commitRecovery(RecoveryProof proof);
+  bool recoveryAuthorityStillCurrent(RecoveryProof proof);
+}
+
+/// Atomic first-submit creation with the 0.19 session-scoped configuration.
+///
+/// This remains a separate optional interface so older gateway fakes and
+/// servers stay compatible. There is deliberately no global fallback.
+abstract class HermesDesktopConfiguredSessionLifecycleGateway {
+  Future<DesktopSessionSnapshot> createForFirstSubmitConfigured({
+    String profile = '',
+    List<Map<String, dynamic>> seedMessages = const [],
+    required DesktopSessionCreateConfig config,
+  });
+}
+
+/// Lifecycle opcional para soltar un socket idle sin inutilizar el cliente.
+abstract class HermesDesktopLifecycleGateway {
+  Future<void> disconnectIdle();
+}
+
+enum DesktopPromptResponseStatus { ok, expired }
+
+final class DesktopPromptResponse {
+  final DesktopPromptResponseStatus status;
+
+  /// False when the answer went out as a bare response frame to a server
+  /// request: nothing acknowledges it, so a transport loss right after the
+  /// write leaves its delivery unknown.
+  final bool deliveryAcknowledged;
+
+  const DesktopPromptResponse._(
+    this.status, {
+    this.deliveryAcknowledged = true,
+  });
+
+  bool get isExpired => status == DesktopPromptResponseStatus.expired;
+
+  factory DesktopPromptResponse.fromJson(
+    Map<String, dynamic> json, {
+    required String method,
+    bool allowExpired = false,
+  }) {
+    final status = json['status'];
+    if (status == 'ok') {
+      return const DesktopPromptResponse._(DesktopPromptResponseStatus.ok);
+    }
+    if (allowExpired && status == 'expired') {
+      return const DesktopPromptResponse._(DesktopPromptResponseStatus.expired);
+    }
+    throw TuiGatewayRpcError(
+      method,
+      'Hermes returned an invalid interactive prompt response',
+    );
+  }
+}
+
+/// RPC opcional para los prompts bloqueantes introducidos por Desktop 0.19.
+///
+/// Los cuatro métodos se correlacionan solo por el `request_id` opaco que
+/// entrega Hermes. Sudo y secretos aceptan un contenedor de un solo uso: el
+/// transporte lo consume y redacta antes de esperar la respuesta del servidor.
+abstract class HermesDesktopInteractivePromptGateway {
+  Future<DesktopPromptResponse> respondToClarify(
+    String requestId,
+    String answer, {
+    String? questionId,
+  });
+
+  /// Skips the whole question and only it: the turn goes on (Desktop
+  /// `skipClarify`, `store/clarify.ts:231-249`, answers the server request
+  /// with `{}`). Hermes settles a reply without `answers` as `cancelled`
+  /// and keeps the answers already locked (`tools/clarify_batch.py:15-31`).
+  Future<DesktopPromptResponse> skipClarify(String requestId);
+
+  Future<DesktopPromptResponse> respondToSudo(
+    String requestId,
+    EphemeralSensitiveValue password,
+  );
+
+  Future<DesktopPromptResponse> respondToSecret(
+    String requestId,
+    EphemeralSensitiveValue value,
+  );
+
+  /// La app móvil no posee una terminal administrada. Este RPC responde
+  /// siempre con texto vacío para desbloquear el runtime sin leer el sistema.
+  Future<DesktopPromptResponse> respondToTerminalRead(String requestId);
+}
+
+/// Session-scoped configuration introduced by Hermes Desktop 0.19.
+///
+/// Implementations must target the live runtime. There is deliberately no
+/// global fallback in this interface.
+abstract class HermesDesktopSessionConfigGateway {
+  Future<DesktopConfigSetResult> setSessionModel(
+    String runtimeSessionId,
+    DesktopModelSelection selection, {
+    bool confirmExpensiveModel = false,
+  });
+
+  Future<DesktopConfigSetResult> setSessionReasoning(
+    String runtimeSessionId,
+    DesktopReasoningEffort effort,
+  );
+
+  Future<DesktopConfigSetResult> setSessionFastMode(
+    String runtimeSessionId,
+    DesktopFastMode mode,
+  );
+}
+
+/// Optional live-session switching and inventory from Hermes Desktop 0.19.
+///
+/// Activation targets a known live runtime. Callers must fall back to
+/// `resumeExisting` with the durable identity when activation returns 4007 or
+/// the capability is unavailable; this interface never creates a session.
+abstract class HermesDesktopSessionActivityGateway {
+  DesktopGatewayCapabilityState capabilityState(
+    DesktopGatewayCapability capability,
+  );
+
+  Future<DesktopSessionSnapshot> activateSession(
+    String runtimeSessionId, {
+    required String storedSessionId,
+  });
+
+  Future<DesktopActiveSessionList> listActiveSessions({
+    String currentRuntimeSessionId = '',
+  });
+}
+
+/// Authenticated provider/model catalog scoped to an existing live runtime.
+abstract class HermesDesktopModelCatalogGateway {
+  /// [connectedOnly] fails closed instead of (re)opening the socket, for
+  /// passive reads such as the AppBar badge.
+  Future<DesktopModelCatalog> modelOptions(
+    String runtimeSessionId, {
+    bool refresh = false,
+    bool connectedOnly = false,
+  });
+}
+
+/// Profile-scoped catalog read without a live runtime, as Desktop's
+/// `requestModelOptions` does over its already-open gateway (mk1215). Kept
+/// separate so legacy fakes stay valid.
+abstract class HermesDesktopGlobalModelCatalogGateway {
+  /// [connectedOnly] fails closed instead of (re)opening the socket.
+  /// The default bounds preparation to 6 s, then gives model.options the
+  /// Desktop catalog RPC budget of 30 s. An explicit [timeout] preserves the
+  /// original single deadline shared by preparation and response.
+  Future<DesktopModelCatalog> globalModelOptions({
+    String profile = '',
+    bool refresh = false,
+    Duration? timeout,
+    bool connectedOnly = false,
+  });
+}
+
+abstract class HermesDesktopFreeTierGateway {
+  Future<FreeTierStatus> freeTierStatus({String profile = ''});
+
+  Future<FreeTierAckNotice> ackFreeTierNotice({String profile = ''});
+}
+
+/// Desglose opcional de la ventana de contexto del runtime vivo.
+///
+/// Se mantiene separado del gateway base para conservar compatibilidad con
+/// servidores y fakes anteriores a Desktop 0.19.
+abstract class HermesDesktopContextUsageGateway {
+  Future<DesktopContextBreakdown> contextBreakdown(String runtimeSessionId);
+}
+
+/// Plan limits as Hermes Desktop reads them: `session.usage` (its
+/// `account_lines` / `credits_lines`) and the `usage.bars` dollar view.
+/// Both answers are passed through raw; the model parses them.
+abstract class HermesDesktopAccountUsageGateway {
+  Future<Map<String, dynamic>> sessionUsage(String runtimeSessionId);
+
+  Future<Map<String, dynamic>> usageBars();
+}
+
+/// Lectura y escritura opcional de la identidad visual server-side de un
+/// profile (avatar raster + metadatos `hermes-bots` de Bot Mode).
+///
+/// Se mantiene fuera del gateway base para que backends y dobles anteriores a
+/// Hermes 0.20 sigan degradando sin exigir estos RPC.
+abstract class HermesDesktopProfileAssetsGateway {
+  Future<AgentProfileAvatar?> profileAvatar(String profileName);
+
+  /// Persiste título/apariencia/visibilidad del bot en `hermes-bots` de
+  /// `ui_meta` (`profiles.configure`). Los parámetros a `null` no se tocan;
+  /// `false` en [hidden] o [pinned] se persiste literalmente y un [title]
+  /// vacío elimina la clave. La escritura es read-modify-write: Hermes
+  /// reemplaza el namespace entero, así que los campos ajenos (`chat`,
+  /// `group`, …) se conservan desde una lectura fresca.
+  Future<void> saveProfileBotMeta({
+    required String profile,
+    String? title,
+    String? shape,
+    String? colorHex,
+    bool? hidden,
+    bool? pinned,
+    BotVisualIdentity? identity,
+  });
+
+  /// Escribe el avatar raster del profile (`profiles.set_asset`); [dataUri]
+  /// debe ser un data URI PNG/JPEG/WebP dentro de las cotas de
+  /// [AgentProfileAvatar].
+  Future<void> setProfileAvatar({
+    required String profile,
+    required String dataUri,
+  });
+
+  /// Borra el avatar del profile (`profiles.set_asset` con `clear: true`).
+  Future<void> clearProfileAvatar(String profile);
+}
+
+/// Skill de un profile según `profiles.describe` (Hermes 0.20, Bot Mode).
+final class DesktopProfileSkill {
+  final String name;
+  final bool enabled;
+  final String? label;
+  final String? description;
+  final String? group;
+
+  const DesktopProfileSkill({
+    required this.name,
+    required this.enabled,
+    this.label,
+    this.description,
+    this.group,
+  });
+
+  DesktopProfileSkill withEnabled(bool value) => DesktopProfileSkill(
+    name: name,
+    enabled: value,
+    label: label,
+    description: description,
+    group: group,
+  );
+}
+
+/// Creación de bots con paridad Bot Mode de Hermes Desktop
+/// (`CreateAgentDialog`): `profiles.create` con clonación/SOUL/modelo en una
+/// sola escritura, catálogo opcional de skills vía `profiles.describe` y
+/// `profiles.configure` para desactivar skills tras crear.
+///
+/// Interfaz opcional como el resto de capacidades Desktop: un gateway sin
+/// `profiles.describe` degrada devolviendo `null` en
+/// [describeProfileSkills] y el diálogo oculta la sección de skills.
+abstract class HermesDesktopBotCreationGateway {
+  Future<void> createProfileNative({
+    required String name,
+    String? cloneFrom,
+    String description,
+    String soul,
+    String model,
+    String provider,
+    bool noSkills,
+    bool shareAuth,
+  });
+
+  /// Misma escritura que [HermesDesktopProfileAssetsGateway.saveProfileBotMeta]
+  /// más el sello `created` (epoch ms) que Desktop usa para ordenar el roster
+  /// por actividad reciente (un bot recién creado encabeza la lista).
+  Future<void> saveProfileBotMeta({
+    required String profile,
+    String? title,
+    String? shape,
+    String? colorHex,
+    bool? hidden,
+    bool? pinned,
+    int? createdAtMs,
+    BotVisualIdentity? identity,
+  });
+
+  /// Skills del profile origen de clonación, o `null` cuando el gateway no
+  /// expone `profiles.describe` (-32601).
+  Future<List<DesktopProfileSkill>?> describeProfileSkills(String profile);
+
+  /// Aplica las skills desmarcadas en el diálogo de creación
+  /// (`profiles.configure` con `disabled_skills`). Best-effort en el llamador,
+  /// igual que en Desktop: el profile ya existe aunque esto falle.
+  Future<void> setProfileDisabledSkills({
+    required String profile,
+    required List<String> disabledSkills,
+  });
+}
+
+/// Mascotas nativas por perfil de Hermes Agent (RPCs `pet.*`).
+///
+/// Interfaz opcional (mismo patrón que el resto de capacidades Desktop): los
+/// gateways antiguos sin estos métodos fallan cerrados con `-32601`, igual que
+/// el manejo de Bot Mode. Todas las llamadas aceptan `profile`; vacío = perfil
+/// de arranque del gateway (upstream: `_profile_scoped` en
+/// `tui_gateway/server.py`).
+abstract class HermesDesktopPetGateway {
+  Stream<TuiGatewayEvent> get events;
+
+  Future<ProfilePetInfo> profilePetInfo({
+    String profile = '',
+    String? knownRevision,
+  });
+
+  Future<ProfilePetGallery> profilePetGallery({
+    String profile = '',
+    bool localOnly = false,
+  });
+
+  Future<String?> profilePetThumb({
+    String profile = '',
+    required String slug,
+    String url = '',
+  });
+
+  Future<ProfilePetSelection> profilePetSelect({
+    String profile = '',
+    required String slug,
+  });
+
+  Future<bool> profilePetDisable({String profile = ''});
+}
+
+/// Catálogo, completion y dispatch usados por las superficies Desktop.
+///
+/// Es una interfaz opcional para no ampliar [HermesDesktopGateway] ni romper
+/// dobles antiguos del chat.
+abstract class HermesDesktopCommandGateway {
+  Future<DesktopCommandCatalog> commandsCatalog();
+
+  Future<SlashCompletionBatch> completeSlash(String text);
+
+  Future<DesktopCommandRpcResult> slashExec(
+    String runtimeSessionId,
+    String command,
+  );
+
+  Future<DesktopCommandRpcResult> commandDispatch(
+    String runtimeSessionId, {
+    required String name,
+    String arg = '',
+  });
+}
+
+/// Composer completions bound to the chat's runtime, as Desktop sends them
+/// (`use-slash-completions.ts`): `session_id` scopes skill lookups to that
+/// session's profile and workspace (project-local skills); a new-chat draft
+/// with no session names its `profile` instead (`CompleteSlashParams`).
+/// Optional so older doubles of [HermesDesktopCommandGateway] stay valid.
+abstract class HermesDesktopComposerCompletionGateway {
+  Future<SlashCompletionBatch> completeSlashInSession(
+    String text, {
+    String? runtimeSessionId,
+    String? profile,
+  });
+
+  /// `complete.path {word, session_id}`: `@` references listed against the
+  /// session's own cwd (Desktop `use-at-completions.ts`).
+  Future<PathCompletionBatch> completePath(
+    String word, {
+    required String runtimeSessionId,
+  });
+}
+
+/// Read-only replay ring of one runtime (`session.events.since`,
+/// `last_seen: 0`). Lets a relaunched client learn whether a compression that
+/// runtime ran is still pinned, without resuming or stealing it.
+abstract class HermesDesktopCompressionStatusGateway {
+  Future<Map<String, dynamic>> compressionEventReplay(String runtimeSessionId);
+}
+
+/// Compresión manual y explícita de una sesión inactiva.
+///
+/// Es opcional para mantener compatibles servidores y dobles anteriores a 0.19.
+abstract class HermesDesktopCompressionGateway {
+  Future<DesktopCompressionResult> compressSession(
+    String runtimeSessionId, {
+    String focusTopic = '',
+  });
+}
+
+final class DesktopSubagentInterruptResult {
+  final bool found;
+  final String subagentId;
+
+  const DesktopSubagentInterruptResult({
+    required this.found,
+    required this.subagentId,
+  });
+
+  factory DesktopSubagentInterruptResult.fromJson(
+    Map<String, dynamic> json, {
+    required String requestedSubagentId,
+  }) {
+    final found = json['found'];
+    final returnedId = json['subagent_id'];
+    if (found is! bool || returnedId != requestedSubagentId) {
+      throw const FormatException('invalid subagent interrupt result');
+    }
+    return DesktopSubagentInterruptResult(
+      found: found,
+      subagentId: requestedSubagentId,
+    );
+  }
+}
+
+final class DesktopSubagentSnapshot {
+  /// `SubagentStatus` values the contract marks terminal. `subagent.list`
+  /// reads only the live registry, so these are defensive: a finished row
+  /// must not resurrect a card.
+  static const _terminalStatuses = <String>{
+    'completed',
+    'complete',
+    'failed',
+    'error',
+    'timeout',
+    'interrupted',
+    'cancelled',
+  };
+
+  final String subagentId;
+  final String? parentId;
+  final int? depth;
+  final String? goal;
+  final String? delegationId;
+  final String? model;
+  final DateTime? startedAt;
+  final String status;
+  final int? toolCount;
+  final String? lastTool;
+  final bool? acceptingSteer;
+
+  const DesktopSubagentSnapshot({
+    required this.subagentId,
+    required this.status,
+    this.parentId,
+    this.depth,
+    this.goal,
+    this.delegationId,
+    this.model,
+    this.startedAt,
+    this.toolCount,
+    this.lastTool,
+    this.acceptingSteer,
+  });
+
+  static DesktopSubagentSnapshot? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final json = <String, dynamic>{};
+    for (final entry in raw.entries) {
+      if (entry.key is String) json[entry.key as String] = entry.value;
+    }
+    final subagentId = _subagentOpaqueId(json['subagent_id']);
+    if (subagentId == null) return null;
+    // `status` is `SubagentStatus | null`. A live record without one, or with
+    // a status newer than this build, is still a running child.
+    final statusValue = json['status'];
+    final reported = statusValue is String
+        ? statusValue.trim().toLowerCase()
+        : '';
+    if (_terminalStatuses.contains(reported)) return null;
+    final status = reported.isEmpty ? 'running' : reported;
+    final toolCount = json['tool_count'];
+    final acceptingSteer = json['accepting_steer'];
+    final startedAt = _subagentTimestamp(json['started_at']);
+    return DesktopSubagentSnapshot(
+      subagentId: subagentId,
+      parentId: _subagentOpaqueId(json['parent_id']),
+      depth: _subagentNonNegativeInt(json['depth']),
+      goal: _boundedSubagentText(json['goal'], 1024),
+      delegationId: _subagentOpaqueId(json['delegation_id']),
+      model: _boundedSubagentText(json['model'], 160),
+      startedAt: startedAt,
+      status: status,
+      toolCount: toolCount is int && toolCount >= 0 ? toolCount : null,
+      lastTool: _boundedSubagentText(json['last_tool'], 128),
+      acceptingSteer: acceptingSteer is bool ? acceptingSteer : null,
+    );
+  }
+
+  @override
+  String toString() => 'DesktopSubagentSnapshot(status: $status)';
+}
+
+/// A delegation task that ended badly, as `subagent.list` persists it in
+/// `delegations` (the live roster forgets ended children and dies with a
+/// renderer reload). One entry per failed task; a batch can carry several
+/// under the same [delegationId].
+final class DesktopFailedDelegation {
+  final String delegationId;
+  final int taskIndex;
+  final String status;
+  final String goal;
+  final String? error;
+  final DateTime? dispatchedAt;
+  final DateTime? completedAt;
+
+  const DesktopFailedDelegation({
+    required this.delegationId,
+    required this.taskIndex,
+    required this.status,
+    required this.goal,
+    this.error,
+    this.dispatchedAt,
+    this.completedAt,
+  });
+
+  /// `delegation_id` + `task_index`: unique within one list.
+  String get stableId => '$delegationId#$taskIndex';
+
+  Duration? get duration {
+    final start = dispatchedAt;
+    final end = completedAt;
+    if (start == null || end == null || end.isBefore(start)) return null;
+    return end.difference(start);
+  }
+
+  static DesktopFailedDelegation? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final json = <String, dynamic>{};
+    for (final entry in raw.entries) {
+      if (entry.key is String) json[entry.key as String] = entry.value;
+    }
+    final delegationId = _subagentOpaqueId(json['delegation_id']);
+    if (delegationId == null) return null;
+    final index = _subagentNonNegativeInt(json['task_index']) ?? 0;
+    final status = _boundedSubagentText(json['status'], 32)?.toLowerCase();
+    return DesktopFailedDelegation(
+      delegationId: delegationId,
+      taskIndex: index,
+      status: status ?? 'failed',
+      goal: _boundedSubagentText(json['goal'], 1024) ?? '',
+      error: _boundedSubagentText(json['error'], 2048),
+      dispatchedAt: _subagentTimestamp(json['dispatched_at']),
+      completedAt: _subagentTimestamp(json['completed_at']),
+    );
+  }
+
+  @override
+  String toString() => 'DesktopFailedDelegation(status: $status)';
+}
+
+/// Failed delegations persisted by the server (`subagent.list` →
+/// `delegations`). Separate from [HermesDesktopSubagentGateway] so older
+/// gateways and fakes keep working: absent field means no rows.
+abstract class HermesDesktopFailedDelegationGateway {
+  Future<List<DesktopFailedDelegation>> listFailedDelegations(
+    String runtimeSessionId,
+  );
+}
+
+final class DesktopSubagentTailResult {
+  final bool available;
+  final String content;
+  final bool truncated;
+
+  const DesktopSubagentTailResult({
+    required this.available,
+    required this.content,
+    required this.truncated,
+  });
+
+  factory DesktopSubagentTailResult.fromJson(Map<String, dynamic> json) {
+    // SubagentTailResult defaults: available=false, text="", truncated=false.
+    final available = json['available'] ?? false;
+    final serverTruncated = json['truncated'] ?? false;
+    if (available is! bool || serverTruncated is! bool) {
+      throw const FormatException('invalid subagent tail result');
+    }
+    if (!available) {
+      return const DesktopSubagentTailResult(
+        available: false,
+        content: '',
+        truncated: false,
+      );
+    }
+    final rawContent = json['text'] ?? json['content'] ?? '';
+    if (rawContent is! String) {
+      throw const FormatException('invalid subagent tail content');
+    }
+    const limit = 16384;
+    final runes = rawContent.runes;
+    final clientTruncated = runes.length > limit;
+    return DesktopSubagentTailResult(
+      available: true,
+      content: clientTruncated
+          ? String.fromCharCodes(runes.skip(runes.length - limit))
+          : rawContent,
+      truncated: serverTruncated || clientTruncated,
+    );
+  }
+
+  @override
+  String toString() =>
+      'DesktopSubagentTailResult(available: $available, truncated: $truncated)';
+}
+
+final class DesktopSubagentSteerResult {
+  final String status;
+  final String subagentId;
+  final String text;
+
+  const DesktopSubagentSteerResult({
+    required this.status,
+    required this.subagentId,
+    required this.text,
+  });
+
+  bool get queued => status == 'queued';
+
+  factory DesktopSubagentSteerResult.fromJson(
+    Map<String, dynamic> json, {
+    required String requestedSubagentId,
+  }) {
+    final status = json['status'];
+    final text = json['text'];
+    if (status is! String ||
+        text is! String ||
+        json['subagent_id'] != requestedSubagentId ||
+        !const {'queued', 'rejected'}.contains(status)) {
+      throw const FormatException('invalid subagent steer result');
+    }
+    return DesktopSubagentSteerResult(
+      status: status,
+      subagentId: requestedSubagentId,
+      text: text,
+    );
+  }
+}
+
+String? _subagentOpaqueId(Object? value) {
+  if (value is! String ||
+      value.isEmpty ||
+      value.trim() != value ||
+      value.length > 512 ||
+      value.contains(RegExp(r'[\x00-\x1F\x7F]'))) {
+    return null;
+  }
+  return value;
+}
+
+String? _boundedSubagentText(Object? value, int maxCharacters) {
+  if (value is! String) return null;
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) return null;
+  return String.fromCharCodes(trimmed.runes.take(maxCharacters));
+}
+
+DateTime? _subagentTimestamp(Object? value) {
+  if (value is String) return DateTime.tryParse(value)?.toUtc();
+  if (value is! num || !value.isFinite || value < 0) return null;
+  try {
+    return DateTime.fromMicrosecondsSinceEpoch(
+      (value.toDouble() * Duration.microsecondsPerSecond).round(),
+      isUtc: true,
+    );
+  } on RangeError {
+    return null;
+  }
+}
+
+int? _subagentNonNegativeInt(Object? value) {
+  if (value is! num || !value.isFinite || value < 0) return null;
+  final integer = value.toInt();
+  return value == integer ? integer : null;
+}
+
+/// Control opcional y autenticado de un hijo nativo de Hermes 0.19.
+///
+/// No incluye la pausa global de delegación: esa mutación requiere una
+/// superficie administrativa separada y nunca se ejecuta desde el chat.
+abstract class HermesDesktopSubagentGateway {
+  DesktopGatewayCapabilityState capabilityState(
+    DesktopGatewayCapability capability,
+  );
+
+  Future<List<DesktopSubagentSnapshot>> listSubagents(String runtimeSessionId);
+
+  Future<DesktopSubagentTailResult> tailSubagent(
+    String runtimeSessionId,
+    String subagentId,
+  );
+
+  Future<DesktopSubagentSteerResult> steerSubagent(
+    String runtimeSessionId,
+    String subagentId,
+    String text,
+  );
+
+  Future<DesktopSubagentInterruptResult> interruptSubagent(
+    String runtimeSessionId,
+    String subagentId,
+  );
+}
+
+enum DesktopTurnState { accepted, running, terminal, failed, cancelled }
+
+DesktopTurnState _parseDesktopTurnState(Object? raw, String method) {
+  final value = raw?.toString() ?? '';
+  return DesktopTurnState.values.firstWhere(
+    (state) => state.name == value,
+    orElse: () => throw TuiGatewayRpcError(
+      method,
+      'Hermes returned an invalid turn state',
+    ),
+  );
+}
+
+class DesktopTurnAck {
+  final bool accepted;
+  final String clientTurnId;
+  final String serverTurnId;
+  final DesktopTurnState state;
+  final bool duplicate;
+
+  const DesktopTurnAck({
+    required this.accepted,
+    required this.clientTurnId,
+    required this.serverTurnId,
+    required this.state,
+    required this.duplicate,
+  });
+
+  factory DesktopTurnAck.fromJson(
+    Map<String, dynamic> json, {
+    required String expectedClientTurnId,
+  }) {
+    final echoed = (json['client_turn_id'] ?? '').toString();
+    if (json['accepted'] != true || echoed != expectedClientTurnId) {
+      throw const TuiGatewayRpcError(
+        'prompt.submit',
+        'Hermes returned an invalid idempotent acknowledgement',
+      );
+    }
+    final serverTurnId = (json['server_turn_id'] ?? '').toString();
+    if (serverTurnId.isEmpty) {
+      throw const TuiGatewayRpcError(
+        'prompt.submit',
+        'Hermes omitted the server turn identity',
+      );
+    }
+    final state = _parseDesktopTurnState(json['state'], 'prompt.submit');
+    if (state != DesktopTurnState.accepted &&
+        state != DesktopTurnState.running &&
+        state != DesktopTurnState.terminal) {
+      throw const TuiGatewayRpcError(
+        'prompt.submit',
+        'Hermes acknowledged a turn with an invalid state',
+      );
+    }
+    final duplicate = json['duplicate'];
+    if (duplicate is! bool) {
+      throw const TuiGatewayRpcError(
+        'prompt.submit',
+        'Hermes omitted the duplicate flag',
+      );
+    }
+    return DesktopTurnAck(
+      accepted: true,
+      clientTurnId: echoed,
+      serverTurnId: serverTurnId,
+      state: state,
+      duplicate: duplicate,
+    );
+  }
+}
+
+class DesktopTurnStatus {
+  final bool known;
+  final String clientTurnId;
+  final String? serverTurnId;
+  final DesktopTurnState? state;
+
+  const DesktopTurnStatus({
+    required this.known,
+    required this.clientTurnId,
+    this.serverTurnId,
+    this.state,
+  });
+
+  factory DesktopTurnStatus.fromJson(
+    Map<String, dynamic> json, {
+    required String expectedClientTurnId,
+  }) {
+    final known = json['known'];
+    final echoed = (json['client_turn_id'] ?? '').toString();
+    if (known is! bool || echoed != expectedClientTurnId) {
+      throw const TuiGatewayRpcError(
+        'turn.status',
+        'Hermes returned an invalid turn status',
+      );
+    }
+    if (!known) {
+      return DesktopTurnStatus(known: false, clientTurnId: echoed);
+    }
+    final serverTurnId = (json['server_turn_id'] ?? '').toString();
+    if (serverTurnId.isEmpty) {
+      throw const TuiGatewayRpcError(
+        'turn.status',
+        'Hermes omitted the known server turn identity',
+      );
+    }
+    return DesktopTurnStatus(
+      known: true,
+      clientTurnId: echoed,
+      serverTurnId: serverTurnId,
+      state: _parseDesktopTurnState(json['state'], 'turn.status'),
+    );
+  }
+}
+
+/// Extensión opcional: comprobación inmediata del socket actual tras un cambio
+/// de red o al volver de segundo plano. Un socket medio abierto en la red
+/// antigua no espera al plazo completo del heartbeat.
+abstract class HermesDesktopTransportProbeGateway {
+  /// Devuelve true si el socket respondió; false si no había conexión o la
+  /// sonda la declaró muerta (y ya se lanzó la ruta normal de error).
+  Future<bool> probeNow();
+}
+
+/// Extensión opcional. La interfaz base permanece intacta para instalaciones y
+/// fakes heredados; solo se usa tras una capability positiva autenticada.
+abstract class HermesDesktopIdempotentGateway {
+  Future<DesktopTurnAck> submitPromptIdempotent(
+    String runtimeSessionId,
+    String text,
+    String clientTurnId,
+  );
+
+  Future<DesktopTurnStatus> getTurnStatus(
+    String sessionId,
+    String clientTurnId,
+  );
+}
+
+abstract class HermesDesktopQueuedPromptGateway {
+  Future<void> submitQueuedPrompt(String runtimeSessionId, String text);
+
+  Future<DesktopTurnAck> submitQueuedPromptIdempotent(
+    String runtimeSessionId,
+    String text,
+    String clientTurnId,
+  );
+}
+
+/// Identidad durable posterior a un `prompt.submit` que recorta.
+///
+/// Los gateways nuevos devuelven un mapa `old → new` por fila física
+/// (`survivor_row_id_map`); los antiguos, los ids visibles de usuario en orden
+/// de ordinal (`survivor_user_row_ids`). Un rewind reinserta el prefijo
+/// conservado como filas SQLite NUEVAS, así que todo row id cacheado queda
+/// obsoleto en cuanto aterriza.
+class DesktopRewindAck {
+  final List<int?>? survivorUserRowIds;
+
+  /// `old row id → new row id` (o `null` si esa fila dejó de existir). Tiene
+  /// precedencia sobre [survivorUserRowIds]: no depende de que el ordinal
+  /// local y el del gateway coincidan.
+  final Map<int, int?>? survivorRowIdMap;
+
+  const DesktopRewindAck({this.survivorUserRowIds, this.survivorRowIdMap});
+
+  factory DesktopRewindAck.fromJson(Map<String, dynamic> json) {
+    final rawMap = json['survivor_row_id_map'];
+    if (rawMap is Map) {
+      final parsed = <int, int?>{};
+      for (final entry in rawMap.entries) {
+        final previous = entry.key is int
+            ? entry.key as int
+            : int.tryParse('${entry.key}');
+        if (previous == null) continue;
+        final next = entry.value;
+        if (next == null) {
+          parsed[previous] = null;
+        } else if (next is int) {
+          parsed[previous] = next;
+        }
+      }
+      return DesktopRewindAck(survivorRowIdMap: parsed);
+    }
+    final raw = json['survivor_user_row_ids'];
+    if (raw is! List) return const DesktopRewindAck();
+    return DesktopRewindAck(
+      survivorUserRowIds: raw
+          .map<int?>((value) => value is int ? value : null)
+          .toList(growable: false),
+    );
+  }
+}
+
+/// Capacidades añadidas por Hermes Desktop moderno. Se separan de la interfaz
+/// base para que gateways antiguos y dobles de prueba sigan siendo válidos.
+abstract class HermesDesktopRewindResolverGateway {
+  Future<int?> resolveDurableUserRowId(
+    String runtimeSessionId, {
+    required String sourceText,
+    required int expectedOrdinal,
+  });
+}
+
+abstract class HermesDesktopRewindGateway {
+  Future<void> submitRewindPrompt(
+    String runtimeSessionId,
+    String text,
+    int truncateBeforeUserOrdinal,
+  );
+}
+
+abstract class HermesDesktopDurableRewindGateway {
+  /// [rebindSurvivorRowIds] son los row ids durables que el cliente todavía
+  /// tiene cacheados. El gateway devuelve por ellos el mapa autoritativo
+  /// `old → new`. Opcional a propósito: los dobles y gateways antiguos que no
+  /// lo declaran siguen siendo válidos.
+  Future<DesktopRewindAck> submitDurableRewindPrompt(
+    String runtimeSessionId,
+    String text,
+    int truncateBeforeUserOrdinal, {
+    required int truncateBeforeRowId,
+    List<int> rebindSurvivorRowIds = const [],
+  });
+}
+
+class DesktopAttachmentResult {
+  final String? path;
+  final String? refText;
+
+  const DesktopAttachmentResult({this.path, this.refText});
+}
+
+abstract class HermesDesktopAttachmentGateway {
+  Future<DesktopAttachmentResult> attachImageBytes(
+    String runtimeSessionId, {
+    required String filename,
+    required String contentBase64,
+  });
+
+  Future<DesktopAttachmentResult> attachFileBytes(
+    String runtimeSessionId, {
+    required String filename,
+    required String mimeType,
+    required String contentBase64,
+  });
+
+  Future<void> detachImage(String runtimeSessionId, String path);
+}
+
+final class _GroupSocketLease {
+  final int generation;
+  final WebSocketChannel channel;
+
+  const _GroupSocketLease({required this.generation, required this.channel});
+}
+
+final class _SessionRosterSocketLease {
+  final int generation;
+  final WebSocketChannel channel;
+  final String? replayEpoch;
+
+  const _SessionRosterSocketLease({
+    required this.generation,
+    required this.channel,
+    required this.replayEpoch,
+  });
+}
+
+class TuiGatewayClient
+    implements
+        ConnectionLinkSource,
+        ServerStartingLinkSource,
+        LinkHistorySource,
+        HermesConnectionRequestGateway,
+        HermesDelegationGateway,
+        HermesDesktopGateway,
+        HermesDesktopOpenRequestsGateway,
+        HermesDesktopCompressionStatusGateway,
+        HermesDisplayToggleGateway,
+        BotMentionRosterGateway,
+        BotRoomLinkGateway,
+        BotProfileGateway,
+        BotModelGateway,
+        BotChatTitleLookup,
+        HermesDesktopRedirectGateway,
+        HermesDesktopInterruptedPromptGateway,
+        HermesDesktopClientSurfacePromptGateway,
+        HermesDesktopSessionLifecycleGateway,
+        HermesDesktopSessionHistoryGateway,
+        HermesDesktopSessionCloseGateway,
+        SubagentWatchGateway,
+        HermesDesktopRecoverySessionLifecycleGateway,
+        HermesDesktopRosterBoundRecoveryGateway,
+        HermesDesktopTypedRecoveryGateway,
+        HermesDesktopLiveTransportGateway,
+        HermesDesktopConfiguredSessionLifecycleGateway,
+        HermesDesktopLifecycleGateway,
+        HermesDesktopIdempotentGateway,
+        HermesDesktopTransportProbeGateway,
+        HermesDesktopQueuedPromptGateway,
+        HermesDesktopRewindResolverGateway,
+        HermesDesktopRewindGateway,
+        HermesDesktopDurableRewindGateway,
+        HermesDesktopAttachmentGateway,
+        HermesDesktopInteractivePromptGateway,
+        HermesDesktopSessionConfigGateway,
+        HermesDesktopSessionActivityGateway,
+        HermesDesktopModelCatalogGateway,
+        HermesDesktopGlobalModelCatalogGateway,
+        HermesDesktopFreeTierGateway,
+        HermesDesktopContextUsageGateway,
+        HermesDesktopAccountUsageGateway,
+        HermesDesktopProfileAssetsGateway,
+        HermesDesktopBotCreationGateway,
+        HermesDesktopPetGateway,
+        HermesDesktopCommandGateway,
+        HermesDesktopComposerCompletionGateway,
+        HermesDesktopCompressionGateway,
+        HermesDesktopApprovalResultGateway,
+        HermesDesktopSubagentGateway,
+        HermesDesktopFailedDelegationGateway,
+        HermesDesktopProcessStopGateway,
+        HermesDesktopControlGateway,
+        HermesDesktopTurnSideGateway,
+        HermesDesktopSessionControlGateway,
+        HermesProjectManagementGateway,
+        HermesPullRequestGateway,
+        HermesGitReviewGateway,
+        HermesGitHubGateway,
+        HermesForeignSessionGateway,
+        HermesMessageReactionGateway,
+        HermesProjectCreationGateway,
+        HermesProjectFilesGateway,
+        HermesProjectFileWritesGateway,
+        HermesExtensionManagementGateway,
+        HermesMcpProvisioningGateway,
+        HermesWebhookManagementGateway,
+        HermesServerPlatformCapabilitiesGateway,
+        HermesDesktopExclusiveSubmitCapabilityGateway {
+  static const _transportTeardownBudget = Duration(seconds: 1);
+
+  /// Silence tolerated before a socket is declared half-open. Same 45 s as
+  /// Desktop (`apps/shared/src/json-rpc-channel.ts`), which the server sizes
+  /// its 30 s send deadline against (`tui_gateway/ws.py`). A shorter value
+  /// killed healthy sockets while Hermes was busy serialising a long model
+  /// call and answered the ping late.
+  static const defaultHeartbeatDeadline = Duration(seconds: 45);
+
+  /// How long a teardown keeps reading after sending the close frame so the
+  /// peer's close (and any reply already in flight) is consumed before the
+  /// subscription is cancelled. Cancelling first shuts the read side down and
+  /// can turn a clean close into a TCP reset (server logs 1006).
+  static const _closeDrainCap = Duration(milliseconds: 750);
+
+  /// Completes when a channel's inbound stream ends (peer close, error or
+  /// local close echo). Keyed by channel so superseded sockets drain too.
+  final Expando<Completer<void>> _streamDrained = Expando<Completer<void>>();
+
+  /// When each channel reached `gateway.ready` (close telemetry).
+  final Expando<DateTime> _channelReadyAt = Expando<DateTime>();
+
+  /// Responses a deliberately closed, already detached channel still owes.
+  final Expando<_OwedResponses> _awaitResponses = Expando<_OwedResponses>();
+
+  static String durableGroupEventId(String clientEventId) =>
+      'user:${sha256.convert(utf8.encode(clientEventId))}';
+
+  /// Hermes waits up to 660 seconds for compute-host compression before it
+  /// returns the typed `pending` branch. Keep a small transport margin so a
+  /// valid server reply is not abandoned first by Console.
+  static const sessionCompressRpcTimeout = Duration(seconds: 690);
+
+  final SavedConnection _connection;
+
+  /// The saved connection this client talks to; screens opened from a
+  /// gateway (the Plugin Hub of Extensions) build their own transports from it.
+  SavedConnection get connection => _connection;
+
+  /// `[QA-NET]` labels only (never behaviour): the pool sets the lane
+  /// (`chat`, `observer`; a client of its own is `own`) and chat profile.
+  String meterLane = 'own';
+  String meterProfile = '';
+
+  String get _meterSocketKey =>
+      GatewaySocketMeter.socketKey(_connection.id, meterProfile, meterLane);
+
+  String get _meterTag => GatewaySocketMeter.instance.enabled
+      ? ' lane=$meterLane socket=$_meterSocketKey'
+      : '';
+  final DashboardClient _dashboard;
+  final WebSocketChannel Function(Uri uri, Map<String, dynamic> headers)?
+  _channelFactory;
+  final DesktopGatewayCapabilityCache _capabilityCache;
+  final GroupsCapabilityCache _groupsCapabilityCache = GroupsCapabilityCache();
+  final Duration _heartbeatInterval;
+  final Duration _heartbeatDeadline;
+  final Duration _fanoutInactivityDeadline;
+  final DateTime Function() _now;
+  static const CapabilityPayloadSanitizer _payloadSanitizer =
+      CapabilityPayloadSanitizer();
+  static const TuiGatewayRpcError _exclusiveSubmitCapabilityDenied =
+      TuiGatewayRpcError(
+        'prompt.submit',
+        'Hermes Agent cannot safely accept this message',
+        data: {'reason': 'EXCLUSIVE_SUBMIT_CAPABILITY_DENIED'},
+        origin: CompressionFailureOrigin.localPreflight,
+      );
+  static const TuiGatewayRpcError _exclusiveSubmitCapabilityRace =
+      TuiGatewayRpcError(
+        'prompt.submit',
+        'Hermes Agent cannot safely accept this message',
+        origin: CompressionFailureOrigin.localPreflight,
+      );
+
+  WebSocketChannel? _channel;
+  StreamSubscription<dynamic>? _subscription;
+  final StreamController<TuiGatewayEvent> _events =
+      StreamController<TuiGatewayEvent>.broadcast();
+  final Map<int, _PendingRpc> _pending = {};
+  final Map<String, _OpenServerRequest> _openServerRequests = {};
+  // Approval queue `request_id` → JSON-RPC server request id (`srq-…`).
+  final Map<String, String> _approvalServerRequestIds = {};
+  // Server request id → approval `request_id` of approvals this socket
+  // answered by a bare response frame. Hermes may still withdraw one it had
+  // settled first; its `request.cancel` must name the approval, not the frame.
+  // That race is immediate, so only the latest answers are kept.
+  final Map<String, String> _answeredApprovalServerRequestIds = {};
+  static const _answeredApprovalServerRequestLimit = 32;
+  int _nextId = 1;
+  bool _connectedValue = false;
+  bool get _connected => _connectedValue;
+  set _connected(bool value) {
+    if (_connectedValue == value) return;
+    _connectedValue = value;
+    _link.notify();
+  }
+
+  bool _closed = false;
+  int _socketGeneration = 0;
+  int _exclusiveSubmitCapabilityGeneration = -1;
+  bool? _exclusiveSubmitCapabilityAllowed;
+  Future<bool>? _exclusiveSubmitCapabilityProbe;
+  int _heartbeatSequence = 0;
+  DateTime _lastInboundAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Último frame REAL recibido del socket. A diferencia de [_lastInboundAt],
+  /// el heartbeat nunca lo adelanta al reanudar el isolate: solo así
+  /// [probeNow] distingue un socket vivo de uno medio abierto tras un resume.
+  DateTime _lastFrameAt = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime? _lastHeartbeatTickAt;
+
+  /// A `gateway.ping` was sent and no frame arrived since; a clean close
+  /// waits for it (see [_quiesceInFlight]).
+  bool _heartbeatAwaitingReply = false;
+  Timer? _heartbeatTimer;
+  final Map<String, _WatchdogRuntime> _watchdogs = <String, _WatchdogRuntime>{};
+  // N10h-2: runtimes whose end of turn was withheld while quarantined.
+  final Set<String> _withheldTurnEnds = <String>{};
+  bool _fanoutWatchdogInFlight = false;
+  Future<void>? _connecting;
+
+  /// Several chats ride this socket (Desktop's single `JsonRpcGatewayClient`
+  /// model): every chat filters events by its own runtime `session_id`, the
+  /// watchdog follows every attached runtime, and a released chat only drops
+  /// its runtime's bookkeeping. Set by [SharedGatewayPool] for pooled sockets.
+  bool _multiplexed = false;
+
+  bool get multiplexesSessions => _multiplexed;
+
+  /// Opts this socket into many-session use. Idempotent.
+  void enableSessionMultiplexing() => _multiplexed = true;
+
+  /// A `gateway.ready` of this client announced a `replay_epoch`: each session
+  /// can be re-attached from its own watermark after a drop. The proof is
+  /// remembered across redials (the epoch outlives the socket, and a ready
+  /// without one clears it), so a cut does not send every new chat to a socket
+  /// of its own; false until the first `gateway.ready` (first contact).
+  bool get knownPerSessionReplayTransport => !_closed && _replayEpoch != null;
+
+  /// Runtimes released by every chat on this multiplexed socket, with the
+  /// socket generation they were released on. Hermes has no per-session
+  /// detach, so it keeps streaming them on that socket (as to Desktop's single
+  /// socket) until it closes; nobody reads them, so their frames are dropped
+  /// before replay bookkeeping until a chat retains the runtime again.
+  ///
+  /// Membership is exact, never evicted: a capped set forgot its oldest
+  /// entry, whose late frames then rebuilt a watermark nobody read and made
+  /// its revive dirty. It is bounded instead by what Hermes streams here: a
+  /// later socket only carries runtimes some chat resumed on it, so entries
+  /// of an older generation are stale and pruned on the next release.
+  final Map<String, int> _releasedRuntimes = <String, int>{};
+
+  /// Chats currently reading each runtime on this multiplexed socket.
+  final Map<String, int> _runtimeReaders = <String, int>{};
+
+  /// A chat bound [runtimeSessionId] on this multiplexed socket.
+  @override
+  void retainSessionRuntime(String runtimeSessionId) {
+    final runtime = runtimeSessionId.trim();
+    if (runtime.isEmpty || _closed || !_multiplexed) return;
+    final readers = _runtimeReaders[runtime] ?? 0;
+    _runtimeReaders[runtime] = readers + 1;
+    if (readers == 0) _reviveReleasedRuntime(runtime);
+  }
+
+  /// A released runtime is bound again (resume/activate/create answered it):
+  /// its frames flow again from this response on. Frames were dropped while
+  /// nobody read it, so it starts from a clean replay slate, exactly as a
+  /// freshly dialled per-chat socket would.
+  void _reviveReleasedRuntime(String runtime) {
+    final releasedOn = _releasedRuntimes.remove(runtime);
+    if (releasedOn == _socketGeneration) _replayCoordinator.forget(runtime);
+  }
+
+  /// The last chat reading [runtimeSessionId] on this multiplexed socket let
+  /// it go (released or moved to another runtime): forget its watermark and
+  /// watchdog so a long-lived shared socket never accumulates runtimes (the
+  /// replay coordinator poisons every runtime past its bound). After a
+  /// reconnect nobody resumes it, so Hermes detaches and reaps it exactly as
+  /// when a per-chat socket closed.
+  @override
+  void releaseSessionRuntime(String runtimeSessionId) {
+    final runtime = runtimeSessionId.trim();
+    if (runtime.isEmpty || _closed || !_multiplexed) return;
+    final readers = (_runtimeReaders[runtime] ?? 0) - 1;
+    if (readers > 0) {
+      _runtimeReaders[runtime] = readers;
+      return;
+    }
+    _runtimeReaders.remove(runtime);
+    _retireWatchdogRuntime(runtime);
+    _withheldTurnEnds.remove(runtime);
+    _replayCoordinator.forget(runtime);
+    final generation = _socketGeneration;
+    _releasedRuntimes
+      ..removeWhere((_, releasedOn) => releasedOn != generation)
+      ..[runtime] = generation;
+  }
+
+  @visibleForTesting
+  Set<String> get releasedRuntimesForTesting =>
+      Set.unmodifiable(_releasedRuntimes.keys);
+
+  @visibleForTesting
+  Set<String> get watchedRuntimesForTesting =>
+      Set.unmodifiable(_watchdogs.keys);
+
+  /// The single runtime a legacy gateway's unscoped events are attributed to,
+  /// and whether binding a second one made that attribution ambiguous.
+  @visibleForTesting
+  ({String? runtime, bool ambiguous}) get legacyEventRuntimeForTesting =>
+      (runtime: _legacyEventRuntimeId, ambiguous: _legacyEventRuntimeAmbiguous);
+
+  @visibleForTesting
+  Map<String, int> get replayWatermarksForTesting =>
+      _replayCoordinator.watermarks;
+
+  /// Single reconnect owner for this client (P0-2): every loss of the socket
+  /// (failed connect, error, peer close, malformed frame) arms a backoff;
+  /// RPCs fail fast while it runs instead of dialing per call.
+  final GatewayReconnectBackoff _reconnectBackoff;
+  DateTime? _backoffUntil;
+
+  /// Socket link edges (ready, lost, backoff scheduled, auth rejected) for
+  /// [ConnectionStatusRegistry], the single source of the connection state.
+  final _link = ConnectionSignal();
+  bool _authRejected = false;
+
+  /// The last ticket request got 502/503/504: the Dashboard is booting.
+  bool _serverStarting = false;
+
+  /// Credential epoch at which the Dashboard refused the credential. While it
+  /// is unchanged nothing dials: the user has to sign in (a login moves the
+  /// epoch) or press Retry ([connectForeground]).
+  int? _authLatchEpoch;
+
+  bool get _authLatched =>
+      _authLatchEpoch != null && _authLatchEpoch == _dashboard.credentialEpoch;
+
+  @override
+  Listenable get linkListenable => _link;
+  @override
+  bool get linkAuthRejected => _authRejected;
+  @override
+  bool get linkServerStarting => _serverStarting;
+  @override
+  DateTime? get linkReconnectAt => _connected ? null : _backoffUntil;
+  @override
+  int get linkReconnectAttempt => _reconnectBackoff.attempt;
+  @override
+  bool get linkParked => _parked;
+  bool _parked = false;
+  @override
+  bool get linkHasBeenUp => _hasBeenUp;
+
+  /// The one redial this client schedules for the current backoff gap. Owners
+  /// that call [connect] meanwhile wait on [_redialGate]; nothing else dials.
+  final Duration _redialWaitCap;
+  Timer? _redialTimer;
+  Completer<void>? _redialGate;
+  DateTime? _connectedAt;
+  int _lossNotedGeneration = -1;
+
+  final ReplayCoordinator _replayCoordinator = ReplayCoordinator();
+  bool _replayInFlight = false;
+  static const int _maxConcurrentReplayRequests = 4;
+  String? _replayEpoch;
+
+  /// Current replay authority domain; rotates with every socket generation.
+  @override
+  String get currentReplayEpoch => _replayEpoch ?? 'legacy:$_socketGeneration';
+
+  @override
+  bool isCurrentLiveTransport(int? generation, Object? producerChannel) =>
+      _connected &&
+      generation == _socketGeneration &&
+      producerChannel != null &&
+      identical(producerChannel, _channel);
+  bool _connectionReplayCapable = false;
+  bool _connectionChangeEvents = false;
+
+  /// `gateway.ready.session_authority` of the CURRENT connection. Reset on
+  /// every dial: a redial can land on an endpoint with another capability.
+  SessionAuthorityCapability _sessionAuthority =
+      SessionAuthorityCapability.unknown;
+
+  /// What the current connection announced about the canonical session
+  /// authority. Only [SessionAuthorityCapability.supported] selects the
+  /// canonical wire; every other value keeps the standalone behaviour.
+  SessionAuthorityCapability get sessionAuthority => _sessionAuthority;
+
+  bool get usesCanonicalSessions => _sessionAuthority.isCanonical;
+
+  /// Synchronization state of every canonical session attached on the
+  /// current connection, keyed by durable session id. Dropped with the
+  /// connection: the authority detaches a closed socket's subscriptions.
+  final Map<String, CanonicalSessionLedger> _canonicalLedgers =
+      <String, CanonicalSessionLedger>{};
+
+  @visibleForTesting
+  CanonicalSessionLedger? canonicalLedgerForTesting(String sessionId) =>
+      _canonicalLedgers[sessionId];
+
+  /// `gateway.ready.change_events` of the current connection: the backend
+  /// broadcasts sessions/cron/process changes, so polls can be demoted to slow
+  /// safety backstops (Hermes Desktop does the same).
+  bool get changeEventsAvailable => _connectionChangeEvents;
+  Completer<void>? _gatewayReadyCompleter;
+  String? _legacyEventRuntimeId;
+  bool _legacyEventRuntimeAmbiguous = false;
+
+  TuiGatewayClient(
+    this._connection, {
+    DashboardClient? dashboard,
+    WebSocketChannel Function(Uri uri, Map<String, dynamic> headers)?
+    channelFactory,
+    DesktopGatewayCapabilityCache? capabilityCache,
+    Duration heartbeatInterval = const Duration(seconds: 15),
+    Duration heartbeatDeadline = defaultHeartbeatDeadline,
+    Duration probeNowDeadline = const Duration(seconds: 5),
+    Duration probeNowStaleDeadline = const Duration(seconds: 2),
+    Duration probeNowRecentInbound = const Duration(seconds: 3),
+    Duration probeNowRetryDelay = const Duration(seconds: 3),
+    Duration? fanoutInactivityDeadline,
+    DateTime Function()? now,
+    GatewayReconnectBackoff? reconnectBackoff,
+    Duration redialWaitCap = const Duration(seconds: 20),
+  }) : _dashboard = dashboard ?? DashboardClient.lazy(_connection),
+       _reconnectBackoff = reconnectBackoff ?? GatewayReconnectBackoff(),
+       _redialWaitCap = redialWaitCap,
+       _channelFactory = channelFactory,
+       _capabilityCache = capabilityCache ?? DesktopGatewayCapabilityCache(),
+       _heartbeatInterval = heartbeatInterval,
+       _heartbeatDeadline = heartbeatDeadline,
+       _probeNowDeadline = probeNowDeadline,
+       _probeNowStaleDeadline = probeNowStaleDeadline,
+       _probeNowRecentInbound = probeNowRecentInbound,
+       _probeNowRetryDelay = probeNowRetryDelay,
+       _fanoutInactivityDeadline =
+           fanoutInactivityDeadline ??
+           (heartbeatInterval > Duration.zero
+               ? heartbeatInterval
+               : const Duration(seconds: 15)),
+       _now = now ?? DateTime.now;
+
+  @override
+  Stream<TuiGatewayEvent> get events => _events.stream;
+
+  @override
+  bool get isConnected => _connected;
+
+  @override
+  bool get isClosed => _closed;
+
+  Uri _webSocketUri(DashboardWebSocketAuth auth) {
+    final base = Uri.parse(_connection.effectiveDashboardUrl);
+    return base.replace(
+      scheme: base.scheme == 'https' ? 'wss' : 'ws',
+      path:
+          '${base.path.endsWith('/') ? base.path.substring(0, base.path.length - 1) : base.path}/api/ws',
+      queryParameters: {
+        ...base.queryParameters,
+        auth.queryName: auth.credential,
+      },
+    );
+  }
+
+  /// Remaining reconnect backoff after a transport loss (zero when none).
+  Duration get reconnectBackoffRemaining {
+    final until = _backoffUntil;
+    if (until == null || _connected) return Duration.zero;
+    final left = until.difference(_now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  /// True while the owner is waiting out a reconnect backoff.
+  bool get isBackingOff => reconnectBackoffRemaining > Duration.zero;
+
+  bool _backgroundParked = false;
+
+  /// A chat owner parked in the background cannot be dialled by a poller,
+  /// network wake, or an old backoff timer. Resume releases the gate so
+  /// explicit actions can dial while the coalesced idle read is pending.
+  /// Keep a healthy stream through brief pickers without redialling a loss.
+  void suspendBackgroundReconnects() {
+    if (_closed || _backgroundParked) return;
+    _backgroundParked = true;
+    _cancelRedial(const TuiGatewayRpcError(
+      'connect', 'Background transport suspended',
+      failureKind: TuiGatewayRpcFailureKind.connectionLost,
+    ));
+  }
+
+  void setBackgroundParked(bool parked) {
+    if (_closed) return;
+    if (_backgroundParked == parked && (!parked || _parked)) return;
+    _backgroundParked = parked;
+    if (parked) {
+      unawaited(disconnectIdle().catchError((Object _) {}));
+    } else {
+      _reconnectBackoff.markHealthy();
+      _backoffUntil = null;
+    }
+  }
+
+  /// The platform reported a new default network (rl1215). The backoff ladder
+  /// measured the old path (a Wi-Fi/cellular switch kills every socket and
+  /// can push it to its ceiling); keeping it would make lazy RPCs fail fast
+  /// and the next dial wait up to 15 s on a network that already works.
+  /// It never closes a socket (a half-open one is the probe's job) and only
+  /// redials for owners already waiting on the gap.
+  void resetReconnectBackoffForNetworkChange() {
+    if (_closed || _backgroundParked) return;
+    _reconnectBackoff.markHealthy();
+    _backoffUntil = null;
+    // Owners already waiting for the gap, and a chat socket's own redial
+    // timer (which may hold a background gap of up to 60 s), redial on the
+    // new path at once.
+    if (_redialGate != null || _redialTimer != null) {
+      unawaited(_dialAndRelease().catchError((Object _) {}));
+    }
+  }
+
+  /// A socket parked by [disconnectIdle] comes back with the app: one dial
+  /// without a loss noted (the status registry keeps the last state, and
+  /// only a failed dial changes it). The chats riding a multiplexed socket
+  /// learn first that their runtimes went with the parked socket, so they
+  /// re-attach over the new one by their usual recovery path instead of
+  /// waiting on a runtime that no longer exists.
+  Future<void> redialParked() {
+    if (_closed || _backgroundParked || !_parked || _connected) {
+      return Future<void>.value();
+    }
+    if (_multiplexed && !_events.isClosed) {
+      _events.addError(
+        const TuiGatewayRpcError(
+          'gateway.transport',
+          'Hermes Desktop socket was parked in the background',
+          failureKind: TuiGatewayRpcFailureKind.connectionLost,
+        ),
+      );
+    }
+    return connect().then<void>((_) {}, onError: (Object _) {});
+  }
+
+  /// Explicit connect of an owner (ActiveChat recovery, warm-up, the Home and
+  /// Library subscriptions): waits for `ready`. Inside a backoff gap it does
+  /// not dial; every caller shares the single redial this client schedules
+  /// when the gap ends, and the wait is capped (a [TuiGatewayRpcError]
+  /// `connectionLost`). Only a user action ([connectForeground]) skips the gap
+  /// (Desktop `store/gateway.ts` foreground reconnect). Lazy RPC dials go
+  /// through [_connectForRequest], which fails fast instead.
+  @override
+  Future<void> connect() {
+    final settled = _settledConnect();
+    if (settled != null) return settled;
+    if (_authLatched) return Future.error(_authLatchError());
+    final wait = reconnectBackoffRemaining;
+    if (wait <= Duration.zero) return _dialNow();
+    final gate = _redialGate ??= Completer<void>();
+    _redialTimer ??= Timer(
+      wait,
+      () => unawaited(_dialAndRelease().catchError((Object _) {})),
+    );
+    return gate.future.timeout(
+      _redialWaitCap,
+      onTimeout: () => throw const TuiGatewayRpcError(
+        'connect',
+        'Hermes Desktop reconnect is backing off',
+        failureKind: TuiGatewayRpcFailureKind.connectionLost,
+      ),
+    );
+  }
+
+  /// [connect] for a user action (send, Retry): dials now, whatever the
+  /// backoff, and settles the owners already waiting with the same attempt.
+  Future<void> connectForeground() {
+    final settled = _settledConnect();
+    if (settled != null) return settled;
+    _authLatchEpoch = null; // an explicit Retry looks again
+    _dashboard.forgetRejectedAccess();
+    return _dialAndRelease();
+  }
+
+  Object _authLatchError() =>
+      const DashboardAuthException(DashboardAuthFailureCode.loginRequired);
+
+  Future<void>? _settledConnect() {
+    if (_closed) {
+      return Future.error(StateError('Hermes Desktop gateway is closed'));
+    }
+    if (_connected) return Future.value();
+    if (_backgroundParked) {
+      return Future.error(const TuiGatewayRpcError(
+        'connect', 'Background transport parked',
+        failureKind: TuiGatewayRpcFailureKind.connectionLost,
+      ));
+    }
+    return _connecting;
+  }
+
+  Future<void> _dialNow() {
+    if (_backgroundParked) {
+      return Future.error(
+        const TuiGatewayRpcError(
+          'connect',
+          'Background transport parked',
+          failureKind: TuiGatewayRpcFailureKind.connectionLost,
+        ),
+      );
+    }
+    if (_authLatched) return Future.error(_authLatchError());
+    final future = _connectOnce();
+    _connecting = future;
+    return future.whenComplete(() {
+      if (identical(_connecting, future)) _connecting = null;
+    });
+  }
+
+  Future<void> _dialAndRelease() {
+    _redialTimer?.cancel();
+    _redialTimer = null;
+    final gate = _redialGate;
+    _redialGate = null;
+    if (_closed) {
+      gate?.completeError(StateError('Hermes Desktop gateway is closed'));
+      return Future.error(StateError('Hermes Desktop gateway is closed'));
+    }
+    final dial = _connecting ?? _dialNow();
+    if (gate != null) {
+      dial.then(
+        (_) => gate.complete(),
+        onError: (Object error, StackTrace stack) =>
+            gate.completeError(error, stack),
+      );
+    }
+    return dial;
+  }
+
+  void _cancelRedial(Object error) {
+    _redialTimer?.cancel();
+    _redialTimer = null;
+    final gate = _redialGate;
+    _redialGate = null;
+    gate?.completeError(error);
+  }
+
+  /// Fail-closed guard for passive reads: throws `connectionLost` when the
+  /// socket is not connected right now, and never dials or arms a timer.
+  void _requireConnectedWithoutDialing(String method) {
+    if (_closed || !_connected || _channel == null) {
+      throw TuiGatewayRpcError(
+        method,
+        'Hermes Desktop WebSocket is not connected',
+        failureKind: TuiGatewayRpcFailureKind.connectionLost,
+      );
+    }
+  }
+
+  /// Connect on behalf of an RPC: fails fast with `connectionLost` while the
+  /// owner is backing off, so pollers and screens cannot turn every call into
+  /// a new socket (the #46 reconnect loop).
+  Future<void> _connectForRequest(String method) {
+    if (!_connected && _connecting == null && isBackingOff) {
+      return Future.error(
+        TuiGatewayRpcError(
+          method,
+          'Hermes Desktop reconnect is backing off',
+          failureKind: TuiGatewayRpcFailureKind.connectionLost,
+        ),
+      );
+    }
+    return connect();
+  }
+
+  /// Arms the reconnect backoff once per socket generation. The attempt
+  /// counter only resets when the lost socket had been up for
+  /// [GatewayReconnectBackoff.stableOpenInterval].
+  void _noteTransportLoss(int generation) {
+    if (_closed || _backgroundParked || _lossNotedGeneration == generation) {
+      return;
+    }
+    _lossNotedGeneration = generation;
+    final since = _connectedAt;
+    _connectedAt = null;
+    if (since != null &&
+        _now().difference(since) >=
+            GatewayReconnectBackoff.stableOpenInterval) {
+      _reconnectBackoff.markHealthy();
+    }
+    final delay = _reconnectBackoff.nextDelay();
+    _backoffUntil = _now().add(delay);
+    _link.notify();
+    _armOwnRedial(delay);
+    GatewaySocketMeter.instance.recordBackoff(
+      _reconnectBackoff.attempt,
+      delay.inMilliseconds,
+      tag: _meterTag,
+    );
+    debugPrint(
+      '[tui-gateway] reconnect backoff ${delay.inMilliseconds} ms '
+      '(attempt ${_reconnectBackoff.attempt}, generation=$generation)'
+      '$_meterTag',
+    );
+  }
+
+  /// Set by [ActiveChat] on the gateway a chat rides (the shared chat socket
+  /// or a chat's own): it redials by itself when the backoff gap ends. The
+  /// observer sockets (Home, Library) have owners that call [connect] and
+  /// keep the old behaviour.
+  bool redialWhenIdle = false;
+
+  /// A socket of this client reached `ready` once: only then is a lost link
+  /// «down» (redialled alone); a first dial that fails has its owner.
+  bool _hasBeenUp = false;
+
+  /// A chat socket redials by itself when its backoff gap ends, as Desktop's
+  /// gateway boot does (`use-gateway-boot.ts` reconnect timer): without it a
+  /// chat at rest with nobody waiting on [connect] stays down for good after
+  /// the server dies and comes back. It rides the one [_redialTimer] (owners
+  /// that call [connect] meanwhile share it, no second dial), follows the same
+  /// ladder (every failed dial arms the next), and stands down when latched
+  /// on a rejected credential. Parking and closing cancel the timer
+  /// ([_cancelRedial]) and bump the socket generation, so no loss is noted
+  /// for a socket they retired.
+  void _armOwnRedial(Duration delay) {
+    if (_backgroundParked ||
+        !redialWhenIdle ||
+        !_hasBeenUp ||
+        _authLatched ||
+        _redialTimer != null) {
+      return;
+    }
+    _redialTimer = Timer(delay, () {
+      if (_connected) {
+        _redialTimer = null;
+        return;
+      }
+      unawaited(_dialAndRelease().catchError((Object _) {}));
+    });
+  }
+
+  /// True when the Dashboard rejected the credential (401/403 on the ticket, or
+  /// a login that needs the user), as opposed to a ticket request that failed
+  /// in transit. Only this marks Dashboard auth as required.
+  static bool isDashboardAuthRejection(Object error) =>
+      (error is DashboardAuthException &&
+          const {
+            DashboardAuthFailureCode.loginRequired,
+            DashboardAuthFailureCode.invalidCredentials,
+            DashboardAuthFailureCode.sessionCookieMissing,
+          }.contains(error.code)) ||
+      (error is DashboardWebSocketAuthException &&
+          (error.statusCode == 401 || error.statusCode == 403));
+
+  /// `[QA-NET]`: counts this dial (ticket + open) as in flight for its lane.
+  Future<void> _connectOnce() async {
+    final key = _meterSocketKey;
+    GatewaySocketMeter.instance.dialStart(key);
+    try {
+      await _connectOnceUnmetered();
+    } finally {
+      GatewaySocketMeter.instance.dialEnd(key);
+    }
+  }
+
+  /// The upgrade was answered 401/403 instead of 101: `/api/ws` refused the
+  /// ticket (expired, unknown or already used) or the host before accepting,
+  /// and uvicorn reports either as HTTP 403.
+  static bool _isRefusedUpgrade(Object error) {
+    final inner = error is WebSocketChannelException ? error.inner : null;
+    return inner is WebSocketException &&
+        (inner.httpStatusCode == 401 || inner.httpStatusCode == 403);
+  }
+
+  Future<void> _connectOnceUnmetered({bool ticketRetried = false}) async {
+    final generation = ++_socketGeneration;
+    _parked = false;
+    _stopHeartbeat();
+    _heartbeatAwaitingReply = false;
+    _resetLegacyEventRuntimeAnchor();
+    late DashboardWebSocketAuth auth;
+    try {
+      auth = await _dashboard.webSocketAuth();
+    } catch (error, stackTrace) {
+      if (_closed || generation != _socketGeneration) {
+        throw StateError('Hermes Desktop connection was cancelled');
+      }
+      // Only a rejected credential is an auth failure; a ticket request that
+      // timed out or never reached the Dashboard is transport.
+      GatewaySocketMeter.instance.recordTicketFailure(
+        isDashboardAuthRejection(error) ? 'auth' : 'transport',
+        tag: _meterTag,
+      );
+      debugPrint(
+        isDashboardAuthRejection(error)
+            ? '[tui-gateway] Dashboard auth unavailable '
+                  '(${_safeFailureKind(error)})$_meterTag'
+            : '[tui-gateway] Dashboard ticket request failed (transport: '
+                  '${_safeFailureKind(error)})$_meterTag',
+      );
+      _authRejected = isDashboardAuthRejection(error);
+      _serverStarting =
+          _dashboard.simpleConnect && isServerStartingError(error);
+      _authLatchEpoch = _authRejected && _dashboard.simpleConnect
+          ? _dashboard.credentialEpoch
+          : null;
+      if (generation == _socketGeneration) _noteTransportLoss(generation);
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+    if (_closed || generation != _socketGeneration) {
+      throw StateError('Hermes Desktop connection was cancelled');
+    }
+    // A ticket the Dashboard issued proves the credential is accepted again.
+    _authRejected = false;
+    _serverStarting = false;
+    _authLatchEpoch = null;
+    final uri = _webSocketUri(auth);
+    GatewaySocketMeter.instance.recordOpen();
+    if (kNetMeterEnabled) GatewaySocketMeter.instance.startStallWatch();
+    final openStartedAt = _now();
+    final channel =
+        _channelFactory?.call(uri, auth.headers) ??
+        IOWebSocketChannel.connect(
+          uri,
+          headers: auth.headers,
+          pingInterval: const Duration(seconds: 20),
+          connectTimeout: const Duration(seconds: 10),
+        );
+    if (_closed || generation != _socketGeneration) {
+      await _teardownTransport(
+        channel,
+        null,
+        closeCode: TuiGatewayCloseCodes.normal,
+        closeReason: 'connect_aborted',
+      );
+      throw StateError('Hermes Desktop connection was cancelled');
+    }
+    _connectionReplayCapable = false;
+    _connectionChangeEvents = false;
+    _sessionAuthority = SessionAuthorityCapability.unknown;
+    _canonicalLedgers.clear();
+    final gatewayReady = Completer<void>();
+    // Socket callbacks may fail readiness before channel.ready settles. Attach a
+    // handler immediately so the original upgrade error remains the connect
+    // result without an unhandled secondary Future.
+    unawaited(gatewayReady.future.catchError((Object _) {}));
+    _gatewayReadyCompleter = gatewayReady;
+    final drained = Completer<void>();
+    _streamDrained[channel] = drained;
+    late final StreamSubscription<dynamic> subscription;
+    subscription = channel.stream.listen(
+      (raw) {
+        _awaitResponses[channel]?.observe(raw);
+        _handleFrame(generation, channel, raw);
+      },
+      onError: (Object error, StackTrace stackTrace) =>
+          _handleSocketError(generation, channel, error, stackTrace),
+      onDone: () {
+        if (!drained.isCompleted) drained.complete();
+        _awaitResponses[channel]?.settle();
+        _handleSocketDone(generation, channel);
+      },
+      cancelOnError: false,
+    );
+    _channel = channel;
+    _subscription = subscription;
+    try {
+      await channel.ready.timeout(const Duration(seconds: 12));
+      await gatewayReady.future.timeout(const Duration(seconds: 12));
+      if (_closed ||
+          generation != _socketGeneration ||
+          !identical(_channel, channel)) {
+        throw StateError('Hermes Desktop connection was superseded');
+      }
+      _capabilityCache.resetForReconnect();
+      _connected = true;
+      _connectedAt = _now();
+      _hasBeenUp = true;
+      _channelReadyAt[channel] = _connectedAt;
+      GatewaySocketMeter.instance.recordReady(
+        _connectedAt!.difference(openStartedAt).inMilliseconds,
+        tag: _meterTag,
+      );
+      GatewaySocketMeter.instance.socketUp(_meterSocketKey);
+      _backoffUntil = null;
+      _authRejected = false;
+      _serverStarting = false;
+      _authLatchEpoch = null;
+      _parked = false;
+      _advertiseServerRequestCapability(generation, channel);
+      // A recovery caller resumes its stored session only after connect() ends.
+      // Drain the server's sequence gap first so replayed deltas/tools cannot
+      // race the new snapshot or be delivered out of order with live frames.
+      await _fetchReplay();
+      if (_closed ||
+          generation != _socketGeneration ||
+          !identical(_channel, channel) ||
+          !_connected) {
+        throw StateError('Hermes Desktop disconnected during replay');
+      }
+    } catch (error) {
+      debugPrint(
+        '[tui-gateway] WebSocket connection failed '
+        '(${_safeFailureKind(error)})',
+      );
+      if (identical(_gatewayReadyCompleter, gatewayReady)) {
+        _gatewayReadyCompleter = null;
+      }
+      // A ticket refused on the upgrade says nothing about the credential
+      // that minted it a moment ago: one fresh ticket, before the dial counts
+      // as a lost link (no backoff, no own redial in between).
+      final retryTicket =
+          !ticketRetried &&
+          auth.queryName == 'ticket' &&
+          _isRefusedUpgrade(error);
+      if (generation == _socketGeneration && identical(_channel, channel)) {
+        _subscription = null;
+        _channel = null;
+        _connected = false;
+        _authRejected = isDashboardAuthRejection(error);
+        if (!retryTicket) _noteTransportLoss(generation);
+      }
+      // Si el upgrade falla antes de enlazar el sink real (HTTP 401/404), tanto
+      // `cancel()` como `close()` pueden quedar pendientes. Se desvincula antes
+      // de limpiar y ambas operaciones comparten un único presupuesto para que
+      // ActiveChat no quede en "Conectando".
+      await _teardownTransport(
+        channel,
+        subscription,
+        closeCode: TuiGatewayCloseCodes.normal,
+        closeReason: 'connect_aborted',
+      );
+      // The refused socket is gone; a close, park or newer dial meanwhile
+      // owns the client and ends this one.
+      if (retryTicket && !_closed && generation == _socketGeneration) {
+        debugPrint(
+          '[tui-gateway] Ticket refused on the upgrade; one fresh ticket'
+          '$_meterTag',
+        );
+        return _connectOnceUnmetered(ticketRetried: true);
+      }
+      rethrow;
+    }
+  }
+
+  void _advertiseServerRequestCapability(
+    int generation,
+    WebSocketChannel channel,
+  ) {
+    if (generation != _socketGeneration || !identical(_channel, channel)) {
+      return;
+    }
+    // A new socket: until this backend says it counts declines, none is sent.
+    _backendCountsDeclines = false;
+    try {
+      final advertisement = _requestConnected(
+        'client.capabilities',
+        const <String, dynamic>{'server_requests': true},
+        timeout: const Duration(seconds: 10),
+      );
+      unawaited(
+        advertisement.then<void>((result) {
+          if (generation != _socketGeneration ||
+              !identical(_channel, channel)) {
+            return;
+          }
+          _backendCountsDeclines = result['declines_not_shown'] == true;
+        }, onError: (Object _, StackTrace _) {}),
+      );
+    } catch (_) {
+      // Capability discovery is optional and must not own transport readiness.
+    }
+  }
+
+  String _safeFailureKind(Object error) {
+    if (error is DashboardAuthException) return error.code.stableCode;
+    final text = error.toString().toLowerCase();
+    if (text.contains('401') || text.contains('403')) return 'unauthorized';
+    if (text.contains('timeout') || text.contains('timed out')) {
+      return 'timeout';
+    }
+    if (text.contains('refused')) return 'connection_refused';
+    if (text.contains('handshake')) return 'websocket_handshake';
+    return error.runtimeType.toString();
+  }
+
+  /// Frames still being decoded off the main isolate, or queued behind one
+  /// so this socket's frames are delivered in wire order.
+  int _inboundDeferred = 0;
+  Future<void> _inboundTail = Future<void>.value();
+
+  void _handleFrame(int generation, WebSocketChannel channel, dynamic raw) {
+    if (generation != _socketGeneration || !identical(_channel, channel)) {
+      return;
+    }
+    final offMain = raw is String && raw.length > kJsonDecodeOffMainBytes;
+    if (!offMain && _inboundDeferred == 0) {
+      _deliverFrame(generation, channel, () => _decodeFrame(raw));
+      return;
+    }
+    // A large frame (the transcript of a long session, a big replay batch)
+    // is parsed in a short-lived isolate, as the HTTP reads above the same
+    // size are: the main isolate is the UI thread. Every frame after it on
+    // this socket waits behind it, small or not, so a notification of the
+    // same session cannot overtake the response it follows. The frame itself
+    // already proves the socket alive, whatever it decodes to.
+    _lastInboundAt = _now();
+    _lastFrameAt = _lastInboundAt;
+    _heartbeatAwaitingReply = false;
+    final replayCapable = _connectionReplayCapable;
+    _inboundDeferred += 1;
+    _inboundTail = _inboundTail.then((_) async {
+      JsonRpcWireFrame? parsed;
+      Object? failure;
+      StackTrace? failureTrace;
+      try {
+        parsed = offMain
+            ? await JsonRpcWireDecoder.decodeTransportFrameOffMain(
+                raw,
+                replayCapable: replayCapable,
+              )
+            : JsonRpcWireDecoder.decodeTransportFrame(
+                raw,
+                replayCapable: replayCapable,
+              );
+      } catch (error, stackTrace) {
+        failure = error;
+        failureTrace = stackTrace;
+      }
+      _inboundDeferred -= 1;
+      if (generation != _socketGeneration || !identical(_channel, channel)) {
+        return;
+      }
+      final failed = failure;
+      final failedTrace = failureTrace;
+      _deliverFrame(generation, channel, () {
+        if (failed != null) Error.throwWithStackTrace(failed, failedTrace!);
+        return parsed;
+      });
+    });
+  }
+
+  JsonRpcWireFrame? _decodeFrame(dynamic raw) {
+    final decodeWatch = GatewaySocketMeter.instance.enabled
+        ? (Stopwatch()..start())
+        : null;
+    final parsed = JsonRpcWireDecoder.decodeTransportFrame(
+      raw,
+      replayCapable: _connectionReplayCapable,
+    );
+    if (decodeWatch != null && raw is String && raw.length > 4096) {
+      GatewaySocketMeter.instance.recordDecode(
+        decodeWatch.elapsedMilliseconds,
+        raw.length,
+      );
+    }
+    return parsed;
+  }
+
+  /// Delivers one decoded frame; [decode] throws for a malformed one, which
+  /// drops the socket as before.
+  void _deliverFrame(
+    int generation,
+    WebSocketChannel channel,
+    JsonRpcWireFrame? Function() decode,
+  ) {
+    try {
+      final parsed = decode();
+      if (parsed == null) return;
+      _lastInboundAt = _now();
+      _lastFrameAt = _lastInboundAt;
+      _heartbeatAwaitingReply = false;
+      if (parsed is JsonRpcNotificationFrame) return;
+      if (parsed is JsonRpcServerRequestFrame) {
+        _deliverServerRequest(parsed, generation, channel);
+        return;
+      }
+      if (parsed is JsonRpcResponseFrame) {
+        final pending = _pending[parsed.id];
+        if (pending == null) return;
+        _pending.remove(parsed.id);
+        pending.timer.cancel();
+        final error = parsed.error;
+        if (error != null) {
+          pending.completer.completeError(
+            pending.redactRemoteError
+                ? SanitizedRpcFailureFactory.remote(
+                    pending.method,
+                    safeCode: _protocolInteger(error['code']),
+                  )
+                : TuiGatewayRpcError(
+                    pending.method,
+                    error['message'] as String,
+                    code: _protocolInteger(error['code']),
+                    origin: CompressionFailureOrigin.remoteRpc,
+                    data: error['data'] is Map<String, dynamic>
+                        ? Map<String, dynamic>.unmodifiable(
+                            error['data']! as Map<String, dynamic>,
+                          )
+                        : const <String, dynamic>{},
+                  ),
+          );
+        } else {
+          final result = parsed.result;
+          if (result is Map<String, dynamic>) {
+            // Reconnect contract: resume/activate/events.since answer with the
+            // server→client requests still waiting on this session. They are
+            // not events, so they cannot ride the replay ring.
+            _deliverOpenServerRequests(
+              result['open_requests'],
+              generation,
+              channel,
+            );
+          }
+          pending.completer.complete(
+            result is Map<String, dynamic>
+                ? Map<String, dynamic>.from(result)
+                : <String, dynamic>{'value': result},
+          );
+        }
+        return;
+      }
+
+      final parsedEvent = (parsed as JsonRpcEventFrame).event;
+      final readyPending = _gatewayReadyCompleter?.isCompleted == false;
+      if (parsedEvent.type == 'gateway.ready') {
+        if (parsedEvent is! GlobalGatewayEvent ||
+            parsedEvent.sequence != null) {
+          throw const JsonRpcWireFormatException(
+            'gateway.ready must be global',
+          );
+        }
+        final payload = parsedEvent.payload;
+        final hasEpoch = payload.containsKey('replay_epoch');
+        final epoch = payload['replay_epoch'];
+        if (hasEpoch &&
+            (epoch is! String || epoch.isEmpty || epoch != epoch.trim())) {
+          throw const JsonRpcWireFormatException('invalid replay epoch');
+        }
+        // `heartbeat` is `bool | null` in GatewayReadyPayload: null means the
+        // capability is not offered, exactly like an absent key.
+        final heartbeat = payload['heartbeat'];
+        if (heartbeat != null && heartbeat is! bool) {
+          throw const JsonRpcWireFormatException(
+            'invalid heartbeat capability',
+          );
+        }
+        if (epoch is String) {
+          _adoptReplayEpoch(epoch);
+          _connectionReplayCapable = true;
+        } else {
+          _connectionReplayCapable = false;
+          if (_replayCoordinator.hasWatermarks) {
+            _replayCoordinator.rotateEpoch();
+          }
+          _replayEpoch = null;
+        }
+        _connectionChangeEvents = payload['change_events'] == true;
+        _sessionAuthority = SessionAuthorityCapability.fromReadyPayload(
+          payload,
+        );
+        if (payload['heartbeat'] == true) _startHeartbeat(generation, channel);
+        final ready = _gatewayReadyCompleter;
+        if (ready != null && !ready.isCompleted) ready.complete();
+        return;
+      }
+      if (readyPending) {
+        throw const JsonRpcWireFormatException(
+          'event received before gateway.ready',
+        );
+      }
+      if (parsedEvent is GlobalGatewayEvent) {
+        if (!_events.isClosed) {
+          _events.add(
+            TuiGatewayEvent(
+              type: parsedEvent.type,
+              sessionId: '',
+              payload: parsedEvent.payload,
+            ),
+          );
+        }
+        return;
+      }
+      final sessionEvent = parsedEvent as SessionGatewayEvent;
+      if (_releasedRuntimes[sessionEvent.sessionId] == generation) return;
+      if (_sessionAuthority.isCanonical) {
+        _deliverCanonicalSessionEvent(sessionEvent, generation, channel);
+        return;
+      }
+      if (sessionEvent.sequence == null) {
+        _dispatchSessionEvent(sessionEvent, generation, channel);
+        return;
+      }
+      final disposition = _replayCoordinator.acceptLive(
+        sessionEvent,
+        socketGeneration: generation,
+        channel: channel,
+        replayEpoch: _replayEpoch,
+      );
+      _meterQuarantine(sessionEvent.sessionId);
+      if (disposition == ReplayLiveDisposition.dispatch) {
+        _dispatchSessionEvent(sessionEvent, generation, channel);
+      } else if (disposition != ReplayLiveDisposition.ignored) {
+        _rehydrateOnWithheldTurnEnd(sessionEvent);
+      }
+    } catch (_) {
+      _handleMalformedFrame(generation, channel);
+    }
+  }
+
+  void _dispatchSessionEvent(
+    SessionGatewayEvent sessionEvent,
+    int generation,
+    WebSocketChannel channel, {
+    bool replayed = false,
+  }) {
+    _observeWatchdogEvent(sessionEvent, _now());
+    if (_events.isClosed) return;
+    _events.add(
+      _translateRequestCancel(
+        TuiGatewayEvent(
+          type: sessionEvent.type,
+          sessionId: sessionEvent.sessionId,
+          sequence: sessionEvent.sequence,
+          transportGeneration: generation,
+          producerChannel: channel,
+          payload: sessionEvent.payload,
+          replayed: replayed,
+        ),
+      ),
+    );
+  }
+
+  /// Legacy event type each server request kind used to arrive as. The chat
+  /// service still consumes those shapes; the transport adapts the v7 frames.
+  /// Answers `preview.read` / `preview.act` for every client (the app's
+  /// agent browser bridge). Null keeps Console's old `no handler` answer.
+  static PreviewRequestBridge? previewRequestBridge;
+
+  /// Ids of `preview.read` / `preview.act` requests the bridge is answering.
+  final Set<String> _previewInFlight = {};
+
+  /// This backend answered `client.capabilities` with `declines_not_shown`:
+  /// it counts a 4404 as one client declining. An older one settles on the
+  /// first error, so Console then sends no decline at all, as Desktop
+  /// (`json-rpc-channel.ts` `decline`, REVIEW-R5-B #10).
+  bool _backendCountsDeclines = false;
+
+  static const Map<String, String> _serverRequestLegacyEvents = {
+    'approval': 'approval.request',
+    'clarify': 'clarify.request',
+    'sudo': 'sudo.request',
+    'secret': 'secret.request',
+    'terminal.read': 'terminal.read.request',
+    'vault.unlock_prompt': 'vault.unlock.request',
+    'vault.save_login': 'vault.save_login.request',
+    'vault.code': 'vault.code.request',
+  };
+
+  /// The legacy `*.request` event an open server request (`open_requests`
+  /// entry of a resume/activate/events.since snapshot) stands for, or null for
+  /// a kind Console does not render. Lets a chat re-hydrate a question it
+  /// missed while it had no runtime attached; answering still goes through
+  /// the response-frame path the transport registered for the same id.
+  static TuiGatewayEvent? openServerRequestEvent(Map<String, dynamic> entry) {
+    final id = entry['id'];
+    final method = entry['method'];
+    final params = entry['params'];
+    if (id is! String || id.isEmpty || method is! String || params is! Map) {
+      return null;
+    }
+    if (method == 'approval') return null;
+    final legacyType = _serverRequestLegacyEvents[method];
+    final rawSession = params['session_id'];
+    final sessionId = rawSession is String ? rawSession.trim() : '';
+    if (legacyType == null || sessionId.isEmpty) return null;
+    final payload = <String, dynamic>{
+      for (final item in params.entries)
+        if (item.key is String && item.key != 'session_id')
+          item.key as String: item.value,
+    };
+    payload['request_id'] = id;
+    return TuiGatewayEvent(
+      type: legacyType,
+      sessionId: sessionId,
+      payload: Map<String, dynamic>.unmodifiable(payload),
+    );
+  }
+
+  void _deliverServerRequest(
+    JsonRpcServerRequestFrame frame,
+    int generation,
+    WebSocketChannel channel,
+  ) {
+    final rawSession = frame.params['session_id'];
+    final sessionId = rawSession is String ? rawSession.trim() : '';
+    final bridge = previewRequestBridge;
+    if (bridge != null &&
+        sessionId.isNotEmpty &&
+        previewBridgeMethods.contains(frame.method)) {
+      _answerPreviewBridge(bridge, frame, sessionId, generation, channel);
+      return;
+    }
+    final legacyType = _serverRequestLegacyEvents[frame.method];
+    if (legacyType == null || sessionId.isEmpty) {
+      // Same as Desktop's `no handler` path: fail the request so the backend
+      // does not wait on a client that cannot answer this kind of question.
+      _writeServerRequestFrame(generation, channel, {
+        'jsonrpc': '2.0',
+        'id': frame.id,
+        'error': {
+          'code': legacyType == null ? -32601 : -32602,
+          'message': legacyType == null
+              ? 'no handler for server request: ${frame.method}'
+              : 'server request without session_id',
+        },
+      });
+      return;
+    }
+    final payload = Map<String, dynamic>.from(frame.params)
+      ..remove('session_id');
+    if (frame.method == 'approval') {
+      // The approval queue keeps its own `request_id`; the UI and the compat
+      // `approval.respond` RPC key on it, so it must survive untouched.
+      final approvalId = (payload['request_id'] ?? payload['approval_id'])
+          ?.toString()
+          .trim();
+      if (approvalId == null || approvalId.isEmpty) {
+        payload['request_id'] = frame.id;
+        _approvalServerRequestIds[frame.id] = frame.id;
+      } else {
+        _approvalServerRequestIds[approvalId] = frame.id;
+      }
+    } else {
+      payload['request_id'] = frame.id;
+    }
+    _openServerRequests[frame.id] = _OpenServerRequest(
+      id: frame.id,
+      method: frame.method,
+      sessionId: sessionId,
+      generation: generation,
+      channel: channel,
+    );
+    if (_events.isClosed) return;
+    _events.add(
+      TuiGatewayEvent(
+        type: legacyType,
+        sessionId: sessionId,
+        transportGeneration: generation,
+        producerChannel: channel,
+        payload: Map<String, dynamic>.unmodifiable(payload),
+      ),
+    );
+  }
+
+  /// Answers the in-app browser's window-owned bridges (`preview.read`,
+  /// `preview.act`). Without a [previewRequestBridge] they keep the `no
+  /// handler` answer above. The request is tracked as open so a
+  /// `request.cancel` withdraws it before anything is read; a decline is
+  /// Desktop's NOT_SHOWN answer, so a Desktop window showing the same chat
+  /// can still answer it.
+  void _answerPreviewBridge(
+    PreviewRequestBridge bridge,
+    JsonRpcServerRequestFrame frame,
+    String sessionId,
+    int generation,
+    WebSocketChannel channel,
+  ) {
+    _openServerRequests[frame.id] = _OpenServerRequest(
+      id: frame.id,
+      method: frame.method,
+      sessionId: sessionId,
+      generation: generation,
+      channel: channel,
+    );
+    // Hermes re-delivers `open_requests` after an idle probe or a reconnect.
+    // A preview request still running here is never run a second time (a
+    // second click or form send, REVIEW-R5-B #9): the running one answers,
+    // on the socket just registered above.
+    if (!_previewInFlight.add(frame.id)) return;
+    final params = Map<String, dynamic>.from(frame.params)
+      ..remove('session_id');
+    unawaited(() async {
+      PreviewBridgeAnswer answer;
+      try {
+        answer = await bridge.answer(
+          PreviewBridgeRequest(
+            method: frame.method,
+            connectionId: _connection.id,
+            sessionId: sessionId,
+            params: Map<String, dynamic>.unmodifiable(params),
+            isOpen: () => _openServerRequests.containsKey(frame.id),
+          ),
+        );
+      } catch (_) {
+        answer = const PreviewBridgeAnswer.notShown();
+      } finally {
+        _previewInFlight.remove(frame.id);
+      }
+      final open = _openServerRequests.remove(frame.id);
+      if (open == null) return;
+      // An older backend would take the decline as the answer and fail a
+      // Desktop window that does show the page: stay silent there.
+      if (answer.notShown && !_backendCountsDeclines) return;
+      _writeServerRequestFrame(open.generation, open.channel, {
+        'jsonrpc': '2.0',
+        'id': frame.id,
+        if (answer.notShown)
+          'error': {
+            'code': previewNotShownCode,
+            'message': 'This window is not showing the session.',
+          }
+        else
+          'result': {'value': answer.value},
+      });
+    }());
+  }
+
+  void _deliverOpenServerRequests(
+    Object? open,
+    int generation,
+    WebSocketChannel channel,
+  ) {
+    if (open is! List) return;
+    for (final entry in open) {
+      if (entry is! Map) continue;
+      final id = entry['id'];
+      final method = entry['method'];
+      final params = entry['params'];
+      if (id is! String || id.isEmpty || method is! String || method.isEmpty) {
+        continue;
+      }
+      _deliverServerRequest(
+        JsonRpcServerRequestFrame(
+          id,
+          method,
+          params is Map<String, dynamic>
+              ? Map<String, dynamic>.unmodifiable(params)
+              : const <String, dynamic>{},
+        ),
+        generation,
+        channel,
+      );
+    }
+  }
+
+  /// `request.cancel {id, method, reason}` withdraws an open server request.
+  /// Consumers still speak the legacy `*.expire` / `approval.responded` shapes.
+  TuiGatewayEvent _translateRequestCancel(TuiGatewayEvent event) {
+    if (event.type != 'request.cancel') return event;
+    final id = event.payload['id'];
+    if (id is! String || id.isEmpty) return event;
+    final open = _openServerRequests.remove(id);
+    final method = open?.method ?? event.payload['method'];
+    if (method is! String) return event;
+    var requestId = id;
+    if (method == 'approval') {
+      requestId = _answeredApprovalServerRequestIds.remove(id) ?? id;
+      for (final entry in _approvalServerRequestIds.entries) {
+        if (entry.value == id) {
+          requestId = entry.key;
+          break;
+        }
+      }
+      _approvalServerRequestIds.remove(requestId);
+      return TuiGatewayEvent(
+        type: 'approval.responded',
+        sessionId: event.sessionId,
+        sequence: event.sequence,
+        transportGeneration: event.transportGeneration,
+        producerChannel: event.producerChannel,
+        payload: Map<String, dynamic>.unmodifiable({
+          'request_id': requestId,
+          'reason': event.payload['reason'],
+        }),
+      );
+    }
+    final legacyType = _serverRequestLegacyEvents[method];
+    if (legacyType == null) return event;
+    return TuiGatewayEvent(
+      type:
+          '${legacyType.substring(0, legacyType.length - '.request'.length)}'
+          '.expire',
+      sessionId: event.sessionId,
+      sequence: event.sequence,
+      transportGeneration: event.transportGeneration,
+      producerChannel: event.producerChannel,
+      payload: Map<String, dynamic>.unmodifiable({
+        'request_id': requestId,
+        'reason': event.payload['reason'],
+      }),
+    );
+  }
+
+  void _rememberAnsweredApproval(String serverRequestId, String requestId) {
+    final answered = _answeredApprovalServerRequestIds
+      ..remove(serverRequestId)
+      ..[serverRequestId] = requestId;
+    while (answered.length > _answeredApprovalServerRequestLimit) {
+      answered.remove(answered.keys.first);
+    }
+  }
+
+  /// Answers an open server request over the socket it arrived on. False when
+  /// nothing is open under that id (expired, cancelled, or the transport was
+  /// replaced — the backend re-delivers it as `open_requests` on resume).
+  bool _respondServerRequest(String requestId, Map<String, Object?> result) {
+    final open = _openServerRequests.remove(requestId);
+    if (open == null) return false;
+    return _writeServerRequestFrame(open.generation, open.channel, {
+      'jsonrpc': '2.0',
+      'id': requestId,
+      'result': result,
+    });
+  }
+
+  bool _writeServerRequestFrame(
+    int generation,
+    WebSocketChannel channel,
+    Map<String, Object?> frame,
+  ) {
+    if (generation != _socketGeneration || !identical(_channel, channel)) {
+      return false;
+    }
+    try {
+      channel.sink.add(jsonEncode(frame));
+      return true;
+    } catch (error, stackTrace) {
+      _handleSocketError(generation, channel, error, stackTrace);
+      return false;
+    }
+  }
+
+  void _handleMalformedFrame(int generation, WebSocketChannel channel) {
+    if (generation != _socketGeneration || !identical(_channel, channel)) {
+      return;
+    }
+    final wasConnected = _connected;
+    _noteTransportLoss(generation);
+    _replayCoordinator.retireTransport(
+      generation: generation,
+      channel: channel,
+    );
+    _connected = false;
+    _stopHeartbeat();
+    _retireWatchdogRuntime();
+    _resetLegacyEventRuntimeAnchor();
+    _capabilityCache.resetForReconnect();
+    _channel = null;
+    final subscription = _subscription;
+    _subscription = null;
+    unawaited(
+      _teardownTransport(
+        channel,
+        subscription,
+        closeCode: TuiGatewayCloseCodes.protocolViolation,
+        closeReason: 'protocol_violation',
+      ),
+    );
+    final ready = _gatewayReadyCompleter;
+    _gatewayReadyCompleter = null;
+    if (ready != null && !ready.isCompleted) {
+      ready.completeError(
+        TuiGatewayRpcError(
+          'gateway.ready',
+          'Invalid JSON-RPC frame',
+          origin: CompressionFailureOrigin.malformed,
+        ),
+      );
+    }
+    for (final pending in _pending.values) {
+      pending.timer.cancel();
+      if (!pending.completer.isCompleted) {
+        pending.completer.completeError(
+          pending.redactRemoteError
+              ? SanitizedRpcFailureFactory.transport(pending.method)
+              : TuiGatewayRpcError(
+                  pending.method,
+                  'Invalid JSON-RPC frame',
+                  origin: CompressionFailureOrigin.malformed,
+                ),
+        );
+      }
+    }
+    _pending.clear();
+    _openServerRequests.clear();
+    _approvalServerRequestIds.clear();
+    _answeredApprovalServerRequestIds.clear();
+    if (wasConnected && !_events.isClosed) {
+      _events.addError(
+        TuiGatewayRpcError(
+          'gateway.frame',
+          'Invalid JSON-RPC frame',
+          origin: CompressionFailureOrigin.malformed,
+        ),
+      );
+    }
+  }
+
+  Future<void> _fetchReplay() async {
+    final channel = _channel;
+    final epoch = _replayEpoch;
+    if (_replayInFlight ||
+        !_replayCoordinator.hasWatermarks ||
+        !_connected ||
+        channel == null ||
+        epoch == null) {
+      return;
+    }
+    _replayInFlight = true;
+    final generation = _socketGeneration;
+    final entries = _replayCoordinator.beginReconnect(
+      generation: generation,
+      channel: channel,
+      epoch: epoch,
+    );
+    try {
+      var nextEntry = 0;
+      Future<void> replayWorker() async {
+        while (nextEntry < entries.length) {
+          final entry = entries[nextEntry++];
+          try {
+            final result = await _requestConnected(
+              'session.events.since',
+              <String, dynamic>{
+                'session_id': entry.key,
+                'last_seen': entry.value,
+              },
+              timeout: const Duration(seconds: 10),
+            );
+            if (generation != _socketGeneration ||
+                !identical(_channel, channel) ||
+                _replayEpoch != epoch) {
+              _replayCoordinator.abandonTransaction(entry.key);
+              continue;
+            }
+            final decision = _replayCoordinator.validateReplay(
+              entry.key,
+              result,
+            );
+            if (decision is ReplayBatchRetireTransport) {
+              _handleMalformedFrame(generation, channel);
+              return;
+            }
+            _meterQuarantine(entry.key);
+            // N10h-1, Desktop parity (json-rpc-gateway.ts fetchReplay /
+            // flushReplayHold): a contiguous, same-epoch, non-truncated batch
+            // is projected with the held live frames and the stream goes on.
+            // Truncated, other epoch or a gap keep the quarantine + REST.
+            if (decision is ReplayBatchCommit &&
+                !_replayCoordinator.isQuarantined(entry.key)) {
+              for (final replayed in [...decision.replay, ...decision.held]) {
+                _dispatchSessionEvent(
+                  replayed,
+                  generation,
+                  channel,
+                  replayed: true,
+                );
+              }
+            }
+          } catch (_) {
+            _replayCoordinator.abandonTransaction(entry.key);
+          }
+        }
+      }
+
+      await Future.wait(
+        List<Future<void>>.generate(
+          entries.length.clamp(0, _maxConcurrentReplayRequests),
+          (_) => replayWorker(),
+        ),
+      );
+    } finally {
+      _replayCoordinator.abandonAllTransactions();
+      _replayInFlight = false;
+    }
+  }
+
+  void _adoptReplayEpoch(String epoch) {
+    if (_replayEpoch == epoch) return;
+    if (_replayEpoch != null) _replayCoordinator.rotateEpoch();
+    _replayEpoch = epoch;
+  }
+
+  static const _heartbeatTimeoutMessage =
+      'Hermes Desktop WebSocket heartbeat timed out';
+  static const _probeTimeoutMessage =
+      'Hermes Desktop WebSocket probe timed out';
+
+  /// Motivo estable y no privado del cierre: nunca imprime el mensaje remoto.
+  String _socketCloseReason(Object error) {
+    if (error is StateError) {
+      if (error.message == _heartbeatTimeoutMessage) return 'heartbeat_timeout';
+      if (error.message == _probeTimeoutMessage) return 'probe_timeout';
+    }
+    return 'error:${_safeFailureKind(error)}';
+  }
+
+  void _handleSocketError(
+    int generation,
+    WebSocketChannel channel,
+    Object error, [
+    StackTrace? stackTrace,
+  ]) {
+    if (generation != _socketGeneration || !identical(_channel, channel)) {
+      return;
+    }
+    final wasConnected = _connected;
+    _replayCoordinator.retireTransport(
+      generation: generation,
+      channel: channel,
+    );
+    final ready = _gatewayReadyCompleter;
+    _gatewayReadyCompleter = null;
+    if (ready != null && !ready.isCompleted) {
+      ready.completeError(
+        TuiGatewayRpcError(
+          'gateway.ready',
+          'Connection lost before gateway.ready',
+          failureKind: TuiGatewayRpcFailureKind.connectionLost,
+        ),
+      );
+    }
+    // Antes de `ready`, `_connectOnce` conserva el error original y es el único
+    // owner del teardown. Evita dos cancel/close concurrentes sobre un upgrade
+    // rechazado.
+    if (!wasConnected) return;
+    _noteTransportLoss(generation);
+    // Diagnóstico sin datos privados: distingue un plazo de heartbeat/sonda
+    // vencido de un error del socket (bucles de reconexión en turnos largos).
+    debugPrint(
+      '[tui-gateway] WebSocket closed '
+      '(reason=${_socketCloseReason(error)}, generation=$generation)',
+    );
+    _connected = false;
+    _stopHeartbeat();
+    _retireWatchdogRuntime();
+    _resetLegacyEventRuntimeAnchor();
+    _capabilityCache.resetForReconnect();
+    _channel = null;
+    final subscription = _subscription;
+    _subscription = null;
+    final closeReason = _socketCloseReason(error);
+    unawaited(
+      _teardownTransport(
+        channel,
+        subscription,
+        closeCode: switch (closeReason) {
+          'heartbeat_timeout' => TuiGatewayCloseCodes.heartbeatTimeout,
+          'probe_timeout' => TuiGatewayCloseCodes.probeTimeout,
+          _ => TuiGatewayCloseCodes.transportError,
+        },
+        closeReason: closeReason.startsWith('error:')
+            ? 'transport_error'
+            : closeReason,
+      ),
+    );
+    final hadSensitivePending = _pending.values.any(
+      (pending) => pending.redactRemoteError,
+    );
+    _failPending(error, stackTrace);
+    // `events` is the long-lived side of the Desktop protocol. A socket can
+    // disappear while there is no JSON-RPC request pending (for example while
+    // Hermes is executing a tool), so failing only `_pending` leaves the chat
+    // stuck in "streaming" until its watchdog fires. Notify the ActiveChat as
+    // soon as an already-established transport drops. Connection failures
+    // before `ready` are deliberately not forwarded: `_connectOnce` owns those
+    // and can still use the REST fallback without racing an event-stream error.
+    if (wasConnected && !_events.isClosed) {
+      if (hadSensitivePending) {
+        _events.addError(
+          const TuiGatewayRpcError(
+            'gateway.transport',
+            'Hermes Desktop connection lost',
+            failureKind: TuiGatewayRpcFailureKind.connectionLost,
+          ),
+        );
+      } else if (stackTrace == null) {
+        _events.addError(error);
+      } else {
+        _events.addError(error, stackTrace);
+      }
+    }
+  }
+
+  void _handleSocketDone(int generation, WebSocketChannel channel) {
+    if (generation != _socketGeneration || !identical(_channel, channel)) {
+      return;
+    }
+    final wasConnected = _connected;
+    _replayCoordinator.retireTransport(
+      generation: generation,
+      channel: channel,
+    );
+    final ready = _gatewayReadyCompleter;
+    _gatewayReadyCompleter = null;
+    if (ready != null && !ready.isCompleted) {
+      ready.completeError(
+        TuiGatewayRpcError(
+          'gateway.ready',
+          'Connection lost before gateway.ready',
+          failureKind: TuiGatewayRpcFailureKind.connectionLost,
+        ),
+      );
+    }
+    if (wasConnected) _noteTransportLoss(generation);
+    if (wasConnected) {
+      debugPrint(
+        '[tui-gateway] WebSocket closed '
+        '(reason=on_done, closeCode=${channel.closeCode ?? 'none'}, '
+        'origin=unknown, background=$_backgroundParked, '
+        'generation=$generation)',
+      );
+    }
+    _connected = false;
+    _stopHeartbeat();
+    _retireWatchdogRuntime();
+    _resetLegacyEventRuntimeAnchor();
+    _capabilityCache.resetForReconnect();
+    final subscription = _subscription;
+    _channel = null;
+    _subscription = null;
+    if (wasConnected) {
+      unawaited(
+        _teardownTransport(
+          channel,
+          subscription,
+          closeCode: TuiGatewayCloseCodes.normal,
+          // dart:io also ends the stream with 1002 for a local decoder/read
+          // error, without forwarding onError. onDone does not identify the
+          // initiator; deliberate app closes are generation-fenced above.
+          closeReason: 'stream_done',
+        ),
+      );
+    }
+    final hadSensitivePending = _pending.values.any(
+      (pending) => pending.redactRemoteError,
+    );
+    const pendingError = TuiGatewayRpcError(
+      'gateway.transport',
+      'Hermes Desktop connection lost',
+      failureKind: TuiGatewayRpcFailureKind.connectionLost,
+    );
+    _failPending(pendingError);
+    if (wasConnected && !_events.isClosed) {
+      _events.addError(
+        hadSensitivePending
+            ? pendingError
+            : StateError('Hermes Desktop WebSocket closed'),
+      );
+    }
+  }
+
+  void _startHeartbeat(int generation, WebSocketChannel channel) {
+    _stopHeartbeat();
+    final startedAt = _now();
+    _lastInboundAt = startedAt;
+    _lastHeartbeatTickAt = startedAt;
+    if (_heartbeatInterval <= Duration.zero ||
+        _heartbeatDeadline <= Duration.zero) {
+      return;
+    }
+    _heartbeatTimer = Timer.periodic(
+      _heartbeatInterval,
+      (_) => unawaited(_heartbeatTick(generation, channel)),
+    );
+  }
+
+  Future<void> _heartbeatTick(int generation, WebSocketChannel channel) async {
+    if (generation != _socketGeneration ||
+        !identical(_channel, channel) ||
+        !_connected) {
+      return;
+    }
+    final now = _now();
+    final previousTick = _lastHeartbeatTickAt;
+    _lastHeartbeatTickAt = now;
+    // Android suspende el isolate al dejar la app en segundo plano. Al
+    // volver, un Timer periódico vencido puede ejecutarse antes de entregar
+    // los frames que el socket dejó en cola. Ese salto no demuestra una
+    // conexión muerta: concede una sonda completa antes de invalidarla.
+    if (previousTick != null &&
+        now.difference(previousTick) >= _heartbeatDeadline) {
+      _lastInboundAt = now;
+    }
+    if (now.difference(_lastInboundAt) >= _heartbeatDeadline) {
+      _handleSocketError(
+        generation,
+        channel,
+        StateError(_heartbeatTimeoutMessage),
+      );
+      return;
+    }
+    try {
+      _heartbeatSequence = _heartbeatSequence >= maxSafeJsonInteger
+          ? 1
+          : _heartbeatSequence + 1;
+      channel.sink.add(
+        jsonEncode({
+          'jsonrpc': '2.0',
+          'id': -_heartbeatSequence,
+          'method': 'gateway.ping',
+          'params': const <String, dynamic>{},
+        }),
+      );
+      _heartbeatAwaitingReply = true;
+      await _probeSilentFanout(generation, channel, now);
+    } catch (error, stackTrace) {
+      _handleSocketError(generation, channel, error, stackTrace);
+    }
+  }
+
+  Future<bool>? _probeNowFlight;
+  int _probeNowFlightGeneration = -1;
+  final Duration _probeNowDeadline;
+
+  /// The probe's deadline when no frame arrived for a whole heartbeat
+  /// deadline: the isolate was frozen (or the socket died in silence) and
+  /// the usual 5 s would only delay the redial the screens are waiting for.
+  final Duration _probeNowStaleDeadline;
+
+  /// No frame for [_heartbeatDeadline] while still «connected»: only a frozen
+  /// isolate (or a socket that died without a close) gets here, since the
+  /// heartbeat would otherwise have cut the socket.
+  bool get _inboundStale =>
+      _heartbeatDeadline > Duration.zero &&
+      _now().difference(_lastFrameAt) >= _heartbeatDeadline;
+
+  /// Un frame recibido hace menos de esto ya prueba que el socket vive.
+  final Duration _probeNowRecentInbound;
+
+  /// Espera antes de repetir la sonda cuando el primer timeout se aplazó por
+  /// un turno en vuelo (Desktop `gateway-liveness-policy.ts`: 3 s, racha de 2).
+  final Duration _probeNowRetryDelay;
+  Timer? _probeRetryTimer;
+  Completer<void>? _probeRetryWait;
+
+  /// Sonda puntual del socket vigente (cambio de red / resume). Cualquier
+  /// respuesta, incluso un error JSON-RPC, prueba que el socket vive. Sin
+  /// respuesta en ~5 s *y sin ningún frame entrante desde que empezó* se usa
+  /// la misma ruta que un heartbeat vencido, así que la reconexión normal
+  /// arranca sin esperar los 45 s. Hermes procesa los RPC en serie
+  /// (`tui_gateway/ws.py`): un `prompt.submit` o `approval.respond` lento
+  /// retrasa el pong aunque los eventos sigan llegando, y cortar entonces
+  /// dejaría ambiguo un submit sano. Coalescida por conexión; no-op si no hay
+  /// conexión o hubo tráfico reciente. No toca el heartbeat.
+  @override
+  Future<bool> probeNow() {
+    final existing = _probeNowFlight;
+    if (existing != null && _probeNowFlightGeneration == _socketGeneration) {
+      return existing;
+    }
+    final channel = _channel;
+    if (_closed || !_connected || channel == null) {
+      return Future<bool>.value(false);
+    }
+    if (_now().difference(_lastFrameAt) < _probeNowRecentInbound) {
+      return Future<bool>.value(true);
+    }
+    final generation = _socketGeneration;
+    late final Future<bool> flight;
+    flight = _probeNowOnce(generation, channel).whenComplete(() {
+      if (identical(_probeNowFlight, flight)) _probeNowFlight = null;
+    });
+    _probeNowFlight = flight;
+    _probeNowFlightGeneration = generation;
+    return flight;
+  }
+
+  bool get _anyRuntimeBusy => _watchdogs.values.any((watched) => watched.busy);
+
+  /// Espera cancelable: `false` si el socket ya no es el de la sonda o el
+  /// cliente se cerró mientras tanto.
+  Future<bool> _waitProbeRetry(int generation, WebSocketChannel channel) async {
+    final wait = Completer<void>();
+    _probeRetryWait = wait;
+    _probeRetryTimer = Timer(_probeNowRetryDelay, () {
+      if (!wait.isCompleted) wait.complete();
+    });
+    await wait.future;
+    _probeRetryTimer?.cancel();
+    _probeRetryTimer = null;
+    if (identical(_probeRetryWait, wait)) _probeRetryWait = null;
+    return !_closed &&
+        _connected &&
+        generation == _socketGeneration &&
+        identical(_channel, channel);
+  }
+
+  void _cancelProbeRetry() {
+    _probeRetryTimer?.cancel();
+    _probeRetryTimer = null;
+    final wait = _probeRetryWait;
+    _probeRetryWait = null;
+    if (wait != null && !wait.isCompleted) wait.complete();
+  }
+
+  Future<bool> _probeNowOnce(
+    int generation,
+    WebSocketChannel channel, {
+    bool retried = false,
+  }) async {
+    final probeStartedAt = _now();
+    final stale = _inboundStale;
+    try {
+      await _requestConnected(
+        'gateway.ping',
+        const <String, dynamic>{},
+        timeout: stale ? _probeNowStaleDeadline : _probeNowDeadline,
+      );
+      GatewaySocketMeter.instance.recordProbe(ok: true);
+      return true;
+    } on TuiGatewayRpcError catch (error) {
+      if (error.failureKind == null) return true;
+      if (error.failureKind == TuiGatewayRpcFailureKind.timeout) {
+        GatewaySocketMeter.instance.recordProbe(ok: false);
+        // Cualquier frame posterior al inicio de la sonda prueba que el
+        // socket vive: el pong solo espera tras un RPC serial lento.
+        if (_lastFrameAt.isAfter(probeStartedAt)) return true;
+        if (!retried && _anyRuntimeBusy) {
+          // Turno en vuelo: el primer timeout se aplaza y solo una racha de 2
+          // cierra. Un frame durante la espera reinicia la racha.
+          if (!await _waitProbeRetry(generation, channel)) return false;
+          if (_lastFrameAt.isAfter(probeStartedAt)) return true;
+          return _probeNowOnce(generation, channel, retried: true);
+        }
+        _handleSocketError(
+          generation,
+          channel,
+          StateError(_probeTimeoutMessage),
+        );
+      }
+      return false;
+    } catch (error, stackTrace) {
+      _handleSocketError(generation, channel, error, stackTrace);
+      return false;
+    }
+  }
+
+  @visibleForTesting
+  Future<void> debugHeartbeatTick() async {
+    final channel = _channel;
+    if (channel == null) return;
+    await _heartbeatTick(_socketGeneration, channel);
+  }
+
+  Future<void> _probeSilentFanout(
+    int generation,
+    WebSocketChannel channel,
+    DateTime now,
+  ) async {
+    final epoch = _replayEpoch;
+    if (_fanoutWatchdogInFlight ||
+        epoch == null ||
+        !_connectionReplayCapable ||
+        generation != _socketGeneration ||
+        !identical(_channel, channel) ||
+        !_connected) {
+      return;
+    }
+    final due = <MapEntry<String, _WatchdogRuntime>>[
+      for (final entry in _watchdogs.entries)
+        if (entry.value.busy &&
+            (entry.value.lastActivityAt == null ||
+                now.difference(entry.value.lastActivityAt!) >=
+                    _fanoutInactivityDeadline))
+          entry,
+    ];
+    if (due.isEmpty) return;
+    _fanoutWatchdogInFlight = true;
+    try {
+      for (final entry in due) {
+        if (generation != _socketGeneration ||
+            !identical(_channel, channel) ||
+            _replayEpoch != epoch ||
+            !_connected) {
+          return;
+        }
+        await _probeSilentRuntime(
+          generation,
+          channel,
+          epoch,
+          entry.key,
+          entry.value,
+          now,
+        );
+      }
+    } finally {
+      _fanoutWatchdogInFlight = false;
+    }
+  }
+
+  Future<void> _probeSilentRuntime(
+    int generation,
+    WebSocketChannel channel,
+    String epoch,
+    String runtime,
+    _WatchdogRuntime watched,
+    DateTime now,
+  ) async {
+    if (!identical(_watchdogs[runtime], watched) || !watched.busy) return;
+    // N10h-2: a quarantined runtime has no watermark, so `since(0)` always
+    // looks like a gap and looped /messages for the whole live turn. Until a
+    // withheld turn end arrives, the roster decides (no /messages reads).
+    if (_replayCoordinator.isQuarantined(runtime) &&
+        !_withheldTurnEnds.contains(runtime)) {
+      return _probeQuarantinedRoster(generation, channel, runtime, watched);
+    }
+    final registration = watched.revision;
+    final lastSeen = _replayCoordinator.watermarks[runtime] ?? 0;
+    // A completed no-gap probe also bounds traffic to one request per busy
+    // inactivity window. Heartbeat responses deliberately do not update this
+    // runtime-specific clock: a fanout-detached peer still answers ping.
+    watched.lastActivityAt = now;
+    try {
+      final result = await _requestConnected(
+        'session.events.since',
+        <String, dynamic>{'session_id': runtime, 'last_seen': lastSeen},
+        timeout: const Duration(seconds: 10),
+      );
+      if (generation != _socketGeneration ||
+          !identical(_channel, channel) ||
+          _replayEpoch != epoch ||
+          !identical(_watchdogs[runtime], watched) ||
+          !watched.busy ||
+          watched.revision != registration ||
+          !_connected) {
+        return;
+      }
+      final current = _replayCoordinator.watermarks[runtime];
+      if (current != null && current != lastSeen) return;
+      final decision = ReplayBatchProof.validate(
+        runtime: runtime,
+        epoch: epoch,
+        lastSeen: lastSeen,
+        result: result,
+        held: const <SessionGatewayEvent>[],
+      );
+      final gapRemains =
+          decision is ReplayBatchCommit && decision.newWatermark > lastSeen;
+      if (decision is ReplayBatchCommit && !gapRemains) return;
+
+      // Replay can identify a silent gap, but current upstream cannot prove a
+      // full snapshot-to-tail cut. Quarantine before notifying ActiveChat so it
+      // rehydrates authoritative REST/roster state instead of publishing the
+      // replay payload directly.
+      _requestRuntimeRehydration(runtime);
+    } catch (_) {
+      // A failed diagnostic read is not itself proof that the healthy socket or
+      // fanout lease is lost. Retry only after another bounded idle window.
+    }
+  }
+
+  /// N10h-2: a quarantined turn whose end frame never arrives. Hermes lists
+  /// every live session (methods_session.py:1143-1153) and calls it `idle`
+  /// once `running` is false (server.py:3041-3048): an idle or gone row means
+  /// the turn is over, so rehydrate once. A busy row does nothing; roster reads
+  /// back off 2x per answer (cap 120 s, as in `rearmRuntimeWatchdog`).
+  Future<void> _probeQuarantinedRoster(
+    int generation,
+    WebSocketChannel channel,
+    String runtime,
+    _WatchdogRuntime watched,
+  ) async {
+    final epoch = _replayEpoch;
+    final registration = watched.revision;
+    final window = _fanoutInactivityDeadline * (1 << ++watched.rosterReads);
+    final capped = window > _rosterCap ? _rosterCap : window;
+    watched.lastActivityAt = _now().add(capped - _fanoutInactivityDeadline);
+    try {
+      final roster = await listActiveSessions();
+      if (generation != _socketGeneration ||
+          !identical(_channel, channel) ||
+          _replayEpoch != epoch ||
+          !identical(_watchdogs[runtime], watched) ||
+          !watched.busy ||
+          watched.revision != registration ||
+          !_connected ||
+          !_replayCoordinator.isQuarantined(runtime)) {
+        return;
+      }
+      final row = roster.sessions
+          .where((s) => s.runtimeSessionId == runtime)
+          .firstOrNull;
+      if (row == null ? roster.hasMalformedRows : row.status != 'idle') return;
+      _requestRuntimeRehydration(runtime, meterReason: 'roster_idle');
+    } catch (_) {
+      // A failed roster read proves nothing; retry after the next window.
+    }
+  }
+
+  static const Duration _rosterCap = Duration(seconds: 120);
+
+  /// Quarantines [runtime] and asks its owner chat to rehydrate from
+  /// authoritative REST/roster state. Retiring the watchdog bounds it to one
+  /// request per bind: the next resume/activate arms the runtime again.
+  void _requestRuntimeRehydration(String runtime, {String? meterReason}) {
+    GatewaySocketMeter.instance.noteRehydration(meterReason ?? 'fanout_gap');
+    _replayCoordinator.quarantine(runtime);
+    _meterQuarantine(runtime);
+    _retireWatchdogRuntime(runtime);
+    if (!_events.isClosed) {
+      _events.addError(
+        TuiGatewayRpcError(
+          'session.events.since',
+          'Hermes Desktop live subscription requires rehydration',
+          failureKind: TuiGatewayRpcFailureKind.connectionLost,
+          // A shared socket carries many chats: name the runtime so only
+          // its owner rehydrates (the socket itself is healthy).
+          data: {
+            'session_id': runtime,
+            // N10b: Hermes said the turn is over (a withheld end frame).
+            if (meterReason == 'withheld_turn_end' ||
+                meterReason == 'roster_idle')
+              'turn_ended': true,
+          },
+        ),
+      );
+    }
+  }
+
+  /// lt1215: after a reconnect a runtime's live frames are withheld (held or
+  /// quarantined, never projected) because current Hermes cannot prove a
+  /// snapshot/replay cut, so a chat that rebound a running turn sees nothing
+  /// until the fanout watchdog's next busy idle window (15-30 s with the
+  /// Desktop heartbeat). A withheld frame that ends the turn is Hermes saying
+  /// the answer is final now: rehydrate at once, exactly like a probed gap.
+  /// Nothing of the frame is projected, and frames that do not end the turn
+  /// send nothing, so a long turn costs no extra traffic.
+  void _rehydrateOnWithheldTurnEnd(SessionGatewayEvent event) {
+    final watched = _watchdogs[event.sessionId];
+    if (watched == null || !watched.busy || !_eventEndsTurn(event)) return;
+    _withheldTurnEnds.add(event.sessionId);
+    _requestRuntimeRehydration(
+      event.sessionId,
+      meterReason: 'withheld_turn_end',
+    );
+  }
+
+  /// `[QA-NET]` gauge of quarantined runtimes on this socket (never behaviour).
+  final Set<String> _meterQuarantined = <String>{};
+
+  void _meterQuarantine(String runtime) {
+    if (!GatewaySocketMeter.instance.enabled) return;
+    if (_replayCoordinator.isQuarantined(runtime)) {
+      _meterQuarantined.add(runtime);
+    } else {
+      _meterQuarantined.remove(runtime);
+    }
+    GatewaySocketMeter.instance.recordQuarantined(
+      _meterSocketKey,
+      _meterQuarantined.length,
+    );
+  }
+
+  @visibleForTesting
+  Future<void> debugProbeSilentFanout() async {
+    final channel = _channel;
+    if (channel == null) return;
+    await _probeSilentFanout(_socketGeneration, channel, _now());
+  }
+
+  /// Runtime the watchdog follows next. A single-chat socket follows one
+  /// runtime at a time (the newest bind replaces the old); a multiplexed
+  /// socket follows every runtime a chat attached until it is released.
+  _WatchdogRuntime _watchRuntime(String runtime) {
+    if (!_multiplexed) {
+      _watchdogs.removeWhere((key, _) => key != runtime);
+    }
+    final watched = _watchdogs.putIfAbsent(runtime, _WatchdogRuntime.new);
+    watched.revision += 1;
+    return watched;
+  }
+
+  void _adoptWatchdogSnapshot(DesktopSessionSnapshot snapshot) {
+    final status = snapshot.status?.trim().toLowerCase();
+    final busy =
+        snapshot.running ||
+        snapshot.inflight != null ||
+        snapshot.queued != null ||
+        const <String>{
+          'running',
+          'busy',
+          'streaming',
+          'compacting',
+          'waiting',
+        }.contains(status);
+    final watched = _watchRuntime(snapshot.runtimeSessionId);
+    watched.busy = busy;
+    watched.lastActivityAt = _now();
+  }
+
+  void _markWatchdogRuntimeBusy(Object? runtimeSessionId) {
+    if (runtimeSessionId is! String ||
+        runtimeSessionId.isEmpty ||
+        runtimeSessionId != runtimeSessionId.trim()) {
+      return;
+    }
+    _withheldTurnEnds.remove(runtimeSessionId);
+    final watched = _watchRuntime(runtimeSessionId);
+    watched.rosterReads = 0;
+    watched.busy = true;
+    watched.lastActivityAt = _now();
+  }
+
+  @visibleForTesting
+  void debugMarkRuntimeBusy(String runtimeSessionId) =>
+      _markWatchdogRuntimeBusy(runtimeSessionId);
+
+  /// N10b: a rehydration retires the watchdog of [runtime]; once its owner
+  /// has re-read the transcript the runtime is followed again, but the next
+  /// silent-fanout probe waits `deadline * 2^step` (cap 120 s) instead of one
+  /// deadline, so a runtime that stays withheld costs ever fewer reads.
+  void rearmRuntimeWatchdog(String runtime, {int step = 1}) {
+    if (_closed || !_connected || _watchdogs.containsKey(runtime)) return;
+    const cap = Duration(seconds: 120);
+    final deadline = _fanoutInactivityDeadline;
+    var window = deadline;
+    for (var i = 0; i < step && window < cap; i++) {
+      window *= 2;
+    }
+    if (window > cap) window = cap;
+    if (window < deadline) window = deadline;
+    final watched = _watchRuntime(runtime);
+    watched.busy = true;
+    watched.lastActivityAt = _now().add(window - deadline);
+  }
+
+  void _retireWatchdogRuntime([String? runtimeSessionId]) {
+    if (runtimeSessionId == null) {
+      _watchdogs.clear();
+      _withheldTurnEnds.clear();
+      return;
+    }
+    _watchdogs.remove(runtimeSessionId);
+  }
+
+  void _observeWatchdogEvent(SessionGatewayEvent event, DateTime observedAt) {
+    final watched = _watchdogs[event.sessionId];
+    if (watched == null) return;
+    watched.lastActivityAt = observedAt;
+    watched.revision += 1;
+
+    if (_eventEndsTurn(event)) {
+      watched.busy = false;
+      return;
+    }
+    final status = event.payload['status']?.toString().trim().toLowerCase();
+    final info = event.payload['info'];
+    final running =
+        event.payload['running'] ?? (info is Map ? info['running'] : null);
+    if (running == true ||
+        const <String>{
+          'running',
+          'busy',
+          'streaming',
+          'compacting',
+          'waiting',
+        }.contains(status) ||
+        event.type == 'message.start' ||
+        event.type == 'message.delta' ||
+        event.type == 'message.interim' ||
+        event.type == 'tool.start') {
+      watched.busy = true;
+    }
+  }
+
+  static bool _eventEndsTurn(SessionGatewayEvent event) {
+    final status = event.payload['status']?.toString().trim().toLowerCase();
+    final info = event.payload['info'];
+    final running =
+        event.payload['running'] ?? (info is Map ? info['running'] : null);
+    return event.type == 'message.complete' ||
+        event.type == 'error' ||
+        event.type == 'session.closed' ||
+        running == false ||
+        const <String>{
+          'idle',
+          'complete',
+          'completed',
+          'terminal',
+          'failed',
+          'cancelled',
+          'canceled',
+          'stopped',
+        }.contains(status);
+  }
+
+  void _stopHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+    _lastHeartbeatTickAt = null;
+  }
+
+  void _failPending(Object error, [StackTrace? stackTrace]) {
+    for (final pending in _pending.values.toList()) {
+      pending.timer.cancel();
+      if (pending.completer.isCompleted) continue;
+      if (pending.redactRemoteError) {
+        pending.completer.completeError(
+          SanitizedRpcFailureFactory.transport(pending.method),
+        );
+        continue;
+      }
+      final safeError =
+          const {
+            'gateway.capabilities',
+            'session.resume',
+          }.contains(pending.method)
+          ? TuiGatewayRpcError(
+              pending.method,
+              'Connection lost before JSON-RPC response',
+              failureKind: TuiGatewayRpcFailureKind.connectionLost,
+            )
+          : error;
+      if (stackTrace == null) {
+        pending.completer.completeError(safeError);
+      } else {
+        pending.completer.completeError(safeError, stackTrace);
+      }
+    }
+    _pending.clear();
+    _openServerRequests.clear();
+    _approvalServerRequestIds.clear();
+    _answeredApprovalServerRequestIds.clear();
+  }
+
+  Future<Map<String, dynamic>> _request(
+    String method,
+    Map<String, dynamic> params, {
+    Duration timeout = const Duration(seconds: 120),
+  }) async {
+    await _connectForRequest(method);
+    return _requestConnected(method, params, timeout: timeout);
+  }
+
+  @override
+  Future<void> ensureExclusiveSubmitCapability() async {
+    await _requireExclusiveSubmitCapabilityProof();
+  }
+
+  // Async-local authorization: concurrent operations never overwrite a guard.
+  static final _compressionAuthorization = Object();
+  static Future<T> withCompressionAuthorization<T>(
+    bool Function() allowed,
+    Future<T> Function() operation,
+  ) => runZoned(operation, zoneValues: {_compressionAuthorization: allowed});
+
+  Future<Map<String, dynamic>> _requestExclusiveSessionMutation(
+    String method,
+    Map<String, dynamic> params, {
+    Duration timeout = const Duration(seconds: 120),
+    bool preserveCapabilityFailure = false,
+  }) async {
+    try {
+      final proof = await _requireExclusiveSubmitCapabilityProof(
+        preserveTypedFailure: preserveCapabilityFailure,
+      );
+      if (proof.generation != _socketGeneration ||
+          !identical(_channel, proof.channel) ||
+          !_connected ||
+          (Zone.current[_compressionAuthorization] as bool Function()?)
+                  ?.call() ==
+              false) {
+        throw _exclusiveSubmitCapabilityRace;
+      }
+    } catch (error) {
+      if (error is TuiGatewayRpcError &&
+          error.compressionReason ==
+              CompressionFailureReason.exclusiveSubmitCapabilityDenied) {
+        throw TuiGatewayRpcError(
+          method,
+          _exclusiveSubmitCapabilityDenied.message,
+          data: _exclusiveSubmitCapabilityDenied.data,
+          origin: CompressionFailureOrigin.localPreflight,
+        );
+      }
+      if (preserveCapabilityFailure &&
+          (error is DashboardAuthException ||
+              error is DashboardWebSocketAuthException ||
+              error is TuiGatewayRpcError)) {
+        rethrow;
+      }
+      throw TuiGatewayRpcError(
+        method,
+        _exclusiveSubmitCapabilityRace.message,
+        origin: CompressionFailureOrigin.localPreflight,
+      );
+    }
+    return _requestConnected(method, params, timeout: timeout);
+  }
+
+  // ---------------------------------------------------------------------
+  // Canonical session authority (negotiated per connection; see
+  // session_authority.dart). Nothing below runs unless the CURRENT
+  // connection announced `gateway.ready.session_authority: true`.
+  // ---------------------------------------------------------------------
+
+  int _canonicalSubmissionCounter = 0;
+
+  /// Images staged by `image.attach_bytes` that no admitted submit named yet,
+  /// per session. They are references to files on the server, so they outlive
+  /// a redial; the submit that carries them consumes them.
+  final Map<String, List<Map<String, String>>> _canonicalStagedImages = {};
+  static const int _maxStagedCanonicalImages = 32;
+
+  String _newCanonicalSubmissionId() {
+    _canonicalSubmissionCounter += 1;
+    return 'sub-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}'
+        '-${_canonicalSubmissionCounter.toRadixString(36)}';
+  }
+
+  Future<bool> _canonicalNow() async {
+    if (_sessionAuthority == SessionAuthorityCapability.unknown) {
+      await _connectForRequest('gateway.connect');
+    }
+    return _sessionAuthority.isCanonical;
+  }
+
+  /// The prompts the authority still holds open for [runtime], read from a
+  /// fresh attach (its snapshot is one atomic cut), never from a guess.
+  Future<List<Map<String, dynamic>>> _canonicalOpenRequests(
+    String runtime,
+  ) async {
+    final known = _canonicalLedgers[runtime];
+    if (known == null) return const [];
+    await _resumeCanonical(runtime, profile: known.profile, omitMessages: true);
+    final fresh = _canonicalLedgers[runtime];
+    if (fresh == null || !fresh.isReady) return const [];
+    return [
+      for (final prompt in fresh.prompts.values)
+        <String, dynamic>{
+          'id': prompt.promptId,
+          'method': prompt.kind,
+          'params': <String, dynamic>{
+            'session_id': runtime,
+            ...prompt.toLegacyRequestPayload(),
+          },
+        },
+    ];
+  }
+
+  /// Answers one canonical prompt. The identity and generation come from the
+  /// ledger entry that was shown; an unknown or retired prompt is `expired`
+  /// locally and nothing is sent.
+  Future<Map<String, dynamic>?> _answerCanonicalPrompt({
+    required String method,
+    required String kind,
+    required String? session,
+    required String promptId,
+    required String value,
+  }) async {
+    CanonicalSessionLedger? ledger;
+    if (session != null) {
+      ledger = _readyCanonicalLedger(method, session);
+    } else {
+      for (final candidate in _canonicalLedgers.values) {
+        if (candidate.isReady && candidate.prompts.containsKey(promptId)) {
+          ledger = candidate;
+        }
+      }
+    }
+    final prompt = ledger?.prompts[promptId];
+    if (ledger == null || prompt == null || prompt.kind != kind) return null;
+    final generation = _socketGeneration;
+    final result = await _requestConnected(
+      method,
+      kind == 'approval'
+          ? CanonicalWire.approval(
+              sessionId: ledger.sessionId,
+              generation: prompt.executionGeneration,
+              promptId: promptId,
+              choice: value,
+              profile: ledger.profile,
+            )
+          : CanonicalWire.clarify(
+              sessionId: ledger.sessionId,
+              generation: prompt.executionGeneration,
+              promptId: promptId,
+              answer: value,
+              profile: ledger.profile,
+            ),
+    );
+    if (generation == _socketGeneration &&
+        result['prompt_id'] == promptId &&
+        (result['status'] == 'resolved' ||
+            result['status'] == 'already_resolved')) {
+      ledger.prompts.remove(promptId);
+    }
+    return result;
+  }
+
+  TuiGatewayRpcError _canonicalExpired(String method) => TuiGatewayRpcError(
+    method,
+    'The question is no longer open',
+    data: const <String, dynamic>{'reason': 'prompt_expired'},
+    origin: CompressionFailureOrigin.localPreflight,
+  );
+
+  TuiGatewayRpcError _canonicalUnsupported(String method, String detail) =>
+      TuiGatewayRpcError(
+        method,
+        'Not available on the canonical session authority: $detail',
+        data: <String, dynamic>{'reason': 'canonical_operation_unsupported'},
+        origin: CompressionFailureOrigin.localPreflight,
+      );
+
+  CanonicalSessionLedger _readyCanonicalLedger(String method, String session) {
+    final ledger = _canonicalLedgers[session.trim()];
+    if (ledger == null || !ledger.isSendReady) {
+      // A socket that is merely connected is not hydrated: the authority
+      // refuses a submitter it never attached (`permission_denied`).
+      throw TuiGatewayRpcError(
+        method,
+        'Canonical session is not synchronized',
+        code: 4001,
+        data: const <String, dynamic>{'reason': 'session_not_hydrated'},
+        origin: CompressionFailureOrigin.localPreflight,
+      );
+    }
+    return ledger;
+  }
+
+  /// `session.create` on the authority (`CanonicalCreateParams`: a closed key
+  /// set and a creating surface; Desktop's own is `gui`). It answers the same
+  /// snapshot as a resume and attaches the caller, so the new session starts
+  /// with a proven cut. Settings with no canonical field (fast mode, seeded
+  /// rows) are never sent under another name: seeded rows are refused, fast
+  /// mode is not applied at creation.
+  Future<DesktopSessionSnapshot> _createCanonical({
+    required String profile,
+    required List<Map<String, dynamic>> seedMessages,
+    String? model,
+    DesktopSessionCreateConfig config = const DesktopSessionCreateConfig(),
+  }) async {
+    const method = 'session.create';
+    if (seedMessages.isNotEmpty) {
+      throw _canonicalUnsupported(method, 'creating a session from seed rows');
+    }
+    String? safe(String? value, int max) {
+      final text = value?.trim() ?? '';
+      return text.isNotEmpty &&
+              text.length <= max &&
+              !text.codeUnits.any((unit) => unit < 0x20 || unit == 0x7f)
+          ? text
+          : null;
+    }
+
+    final selection = config.model;
+    final title = safe(config.title, 256);
+    final workspace = safe(config.workspace, 4096);
+    final modelId = selection?.modelId ?? model;
+    final wireProfile = profile.trim();
+    final generation = _socketGeneration;
+    final channel = _channel;
+    final result = await _requestConnected(method, <String, dynamic>{
+      'source': 'gui',
+      'request_id': _newCanonicalSubmissionId(),
+      if (wireProfile.isNotEmpty) 'profile': wireProfile,
+      'title': ?title,
+      if (workspace != null) ...{'cwd': workspace, 'cwd_explicit': true},
+      if (config.hidden) 'hidden': true,
+      if (config.followProfileConfig) 'follow_profile_config': true,
+      'model': ?modelId,
+      if (selection != null) 'provider': selection.providerSlug,
+      if (config.reasoningEffort case final effort?) 'reasoning': effort.wire,
+    });
+    if (generation != _socketGeneration || !identical(_channel, channel)) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Connection lost before JSON-RPC response',
+        failureKind: TuiGatewayRpcFailureKind.connectionLost,
+      );
+    }
+    final CanonicalSnapshot snapshot;
+    try {
+      snapshot = CanonicalSnapshot.parse(result);
+    } on FormatException {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid session snapshot',
+        origin: CompressionFailureOrigin.malformed,
+      );
+    }
+    final ledger = CanonicalSessionLedger(
+      sessionId: snapshot.sessionId,
+      profile: wireProfile,
+    );
+    _canonicalLedgers[snapshot.sessionId] = ledger;
+    ledger.beginHydration();
+    final held = ledger.completeHydration(snapshot);
+    final typed = _parseSessionSnapshot(
+      snapshot.toBindingJson(result),
+      requestedStoredSessionId: '',
+      created: true,
+      method: method,
+      rememberLegacyRuntime: false,
+    );
+    _dispatchHeldCanonicalFrames(held, generation, channel!);
+    return typed;
+  }
+
+  Future<DesktopSessionBinding> _resumeCanonical(
+    String storedSessionId, {
+    required String profile,
+    bool omitMessages = false,
+    bool deferHistory = false,
+    bool deferDispatch = false,
+  }) async {
+    final snapshot = await _resumeCanonicalSnapshot(
+      storedSessionId,
+      profile: profile,
+      omitMessages: omitMessages,
+      deferHistory: deferHistory,
+      deferDispatch: deferDispatch,
+    );
+    final binding = DesktopSessionBinding.fromSnapshot(snapshot);
+    final token = _adoptionTokens[snapshot];
+    if (token != null) _adoptionTokens[binding] = token;
+    return binding;
+  }
+
+  /// Adoption tokens of deferred canonical attaches, by the typed snapshot the
+  /// owner received. Only the owner that holds that exact snapshot can commit
+  /// or release it.
+  final Expando<int> _adoptionTokens = Expando<int>('canonical adoption');
+
+  /// Chats that own the recovery of a canonical session (they listen to this
+  /// client's events and re-attach themselves after a loss). While a session
+  /// has an owner, its attaches are held until the owner adopts them and the
+  /// client never re-attaches it on its own: one recovery owner. A client
+  /// without an owner (standalone, directly constructed) keeps both duties.
+  final Map<String, Object> _canonicalOwners = <String, Object>{};
+
+  void claimCanonicalOwner(String sessionId, Object owner) {
+    if (sessionId.isEmpty) return;
+    _canonicalOwners[sessionId] = owner;
+  }
+
+  /// The owner went away: drops its claims and any adoption it still owed.
+  void releaseCanonicalOwner(Object owner) {
+    final ids = [
+      for (final e in _canonicalOwners.entries)
+        if (identical(e.value, owner)) e.key,
+    ];
+    for (final id in ids) {
+      _canonicalOwners.remove(id);
+      final ledger = _canonicalLedgers[id];
+      if (ledger != null && ledger.awaitingAdoption) {
+        ledger.releaseAdoption(ledger.adoptionToken);
+      }
+    }
+  }
+
+  bool hasCanonicalOwner(String sessionId) =>
+      _canonicalOwners.containsKey(sessionId);
+
+  /// The owner applied the snapshot it holds: the frames held since its cut
+  /// are judged now. A stale snapshot (a newer attach superseded it) is a
+  /// no-op and returns false.
+  bool commitCanonicalAdoption(
+    DesktopSessionSnapshot snapshot, {
+    bool requirePending = false,
+  }) {
+    final token = _adoptionTokens[snapshot];
+    // Default callers retain the no-op success; idle following needs proof
+    // that this exact snapshot actually owned a deferred adoption.
+    if (token == null) return !requirePending;
+    final id = snapshot.storedSessionId;
+    final ledger = _canonicalLedgers[id];
+    if (ledger == null || ledger.adoptionToken != token) return false;
+    _commitCanonicalAdoption(id, token: token);
+    return true;
+  }
+
+  /// The chat's own admission (submitted here and followed by the ledger) has
+  /// not reached its terminal: nothing queued may be admitted behind it yet.
+  bool canonicalOwnTurnAwaitsTerminal(String sessionId) {
+    final ledger = _canonicalLedgers[sessionId];
+    return ledger != null && ledger.isReady && ledger.trackedAdmission != null;
+  }
+
+  /// The owner gave a deferred snapshot up without adopting it.
+  void releaseCanonicalAdoption(DesktopSessionSnapshot snapshot) {
+    final token = _adoptionTokens[snapshot];
+    if (token == null) return;
+    _canonicalLedgers[snapshot.storedSessionId]?.releaseAdoption(token);
+  }
+
+  /// A re-attach the owner asks for (an in-place rehydration keeps its
+  /// runtime): the same bounded attach the client used to start by itself.
+  void reattachCanonicalForOwner(String sessionId) {
+    final ledger = _canonicalLedgers[sessionId];
+    final channel = _channel;
+    if (ledger == null || channel == null || !_connected) return;
+    unawaited(_reattachCanonical(ledger, _socketGeneration, channel));
+  }
+
+  /// The canonical attach, as the typed snapshot. With [deferDispatch] the
+  /// frames that follow the cut stay held by the ledger until the owner calls
+  /// [_commitCanonicalAdoption] (roster-bound recovery commits through
+  /// `consumeRosterBoundRecovery`): a terminal or a question must not be
+  /// consumed before the chat can apply it.
+  Future<DesktopSessionSnapshot> _resumeCanonicalSnapshot(
+    String storedSessionId, {
+    required String profile,
+    bool omitMessages = false,
+    bool deferHistory = false,
+    bool deferDispatch = false,
+  }) async {
+    const method = 'session.resume';
+    final id = storedSessionId.trim();
+    if (id.isEmpty || id != storedSessionId) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Invalid durable session identity',
+      );
+    }
+    final generation = _socketGeneration;
+    final channel = _channel;
+    var ledger = _canonicalLedgers[id];
+    if (ledger == null || ledger.profile != profile.trim()) {
+      // Profile isolation: another profile's state is never reused.
+      ledger = CanonicalSessionLedger(sessionId: id, profile: profile.trim());
+      _canonicalLedgers[id] = ledger;
+    }
+    ledger.beginHydration();
+    final Map<String, dynamic> result;
+    try {
+      result = await _requestConnected(
+        method,
+        CanonicalWire.resume(
+          id,
+          profile: profile,
+          omitMessages: omitMessages,
+          deferHistory: deferHistory,
+        ),
+      );
+    } catch (_) {
+      // Nothing was proven: stay fail-closed until a snapshot lands.
+      if (identical(_canonicalLedgers[id], ledger)) {
+        ledger.requireSnapshot('attach failed');
+      }
+      rethrow;
+    }
+    if (generation != _socketGeneration ||
+        !identical(_channel, channel) ||
+        !identical(_canonicalLedgers[id], ledger)) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Connection lost before JSON-RPC response',
+        failureKind: TuiGatewayRpcFailureKind.connectionLost,
+      );
+    }
+    final CanonicalSnapshot snapshot;
+    try {
+      snapshot = CanonicalSnapshot.parse(result);
+      if (snapshot.sessionId != id) {
+        throw const FormatException('canonical session mismatch');
+      }
+    } on FormatException {
+      ledger.requireSnapshot('invalid snapshot');
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid session snapshot',
+        origin: CompressionFailureOrigin.malformed,
+      );
+    }
+    final held = ledger.completeHydration(
+      snapshot,
+      deferDispatch: deferDispatch,
+    );
+    final typed = _parseSessionSnapshot(
+      snapshot.toBindingJson(result),
+      requestedStoredSessionId: id,
+      created: false,
+      method: method,
+      rememberLegacyRuntime: false,
+    );
+    _dispatchHeldCanonicalFrames(held, generation, channel!);
+    if (deferDispatch) _adoptionTokens[typed] = ledger.adoptionToken;
+    return typed;
+  }
+
+  void _dispatchHeldCanonicalFrames(
+    List<SessionGatewayEvent> held,
+    int generation,
+    WebSocketChannel channel,
+  ) {
+    if (held.isEmpty) return;
+    // After the caller applied the snapshot, in arrival order, each one
+    // judged against the proven cut (older ones are dropped there).
+    Timer.run(() {
+      if (generation != _socketGeneration || !identical(_channel, channel)) {
+        return;
+      }
+      for (final frame in held) {
+        _deliverCanonicalSessionEvent(frame, generation, channel);
+      }
+    });
+  }
+
+  /// The owner applied the snapshot it got from a deferred attach.
+  void _commitCanonicalAdoption(String sessionId, {int? token}) {
+    final ledger = _canonicalLedgers[sessionId];
+    final channel = _channel;
+    if (ledger == null || channel == null) return;
+    _dispatchHeldCanonicalFrames(
+      ledger.commitAdoption(token: token),
+      _socketGeneration,
+      channel,
+    );
+  }
+
+  void _deliverCanonicalSessionEvent(
+    SessionGatewayEvent event,
+    int generation,
+    WebSocketChannel channel,
+  ) {
+    final ledger = _canonicalLedgers[event.sessionId];
+    if (ledger == null) return; // never attached on this connection
+    switch (ledger.judge(event)) {
+      case CanonicalFrameDisposition.dispatch:
+        _dispatchCanonicalEvent(event, generation, channel);
+      case CanonicalFrameDisposition.drop:
+      case CanonicalFrameDisposition.hold:
+        return;
+      case CanonicalFrameDisposition.snapshotRequired:
+        _requestCanonicalRehydration(ledger.sessionId);
+        // One recovery owner: a chat that owns the session re-attaches it
+        // itself (retiring or keeping its runtime as the state demands).
+        if (!_canonicalOwners.containsKey(ledger.sessionId)) {
+          unawaited(_reattachCanonical(ledger, generation, channel));
+        }
+    }
+  }
+
+  /// Re-attaches a session whose live stream could not be proven, so the
+  /// connection does not stay fail-closed after the owner re-read the durable
+  /// transcript. The fresh snapshot is the new proven cut; prompts it adds or
+  /// retires are surfaced once through the same request events.
+  Future<void> _reattachCanonical(
+    CanonicalSessionLedger ledger,
+    int generation,
+    WebSocketChannel channel,
+  ) async {
+    if (ledger.autoReattaches >= CanonicalSessionLedger.maxAutoReattaches) {
+      return;
+    }
+    ledger.autoReattaches += 1;
+    final before = Map<String, CanonicalPrompt>.of(ledger.prompts);
+    try {
+      await _resumeCanonical(
+        ledger.sessionId,
+        profile: ledger.profile,
+        omitMessages: true,
+      );
+    } catch (_) {
+      return; // still fail-closed; the owner's explicit resume recovers
+    }
+    final fresh = _canonicalLedgers[ledger.sessionId];
+    if (fresh == null ||
+        generation != _socketGeneration ||
+        !identical(_channel, channel) ||
+        _events.isClosed) {
+      return;
+    }
+    for (final prompt in fresh.prompts.values) {
+      if (before.containsKey(prompt.promptId)) continue;
+      _events.add(
+        TuiGatewayEvent(
+          type: '${prompt.kind}.request',
+          sessionId: fresh.sessionId,
+          transportGeneration: generation,
+          producerChannel: channel,
+          payload: Map<String, dynamic>.unmodifiable(
+            prompt.toLegacyRequestPayload(),
+          ),
+        ),
+      );
+    }
+    for (final prompt in before.values) {
+      if (fresh.prompts.containsKey(prompt.promptId)) continue;
+      _events.add(
+        TuiGatewayEvent(
+          type: prompt.isApproval ? 'approval.responded' : 'clarify.expire',
+          sessionId: fresh.sessionId,
+          transportGeneration: generation,
+          producerChannel: channel,
+          payload: Map<String, dynamic>.unmodifiable({
+            'request_id': prompt.promptId,
+            'reason': 'settled',
+          }),
+        ),
+      );
+    }
+  }
+
+  void _dispatchCanonicalEvent(
+    SessionGatewayEvent event,
+    int generation,
+    WebSocketChannel channel,
+  ) {
+    final type = event.type;
+    final promptId = event.payload['prompt_id'];
+    if (type == 'approval.request' || type == 'clarify.request') {
+      final prompt = _canonicalLedgers[event.sessionId]?.prompts[promptId];
+      if (prompt == null || _events.isClosed) return;
+      _events.add(
+        TuiGatewayEvent(
+          type: type,
+          sessionId: event.sessionId,
+          sequence: event.sequence,
+          transportGeneration: generation,
+          producerChannel: channel,
+          payload: Map<String, dynamic>.unmodifiable(
+            prompt.toLegacyRequestPayload(),
+          ),
+        ),
+      );
+      return;
+    }
+    if ((type == 'approval.settled' || type == 'clarify.settled') &&
+        promptId is String) {
+      if (_events.isClosed) return;
+      _events.add(
+        TuiGatewayEvent(
+          type: type == 'approval.settled'
+              ? 'approval.responded'
+              : 'clarify.expire',
+          sessionId: event.sessionId,
+          sequence: event.sequence,
+          transportGeneration: generation,
+          producerChannel: channel,
+          payload: Map<String, dynamic>.unmodifiable({
+            'request_id': promptId,
+            'reason': 'settled',
+          }),
+        ),
+      );
+      return;
+    }
+    _dispatchSessionEvent(event, generation, channel);
+  }
+
+  /// The ledger could not prove contiguity/ownership: the owning chat is told
+  /// (same signal as a withheld live subscription) to re-attach from a fresh
+  /// snapshot. Nothing of the unproven frame was projected.
+  void _requestCanonicalRehydration(String sessionId) {
+    GatewaySocketMeter.instance.noteRehydration('canonical_snapshot_required');
+    if (_events.isClosed) return;
+    _events.addError(
+      TuiGatewayRpcError(
+        'session.events.since',
+        'Hermes Desktop live subscription requires rehydration',
+        failureKind: TuiGatewayRpcFailureKind.connectionLost,
+        data: <String, dynamic>{'session_id': sessionId},
+      ),
+    );
+  }
+
+  /// `prompt.submit` on the canonical wire. The reply is an ADMISSION
+  /// receipt: it is surfaced in the legacy ack shape (`accepted`, never
+  /// `terminal` unless the authority says so) and never starts or ends a turn
+  /// by itself.
+  Future<Map<String, dynamic>> _submitCanonical(
+    Map<String, dynamic> params,
+  ) async {
+    const method = 'prompt.submit';
+    final session = params['session_id'];
+    final text = params['text'];
+    if (session is! String || text is! String) {
+      throw const TuiGatewayRpcError(method, 'Invalid prompt submission');
+    }
+    const routing = {'session_id', 'text', 'client_turn_id', 'queued'};
+    for (final key in params.keys) {
+      if (!routing.contains(key) &&
+          !CanonicalWire.allowedSubmitKeys.contains(key)) {
+        throw _canonicalUnsupported(method, 'submit option "$key"');
+      }
+    }
+    final ledger = _readyCanonicalLedger(method, session);
+    final stagedImages = <Map<String, String>>[
+      if (params['attachments'] == null)
+        ...?_canonicalStagedImages[session.trim()],
+    ];
+    final submission = params['client_turn_id'] is String
+        ? params['client_turn_id'] as String
+        : _newCanonicalSubmissionId();
+    final queued = params['queued'] == true;
+    final generation = _socketGeneration;
+    final result = await _requestConnected(
+      method,
+      CanonicalWire.submit(
+        sessionId: session,
+        text: text,
+        submissionId: submission,
+        profile: ledger.profile,
+        queued: queued,
+        extra: {
+          ...params,
+          if (stagedImages.isNotEmpty) 'attachments': stagedImages,
+        },
+      ),
+    );
+    if (result['voice_stopped'] == true) {
+      throw _canonicalUnsupported(method, 'voice stop is not a turn');
+    }
+    final CanonicalAdmissionReceipt receipt;
+    try {
+      receipt = CanonicalAdmissionReceipt.parse(result);
+    } on FormatException {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid admission receipt',
+        origin: CompressionFailureOrigin.malformed,
+      );
+    }
+    if (generation == _socketGeneration &&
+        identical(_canonicalLedgers[session], ledger)) {
+      ledger.noteReceipt(receipt, queued: queued);
+    }
+    if (stagedImages.isNotEmpty && receipt.status != 'unknown') {
+      // Admitted: the authority holds the references now. An `unknown` receipt
+      // keeps them staged for the retry.
+      _canonicalStagedImages[session.trim()]?.removeWhere(
+        stagedImages.contains,
+      );
+    }
+    if (receipt.status == 'unknown') {
+      // The authority lost track of the turn across a restart: the honest
+      // answer is "unresolved", never a success or a failure.
+      throw TuiGatewayRpcError(
+        method,
+        'Hermes could not resolve this admission',
+        data: <String, dynamic>{
+          'reason': 'admission_unknown',
+          'admission_id': receipt.admissionId,
+        },
+      );
+    }
+    return <String, dynamic>{
+      'accepted': true,
+      'client_turn_id': submission,
+      'server_turn_id': receipt.admissionId,
+      'state': switch (receipt.status) {
+        'started' => 'running',
+        'terminal' => 'terminal',
+        _ => 'accepted',
+      },
+      'duplicate': false,
+      'admission_id': receipt.admissionId,
+      'execution_generation': receipt.executionGeneration,
+    };
+  }
+
+  Future<Map<String, dynamic>> _requestPromptSubmit(
+    Map<String, dynamic> params,
+  ) async {
+    // The capability is known once this connection announced `gateway.ready`;
+    // before that the dial is what the standalone path would await anyway.
+    if (_sessionAuthority == SessionAuthorityCapability.unknown) {
+      await _connectForRequest('gateway.connect');
+    }
+    if (_sessionAuthority.isCanonical) return _submitCanonical(params);
+    final generation = _socketGeneration;
+    final result = await _requestExclusiveSessionMutation(
+      'prompt.submit',
+      params,
+    );
+    // Only a reply that started a turn releases: Hermes answers `streaming`
+    // (methods_prompt.py:886); `redirected`/`steered`/`queued` (busy submit,
+    // session_auto_continue.py:429-454) stay inside the running turn. The
+    // idempotent ack (capability) releases only when it is not a duplicate.
+    final startedTurn =
+        result['status'] == 'streaming' ||
+        (result['accepted'] == true && result['duplicate'] == false);
+    if (params['queued'] != true && startedTurn) {
+      _releaseQuarantineForNewTurn(params['session_id'], generation);
+    }
+    return result;
+  }
+
+  /// N10c: Hermes accepted a `prompt.submit` (a new turn) on this socket. The
+  /// quarantine of an earlier cut does not carry over to the new turn, so its
+  /// reasoning and deltas stream again. Only on the socket generation that sent
+  /// the request. `session.redirect` is deliberately not a release: it does
+  /// not start a new turn (interrupt_control.py:280), so lifting quarantine
+  /// there would be mid-turn after an unproven gap (needs the owner's OK).
+  void _releaseQuarantineForNewTurn(Object? runtime, int generation) {
+    if (runtime is! String || generation != _socketGeneration) return;
+    if (_replayCoordinator.releaseForNewTurn(runtime)) {
+      _meterQuarantine(runtime);
+    }
+  }
+
+  Future<({int generation, WebSocketChannel channel})>
+  _requireExclusiveSubmitCapabilityProof({
+    bool preserveTypedFailure = false,
+  }) async {
+    await _connectForRequest('gateway.connect');
+    final generation = _socketGeneration;
+    final channel = _channel;
+    if (!_connected || channel == null || _closed) {
+      throw StateError('Hermes Desktop WebSocket is not connected');
+    }
+    bool capabilityAllowed;
+    try {
+      capabilityAllowed = await _resolveExclusiveSubmitCapability(
+        generation,
+        channel,
+      );
+    } catch (error) {
+      if (error is TuiGatewayRpcError && error.code == -32601) {
+        throw _exclusiveSubmitCapabilityDenied;
+      }
+      if (preserveTypedFailure && error is TuiGatewayRpcError) {
+        rethrow;
+      }
+      throw _exclusiveSubmitCapabilityRace;
+    }
+    if (!capabilityAllowed) {
+      throw _exclusiveSubmitCapabilityDenied;
+    }
+    if (generation != _socketGeneration ||
+        !identical(_channel, channel) ||
+        !_connected) {
+      throw _exclusiveSubmitCapabilityRace;
+    }
+    return (generation: generation, channel: channel);
+  }
+
+  Future<bool> _resolveExclusiveSubmitCapability(
+    int generation,
+    WebSocketChannel channel,
+  ) {
+    if (_exclusiveSubmitCapabilityGeneration != generation) {
+      _exclusiveSubmitCapabilityGeneration = generation;
+      _exclusiveSubmitCapabilityAllowed = null;
+      _exclusiveSubmitCapabilityProbe = null;
+    }
+    final cached = _exclusiveSubmitCapabilityAllowed;
+    if (cached != null) return Future<bool>.value(cached);
+    final inFlight = _exclusiveSubmitCapabilityProbe;
+    if (inFlight != null) return inFlight;
+
+    final probe = _fetchExclusiveSubmitCapability(generation, channel);
+    _exclusiveSubmitCapabilityProbe = probe;
+    probe.then<void>(
+      (_) {
+        if (identical(_exclusiveSubmitCapabilityProbe, probe)) {
+          _exclusiveSubmitCapabilityProbe = null;
+        }
+      },
+      onError: (Object _, StackTrace _) {
+        if (identical(_exclusiveSubmitCapabilityProbe, probe)) {
+          _exclusiveSubmitCapabilityProbe = null;
+        }
+      },
+    );
+    return probe;
+  }
+
+  Future<bool> _fetchExclusiveSubmitCapability(
+    int generation,
+    WebSocketChannel channel,
+  ) async {
+    final capabilities = await _requestConnected(
+      'gateway.capabilities',
+      const <String, dynamic>{},
+      timeout: const Duration(seconds: 10),
+    );
+    final allowed = capabilities['per_session_exclusive_submit'] == true;
+    if (generation == _socketGeneration && identical(_channel, channel)) {
+      _exclusiveSubmitCapabilityAllowed = allowed;
+    }
+    return allowed;
+  }
+
+  Future<Map<String, dynamic>> _requestOptionalCapability(
+    DesktopGatewayCapability capability,
+    String method,
+    Map<String, dynamic> params, {
+    bool connectedOnly = false,
+  }) async {
+    if (!_capabilityCache.canAttempt(capability)) {
+      throw TuiGatewayRpcError(
+        method,
+        'Hermes Desktop capability is unavailable',
+        code: -32601,
+      );
+    }
+    try {
+      final Map<String, dynamic> result;
+      if (connectedOnly) {
+        // Checked and sent in the same synchronous step: a socket that
+        // dropped after the caller's own check is never redialled.
+        _requireConnectedWithoutDialing(method);
+        result = await _requestConnected(method, params);
+      } else {
+        result = await _request(method, params);
+      }
+      _capabilityCache.mark(
+        capability,
+        DesktopGatewayCapabilityState.supported,
+      );
+      return result;
+    } on TuiGatewayRpcError catch (error) {
+      if (error.code == -32601) {
+        _capabilityCache.mark(
+          capability,
+          DesktopGatewayCapabilityState.unsupported,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> _requestConnected(
+    String method,
+    Map<String, dynamic> params, {
+    Duration timeout = const Duration(seconds: 120),
+    bool redactRemoteError = false,
+  }) {
+    final channel = _channel;
+    final generation = _socketGeneration;
+    if (!_connected || channel == null || _closed) {
+      throw StateError('Hermes Desktop WebSocket is not connected');
+    }
+    var id = _nextId;
+    do {
+      id = _nextId;
+      _nextId = _nextId >= maxSafeJsonInteger ? 1 : _nextId + 1;
+    } while (_pending.containsKey(id));
+    final completer = Completer<Map<String, dynamic>>();
+    final timer = Timer(timeout, () {
+      final pending = _pending.remove(id);
+      if (pending != null && !pending.completer.isCompleted) {
+        pending.completer.completeError(
+          pending.redactRemoteError
+              ? SanitizedRpcFailureFactory.timeout(method)
+              : TuiGatewayRpcError(
+                  method,
+                  'Timeout waiting for JSON-RPC response',
+                  failureKind: TuiGatewayRpcFailureKind.timeout,
+                ),
+        );
+      }
+    });
+    _pending[id] = _PendingRpc(
+      method,
+      completer,
+      timer,
+      redactRemoteError: redactRemoteError,
+    );
+    try {
+      if (generation != _socketGeneration || !identical(_channel, channel)) {
+        throw StateError('Hermes Desktop WebSocket was replaced');
+      }
+      channel.sink.add(
+        jsonEncode({
+          'jsonrpc': '2.0',
+          'id': id,
+          'method': method,
+          'params': params,
+        }),
+      );
+    } catch (error, stackTrace) {
+      final pending = _pending.remove(id);
+      pending?.timer.cancel();
+      if (pending != null && !pending.completer.isCompleted) {
+        if (redactRemoteError) {
+          pending.completer.completeError(
+            SanitizedRpcFailureFactory.transport(method),
+          );
+        } else {
+          pending.completer.completeError(error, stackTrace);
+        }
+      }
+      if (redactRemoteError) {
+        throw SanitizedRpcFailureFactory.transport(method);
+      }
+      rethrow;
+    }
+    GatewaySocketMeter.instance.trackRpc(
+      method,
+      completer.future,
+      (e) =>
+          e is TuiGatewayRpcError &&
+          e.failureKind == TuiGatewayRpcFailureKind.timeout,
+    );
+    return completer.future;
+  }
+
+  _SessionRosterSocketLease _captureSessionRosterLease(String method) {
+    final channel = _channel;
+    if (_closed || !_connected || channel == null) {
+      throw _sessionRosterConnectionLost(method);
+    }
+    return _SessionRosterSocketLease(
+      generation: _socketGeneration,
+      channel: channel,
+      replayEpoch: _replayEpoch,
+    );
+  }
+
+  void _requireSessionRosterLease(
+    _SessionRosterSocketLease lease,
+    String method,
+  ) {
+    if (_closed ||
+        !_connected ||
+        _socketGeneration != lease.generation ||
+        !identical(_channel, lease.channel) ||
+        _replayEpoch != lease.replayEpoch) {
+      throw _sessionRosterConnectionLost(method);
+    }
+  }
+
+  TuiGatewayRpcError _sessionRosterConnectionLost(String method) =>
+      TuiGatewayRpcError(
+        method,
+        'Hermes connection changed during session recovery',
+        failureKind: TuiGatewayRpcFailureKind.connectionLost,
+      );
+
+  Future<T> _awaitSessionRosterLease<T>(
+    _SessionRosterSocketLease lease,
+    String method,
+    Future<T> Function() operation,
+  ) async {
+    _requireSessionRosterLease(lease, method);
+    try {
+      final value = await operation();
+      _requireSessionRosterLease(lease, method);
+      return value;
+    } catch (_) {
+      _requireSessionRosterLease(lease, method);
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> _requestSessionRosterLease(
+    _SessionRosterSocketLease lease,
+    String method,
+    Map<String, dynamic> params, {
+    Duration timeout = const Duration(seconds: 120),
+  }) async {
+    final result = await _awaitSessionRosterLease(
+      lease,
+      method,
+      () => _requestConnected(method, params, timeout: timeout),
+    );
+    await _awaitSessionRosterLease(
+      lease,
+      method,
+      () => Future<void>.delayed(Duration.zero),
+    );
+    return result;
+  }
+
+  @override
+  Future<SessionMessagesPage> sessionHistory({
+    required String sessionId,
+    String? profile,
+  }) async {
+    // A read must not reconnect and reuse a runtime from the previous socket.
+    const method = 'session.history';
+    final lease = _captureSessionRosterLease(method);
+    final result = await _requestSessionRosterLease(lease, method, {
+      'session_id': sessionId,
+      if (profile != null && profile.trim().isNotEmpty)
+        'profile': profile.trim(),
+    }, timeout: const Duration(seconds: 15));
+    final messages = result['messages'];
+    if (result['count'] is! int ||
+        (result['count'] as int) < 0 ||
+        messages is! List ||
+        messages.any((row) => row is! Map || row['role'] is! String)) {
+      throw const FormatException('Invalid session history');
+    }
+    // count counts source history rows; projection can expand/filter them.
+    // Keep text, row_id and display_metadata intact: the shared display
+    // normalizer accepts both REST content and Desktop text.
+    // This RPC returns active model history, including active ancestors. It can
+    // omit display generations retained as compacted rows, so ActiveChat keeps
+    // compacted REST recovery available.
+    return SessionMessagesPage.fromRaw(
+      rawMessages: messages,
+      pagination: null,
+      paginationProvided: false,
+    );
+  }
+
+  static const int _maxGroupListPages = 512;
+
+  Future<GroupsCapabilities> groupCapabilities() async {
+    await _connectForRequest('gateway.connect');
+    final lease = _captureGroupSocketLease(
+      _socketGeneration,
+      'groups.capabilities',
+    );
+    final parsed = await _awaitGroupSocketLease(
+      lease,
+      'groups.capabilities',
+      () => _groupsCapabilityCache.resolve(
+        connectionId: _connection.id,
+        generation: lease.generation,
+        loader: () => _requestConnected(
+          'groups.capabilities',
+          const <String, dynamic>{},
+          timeout: const Duration(seconds: 10),
+        ),
+      ),
+    );
+    await _awaitGroupSocketLease(
+      lease,
+      'groups.capabilities',
+      () => Future<void>.delayed(Duration.zero),
+    );
+    if (parsed == null) {
+      throw const TuiGatewayRpcError(
+        'groups.capabilities',
+        'Group capability evidence is unavailable',
+      );
+    }
+    return parsed;
+  }
+
+  Future<({GroupsCapabilities capabilities, _GroupSocketLease lease})>
+  _requireGroupMethod(GroupMethod method, {int? generation}) async {
+    final capabilities = await groupCapabilities();
+    if ((generation != null && capabilities.generation != generation) ||
+        !capabilities.supports(method)) {
+      throw TuiGatewayRpcError(
+        method.wire,
+        'Group operation is unavailable',
+        code: -32601,
+      );
+    }
+    final lease = _captureGroupSocketLease(
+      capabilities.generation,
+      method.wire,
+    );
+    return (capabilities: capabilities, lease: lease);
+  }
+
+  _GroupSocketLease _captureGroupSocketLease(int generation, String method) {
+    final channel = _channel;
+    if (_closed ||
+        !_connected ||
+        channel == null ||
+        _socketGeneration != generation) {
+      throw _groupConnectionLost(method);
+    }
+    return _GroupSocketLease(generation: generation, channel: channel);
+  }
+
+  void _requireGroupSocketLease(_GroupSocketLease lease, String method) {
+    if (_closed ||
+        !_connected ||
+        _socketGeneration != lease.generation ||
+        !identical(_channel, lease.channel)) {
+      throw _groupConnectionLost(method);
+    }
+  }
+
+  TuiGatewayRpcError _groupConnectionLost(String method) => TuiGatewayRpcError(
+    method,
+    'Hermes connection changed during the group operation',
+    failureKind: TuiGatewayRpcFailureKind.connectionLost,
+  );
+
+  Future<T> _awaitGroupSocketLease<T>(
+    _GroupSocketLease lease,
+    String method,
+    Future<T> Function() operation,
+  ) async {
+    _requireGroupSocketLease(lease, method);
+    final value = await operation();
+    _requireGroupSocketLease(lease, method);
+    return value;
+  }
+
+  Future<Map<String, dynamic>> _requestGroupOnLease(
+    _GroupSocketLease lease,
+    String method,
+    Map<String, dynamic> params, {
+    Duration timeout = const Duration(seconds: 120),
+  }) async {
+    final result = await _awaitGroupSocketLease(
+      lease,
+      method,
+      () => _requestConnected(method, params, timeout: timeout),
+    );
+    // Give a close queued directly after the response one event-loop turn to
+    // retire the transport before any authenticated result can be projected.
+    await _awaitGroupSocketLease(
+      lease,
+      method,
+      () => Future<void>.delayed(Duration.zero),
+    );
+    return result;
+  }
+
+  Future<List<HostedGroupRoom>> listGroups({
+    int limit = 500,
+    int offset = 0,
+    int? generation,
+  }) async {
+    final proof = await _requireGroupMethod(
+      GroupMethod.list,
+      generation: generation,
+    );
+    if (limit < 1 || limit > 500 || offset < 0) {
+      throw const FormatException('invalid group list window');
+    }
+    final rooms = <HostedGroupRoom>[];
+    final roomIds = <String>{};
+    var nextOffset = offset;
+    try {
+      for (var pageNumber = 0; pageNumber < _maxGroupListPages; pageNumber++) {
+        final requestedOffset = nextOffset;
+        final result = await _requestGroupOnLease(proof.lease, 'groups.list', {
+          'limit': limit,
+          'offset': requestedOffset,
+          'include_disbanded': false,
+        });
+        final page = HostedGroupListPage.fromJson(result);
+        for (final room in page.rooms) {
+          if (!roomIds.add(room.roomId)) {
+            throw const FormatException('duplicate room across list pages');
+          }
+          rooms.add(room);
+        }
+        final officialNext = page.nextOffset;
+        if (officialNext == null) return List.unmodifiable(rooms);
+        if (officialNext <= requestedOffset ||
+            officialNext != requestedOffset + page.rooms.length) {
+          throw const FormatException('invalid room list continuation');
+        }
+        nextOffset = officialNext;
+      }
+      throw const FormatException('room list pagination limit exceeded');
+    } on FormatException {
+      throw const TuiGatewayRpcError(
+        'groups.list',
+        'Hermes returned an invalid room list',
+      );
+    }
+  }
+
+  Future<HostedGroupRoom> groupState(
+    String roomId, {
+    int? generation,
+    bool includeDisbanded = false,
+  }) async {
+    final proof = await _requireGroupMethod(
+      GroupMethod.state,
+      generation: generation,
+    );
+    return _groupStateOnLease(
+      roomId,
+      lease: proof.lease,
+      includeDisbanded: includeDisbanded,
+    );
+  }
+
+  /// `groups.state` including the server driver evidence
+  /// (`driver_status`: running/working/blocked/counts/pending_actions).
+  /// `driverStatus` is `null` when the gateway omits or malforms it.
+  Future<({HostedGroupRoom room, RoomDriverStatus? driverStatus})>
+  groupStateWithDriver(String roomId, {int? generation}) async {
+    final proof = await _requireGroupMethod(
+      GroupMethod.state,
+      generation: generation,
+    );
+    final result = await _groupStateResultOnLease(roomId, lease: proof.lease);
+    return (
+      room: _parseGroupState(roomId, result),
+      driverStatus: RoomDriverStatus.tryParse(result['driver_status']),
+    );
+  }
+
+  Future<Map<String, dynamic>> _groupStateResultOnLease(
+    String roomId, {
+    required _GroupSocketLease lease,
+    bool includeDisbanded = false,
+  }) {
+    final room = _groupIdentifier(roomId, 'room id');
+    return _requestGroupOnLease(lease, 'groups.state', {
+      'room_id': room,
+      'include_disbanded': includeDisbanded,
+    });
+  }
+
+  Future<HostedGroupRoom> _groupStateOnLease(
+    String roomId, {
+    required _GroupSocketLease lease,
+    bool includeDisbanded = false,
+  }) async {
+    final result = await _groupStateResultOnLease(
+      roomId,
+      lease: lease,
+      includeDisbanded: includeDisbanded,
+    );
+    return _parseGroupState(roomId, result);
+  }
+
+  HostedGroupRoom _parseGroupState(String roomId, Map<String, dynamic> result) {
+    final room = _groupIdentifier(roomId, 'room id');
+    try {
+      final state = HostedGroupRoom.fromJson(result['room']);
+      if (state.roomId != room) {
+        throw const FormatException('room identity mismatch');
+      }
+      return state;
+    } on FormatException {
+      throw const TuiGatewayRpcError(
+        'groups.state',
+        'Hermes returned invalid room state',
+      );
+    }
+  }
+
+  Future<HostedGroupLogPage> groupLog(
+    String roomId, {
+    int sinceSeq = 0,
+    int limit = 100,
+    int? generation,
+  }) async {
+    final proof = await _requireGroupMethod(
+      GroupMethod.log,
+      generation: generation,
+    );
+    return _groupLogOnLease(
+      roomId,
+      sinceSeq: sinceSeq,
+      limit: limit,
+      capabilities: proof.capabilities,
+      lease: proof.lease,
+    );
+  }
+
+  /// The complete room log from the beginning, proven gap-free — see
+  /// `HostedGroupLogPage.loadComplete`. Every page after the first reuses the
+  /// same authenticated lease, so a transport close mid-load surfaces as a
+  /// connection-lost error instead of silently rebasing onto a new socket.
+  Future<HostedGroupLogPage> groupLogComplete(
+    String roomId, {
+    int pageLimit = 100,
+    int? generation,
+  }) async {
+    final proof = await _requireGroupMethod(
+      GroupMethod.log,
+      generation: generation,
+    );
+    final limit = min(pageLimit, proof.capabilities.maxLogLimit);
+    return HostedGroupLogPage.loadComplete(
+      pageLimit: limit,
+      loader: ({required sinceSeq, required limit}) => _groupLogOnLease(
+        roomId,
+        sinceSeq: sinceSeq,
+        limit: limit,
+        capabilities: proof.capabilities,
+        lease: proof.lease,
+      ),
+    );
+  }
+
+  Future<HostedGroupLogPage> _groupLogOnLease(
+    String roomId, {
+    required int sinceSeq,
+    required int limit,
+    required GroupsCapabilities capabilities,
+    required _GroupSocketLease lease,
+  }) async {
+    final room = _groupIdentifier(roomId, 'room id');
+    if (sinceSeq < 0 || limit < 1 || limit > capabilities.maxLogLimit) {
+      throw const FormatException('invalid group log window');
+    }
+    final result = await _requestGroupOnLease(lease, 'groups.log', {
+      'room_id': room,
+      'since_seq': sinceSeq,
+      'limit': limit,
+      'include_disbanded': false,
+    });
+    try {
+      return HostedGroupLogPage.fromJson(
+        result,
+        expectedRoomId: room,
+        sinceSeq: sinceSeq,
+      );
+    } on FormatException {
+      throw const TuiGatewayRpcError(
+        'groups.log',
+        'Hermes returned an invalid room log',
+      );
+    }
+  }
+
+  void _requireReadbackMethod(
+    ({GroupsCapabilities capabilities, _GroupSocketLease lease}) proof,
+    GroupMethod method,
+  ) {
+    _requireGroupSocketLease(proof.lease, method.wire);
+    if (!proof.capabilities.supports(method)) {
+      throw TuiGatewayRpcError(
+        method.wire,
+        'Group operation is unavailable',
+        code: -32601,
+      );
+    }
+  }
+
+  Future<HostedGroupLogPage> sendGroupText({
+    required String roomId,
+    required String text,
+    required String eventId,
+    required String threadId,
+    required int generation,
+  }) async {
+    final proof = await _requireGroupMethod(
+      GroupMethod.send,
+      generation: generation,
+    );
+    _requireReadbackMethod(proof, GroupMethod.log);
+    final room = _groupIdentifier(roomId, 'room id');
+    final clientEventId = _groupIdentifier(eventId, 'event id');
+    final durableEventId = durableGroupEventId(clientEventId);
+    final thread = _groupIdentifier(threadId, 'thread id');
+    if (text.trim().isEmpty || utf8.encode(text).length > 65536) {
+      throw const FormatException('invalid group message');
+    }
+    final result = await _requestGroupOnLease(proof.lease, 'groups.send', {
+      'room_id': room,
+      'event_id': clientEventId,
+      'payload': {'text': text, 'thread_id': thread},
+    });
+    if (result['accepted'] != true ||
+        result['client_event_id'] != clientEventId ||
+        result['event'] is! Map) {
+      throw const TuiGatewayRpcError(
+        'groups.send',
+        'Hermes did not confirm the room message',
+      );
+    }
+    late final HostedGroupEvent acknowledged;
+    try {
+      acknowledged = HostedGroupEvent.fromJson(result['event'], roomId: room);
+      if (acknowledged.eventId != durableEventId ||
+          acknowledged.kind != 'message.user' ||
+          acknowledged.actor.kind != 'user' ||
+          acknowledged.actor.id != 'desktop' ||
+          acknowledged.publicText != text ||
+          acknowledged.threadId != thread) {
+        throw const FormatException('event acknowledgement tuple mismatch');
+      }
+    } on FormatException {
+      throw const TuiGatewayRpcError(
+        'groups.send',
+        'Hermes did not confirm the room message',
+      );
+    }
+    _requireGroupSocketLease(proof.lease, 'groups.send');
+    final page = await _awaitGroupSocketLease(
+      proof.lease,
+      'groups.log',
+      () => _groupLogOnLease(
+        room,
+        sinceSeq: acknowledged.sequence - 1,
+        limit: 100,
+        capabilities: proof.capabilities,
+        lease: proof.lease,
+      ),
+    );
+    final immutableMatches = page.events
+        .where((entry) => entry.immutableEquals(acknowledged))
+        .length;
+    if (page.authority.epoch < acknowledged.authorityEpoch ||
+        immutableMatches != 1) {
+      throw const TuiGatewayRpcError(
+        'groups.send',
+        'Hermes did not publish the acknowledged room message',
+      );
+    }
+    return page;
+  }
+
+  Future<HostedGroupRoom> createGroup({
+    required String roomId,
+    required String name,
+    required List<Map<String, dynamic>> members,
+    required int generation,
+  }) async {
+    final proof = await _requireGroupMethod(
+      GroupMethod.create,
+      generation: generation,
+    );
+    _requireReadbackMethod(proof, GroupMethod.state);
+    final requestedRoom = _groupIdentifier(roomId, 'room id');
+    final result = await _requestGroupOnLease(proof.lease, 'groups.create', {
+      'room_id': requestedRoom,
+      'name': _groupName(name),
+      'members': members,
+    });
+    try {
+      final created = HostedGroupRoom.fromJson(result['room']);
+      if (created.roomId != requestedRoom) {
+        throw const FormatException('room identity mismatch');
+      }
+    } on FormatException {
+      throw const TuiGatewayRpcError(
+        'groups.create',
+        'Hermes did not confirm the created room',
+      );
+    }
+    return _groupStateOnLease(requestedRoom, lease: proof.lease);
+  }
+
+  Future<HostedGroupRoom> renameGroup({
+    required String roomId,
+    required String eventId,
+    required String name,
+    required int generation,
+  }) async {
+    final proof = await _requireGroupMethod(
+      GroupMethod.rename,
+      generation: generation,
+    );
+    _requireReadbackMethod(proof, GroupMethod.state);
+    final room = _groupIdentifier(roomId, 'room id');
+    await _requestGroupOnLease(proof.lease, 'groups.rename', {
+      'room_id': room,
+      'event_id': _groupIdentifier(eventId, 'event id'),
+      'name': _groupName(name),
+    });
+    return _groupStateOnLease(room, lease: proof.lease);
+  }
+
+  Future<HostedGroupRoom> stopGroup({
+    required String roomId,
+    required String cancelId,
+    required int generation,
+  }) async {
+    final proof = await _requireGroupMethod(
+      GroupMethod.stop,
+      generation: generation,
+    );
+    _requireReadbackMethod(proof, GroupMethod.state);
+    final room = _groupIdentifier(roomId, 'room id');
+    await _requestGroupOnLease(proof.lease, 'groups.stop', {
+      'room_id': room,
+      'cancel_id': _groupIdentifier(cancelId, 'cancel id'),
+    });
+    return _groupStateOnLease(room, lease: proof.lease);
+  }
+
+  Future<HostedGroupRoom> retryGroupTask({
+    required String roomId,
+    required String taskId,
+    required int generation,
+  }) async {
+    final proof = await _requireGroupMethod(
+      GroupMethod.retry,
+      generation: generation,
+    );
+    _requireReadbackMethod(proof, GroupMethod.state);
+    final room = _groupIdentifier(roomId, 'room id');
+    await _requestGroupOnLease(proof.lease, 'groups.retry', {
+      'room_id': room,
+      'task_id': _groupIdentifier(taskId, 'task id'),
+    });
+    return _groupStateOnLease(room, lease: proof.lease);
+  }
+
+  /// Desktop's Bot Chat registry lookup: `session.list {title: "Bot Chat",
+  /// include_hidden: true, profile}`. Window-free and resolved server-side to
+  /// the compression tip (`resolved_id`). Returns `null` when no row exists.
+  @override
+  Future<AgentProfileSessionSummary?> findBotChatByTitle(String profile) async {
+    final owner = profile.trim();
+    if (!RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$').hasMatch(owner)) {
+      throw const FormatException('invalid profile');
+    }
+    await _connectForRequest('gateway.connect');
+    final result = await _request('session.list', {
+      'title': botChatTitle,
+      'include_hidden': true,
+      'profile': owner,
+    });
+    final rows = result['sessions'];
+    if (rows is! List) {
+      throw const TuiGatewayRpcError(
+        'session.list',
+        'Hermes returned an invalid Bot Chat lookup',
+      );
+    }
+    for (final row in rows) {
+      final summary = AgentProfileSessionSummary.tryParse(row);
+      if (summary != null && summary.title == botChatTitle) return summary;
+    }
+    return null;
+  }
+
+  Future<HostedGroupRoom> approveGroupTask({
+    required String roomId,
+    required String memberId,
+    required String taskId,
+    required int executionGeneration,
+    required String choice,
+    required String requestId,
+    required int generation,
+  }) async {
+    final proof = await _requireGroupMethod(
+      GroupMethod.approve,
+      generation: generation,
+    );
+    _requireReadbackMethod(proof, GroupMethod.state);
+    final room = _groupIdentifier(roomId, 'room id');
+    await _requestGroupOnLease(proof.lease, 'groups.approve', {
+      'room_id': room,
+      'member_id': _groupIdentifier(memberId, 'member id'),
+      'task_id': _groupIdentifier(taskId, 'task id'),
+      'execution_generation': executionGeneration,
+      'choice': _groupIdentifier(choice, 'approval choice'),
+      'request_id': _groupIdentifier(requestId, 'request id'),
+    });
+    return _groupStateOnLease(room, lease: proof.lease);
+  }
+
+  Future<HostedGroupRoom> disbandGroup({
+    required String roomId,
+    required String cancelId,
+    required int generation,
+  }) async {
+    final proof = await _requireGroupMethod(
+      GroupMethod.disband,
+      generation: generation,
+    );
+    _requireReadbackMethod(proof, GroupMethod.state);
+    final room = _groupIdentifier(roomId, 'room id');
+    await _requestGroupOnLease(proof.lease, 'groups.disband', {
+      'room_id': room,
+      'cancel_id': _groupIdentifier(cancelId, 'cancel id'),
+    });
+    return _groupStateOnLease(room, lease: proof.lease, includeDisbanded: true);
+  }
+
+  static String _groupIdentifier(String value, String label) {
+    final safe = value.trim();
+    if (safe.isEmpty ||
+        safe != value ||
+        safe.runes.length > 128 ||
+        safe.codeUnits.any((unit) => unit < 0x20 || unit == 0x7f)) {
+      throw FormatException('invalid $label');
+    }
+    return safe;
+  }
+
+  static String _groupName(String value) {
+    final safe = value.trim();
+    if (safe.isEmpty || safe.runes.length > 200) {
+      throw const FormatException('invalid group name');
+    }
+    return safe;
+  }
+
+  @override
+  Future<DesktopSessionBinding> resumeSession(
+    String storedSessionId, {
+    String profile = '',
+    List<Map<String, dynamic>> seedMessages = const [],
+    String model = '',
+  }) => resumeExisting(storedSessionId, profile: profile);
+
+  @override
+  Future<List<AgentProfile>> loadMentionProfiles() async {
+    try {
+      return await listProfiles();
+    } on TuiGatewayRpcError catch (error) {
+      if (error.code != -32601 && error.code != 404 && error.code != 405) {
+        rethrow;
+      }
+      return _dashboard.getProfiles();
+    }
+  }
+
+  Future<List<AgentProfile>> listProfiles({
+    bool includeSessions = false,
+    Map<String, String> preferredSessionIds = const {},
+  }) async {
+    final rosterGeneration = BotMentionRoster.shared.generation(_connection.id);
+    await _connectForRequest('gateway.connect');
+    final safePreferredSessionIds = <String, String>{};
+    if (includeSessions) {
+      final validProfile = RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$');
+      for (final entry in preferredSessionIds.entries) {
+        final profile = entry.key.trim();
+        final sessionId = _safeBotModeId(entry.value);
+        if (validProfile.hasMatch(profile) &&
+            sessionId != null &&
+            !sessionId.startsWith('mob-')) {
+          safePreferredSessionIds[profile] = sessionId;
+        }
+      }
+    }
+    final result = await _request('profiles.list', {
+      'include_sessions': includeSessions,
+      if (safePreferredSessionIds.isNotEmpty)
+        'preferred_session_ids': safePreferredSessionIds,
+    });
+    final rawProfiles = result['profiles'];
+    if (rawProfiles is! List) {
+      throw const TuiGatewayRpcError(
+        'profiles.list',
+        'Hermes returned an invalid profile roster',
+      );
+    }
+    try {
+      final profiles = List<AgentProfile>.unmodifiable(
+        rawProfiles
+            .whereType<Map>()
+            .map((raw) => AgentProfile.fromJson(Map<String, dynamic>.from(raw)))
+            .where((profile) => profile.name.trim().isNotEmpty),
+      );
+      BotMentionRoster.shared.replace(
+        _connection.id,
+        _connection.label,
+        profiles,
+        expectedGeneration: rosterGeneration,
+      );
+      return profiles;
+    } on FormatException {
+      throw const TuiGatewayRpcError(
+        'profiles.list',
+        'Hermes returned an invalid profile roster',
+      );
+    }
+  }
+
+  /// Creates a profile through the same native Gateway contract used by
+  /// Hermes Desktop Bot Mode.
+  ///
+  /// Model, SOUL and auth sharing are part of the single authoritative
+  /// `profiles.create` write. This deliberately avoids the legacy mobile
+  /// sequence that created a profile through Dashboard REST and then changed
+  /// the model of the running default gateway as a separate side effect.
+  @override
+  Future<void> createProfileNative({
+    required String name,
+    String? cloneFrom,
+    String description = '',
+    String soul = '',
+    String model = '',
+    String provider = '',
+    bool noSkills = false,
+    bool shareAuth = true,
+  }) async {
+    const method = 'profiles.create';
+    if (_connection.readOnly) {
+      throw const TuiGatewayRpcError(method, 'Connection is read only');
+    }
+    final profile = name.trim();
+    final source = cloneFrom?.trim();
+    final selectedModel = model.trim();
+    final selectedProvider = provider.trim();
+    final validName = RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$');
+    if (!validName.hasMatch(profile) ||
+        (source != null && source.isNotEmpty && !validName.hasMatch(source))) {
+      throw const TuiGatewayRpcError(method, 'Invalid profile name');
+    }
+    if (selectedModel.isEmpty != selectedProvider.isEmpty) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Profile model and provider must be configured together',
+      );
+    }
+    final safeDescription = description.trim();
+    if (safeDescription.runes.length > 2048 || soul.runes.length > 64 * 1024) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Profile metadata exceeds the mobile safety limit',
+      );
+    }
+
+    await _connectForRequest('gateway.connect');
+    final payload = <String, dynamic>{
+      'name': profile,
+      'description': safeDescription,
+      'clone_from': source == null || source.isEmpty ? null : source,
+      'no_skills': noSkills,
+      'share_auth': shareAuth,
+      'mirror_credentials': shareAuth,
+      if (soul.trim().isNotEmpty) 'soul': soul,
+      if (selectedModel.isNotEmpty) ...{
+        'model': selectedModel,
+        'provider': selectedProvider,
+      },
+    };
+    final result = await _request(method, payload);
+    if (result['ok'] == false) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes did not create the profile',
+      );
+    }
+  }
+
+  @override
+  Future<AgentProfileAvatar?> profileAvatar(String profileName) async {
+    const method = 'profiles.get_asset';
+    final profile = profileName.trim();
+    if (!RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$').hasMatch(profile)) {
+      throw const TuiGatewayRpcError(method, 'Invalid profile name');
+    }
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.profileAssets,
+      method,
+      {'name': profile, 'asset': 'avatar'},
+    );
+    if (result['found'] == false) return null;
+    final data = result['data'];
+    if (result['found'] != true || data is! String) {
+      _capabilityCache.mark(
+        DesktopGatewayCapability.profileAssets,
+        DesktopGatewayCapabilityState.invalid,
+      );
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid profile avatar',
+      );
+    }
+    try {
+      return AgentProfileAvatar.fromDataUri(data);
+    } on FormatException {
+      _capabilityCache.mark(
+        DesktopGatewayCapability.profileAssets,
+        DesktopGatewayCapabilityState.invalid,
+      );
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid profile avatar',
+      );
+    }
+  }
+
+  /// Persiste la identidad visible del bot (título/forma/color) con la
+  /// semántica del editor de Hermes Desktop. El namespace `hermes-bots` se
+  /// reemplaza entero server-side (es UNA entrada de `ui_meta`), así que la
+  /// escritura relee el roster justo antes — el mismo patrón RMW de
+  /// [persistCanonicalBotChat] — para no pisar campos ajenos (`chat`,
+  /// `group` y extensiones desconocidas). Los assets image/pet no se reescriben.
+  @override
+  Future<void> saveProfileBotMeta({
+    required String profile,
+    String? title,
+    String? shape,
+    String? colorHex,
+    bool? hidden,
+    bool? pinned,
+    int? createdAtMs,
+    BotVisualIdentity? identity,
+  }) async {
+    const method = 'profiles.configure';
+    final owner = profile.trim();
+    if (!RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$').hasMatch(owner)) {
+      throw const TuiGatewayRpcError(method, 'Invalid profile name');
+    }
+    final safeTitle = title?.trim();
+    if (safeTitle != null && safeTitle.runes.length > 128) {
+      throw const TuiGatewayRpcError(method, 'Invalid bot title');
+    }
+    final safeShape = shape?.trim().toLowerCase();
+    if (safeShape != null &&
+        BlobatarShapeWire.tryParse(safeShape) == null &&
+        !ClassicFaceIdentity.shapes.contains(safeShape)) {
+      throw const TuiGatewayRpcError(method, 'Invalid bot shape');
+    }
+    final safeColor = colorHex?.trim().toLowerCase();
+    if (safeColor != null && !RegExp(r'^#[0-9a-f]{6}$').hasMatch(safeColor)) {
+      throw const TuiGatewayRpcError(method, 'Invalid bot color');
+    }
+    if (createdAtMs != null && createdAtMs < 0) {
+      throw const TuiGatewayRpcError(method, 'Invalid bot creation stamp');
+    }
+
+    final botMeta = <String, dynamic>{};
+    final remove = <String>{};
+    if (title != null) {
+      if (safeTitle!.isEmpty) {
+        remove.add('title');
+      } else {
+        botMeta['title'] = safeTitle;
+      }
+    }
+    if (shape != null) botMeta['shape'] = safeShape;
+    if (colorHex != null) botMeta['color'] = safeColor;
+    if (shape != null || colorHex != null) {
+      botMeta['imageKind'] = 'shape';
+      botMeta['custom'] = true;
+    }
+    if (hidden != null) botMeta['hidden'] = hidden;
+    if (pinned != null) botMeta['pinned'] = pinned;
+    if (createdAtMs != null) botMeta['created'] = createdAtMs;
+    if (identity != null) {
+      remove.add('useShapeColor');
+      botMeta.addAll(identity.toBotModeMetadata());
+    }
+    try {
+      await patchBotMetadata(owner, botMeta, remove: remove);
+    } on TuiGatewayRpcError {
+      rethrow;
+    } catch (_) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes did not persist the bot identity',
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> roomLinkRequest(
+    String method,
+    Map<String, dynamic> params,
+  ) async {
+    const allowed = {
+      'groups.capabilities',
+      'groups.peer.invite',
+      'groups.peer.register',
+      'groups.peer.revoke',
+    };
+    if (!allowed.contains(method) ||
+        (_connection.readOnly && method != 'groups.capabilities')) {
+      throw TuiGatewayRpcError(method, 'Room linking unavailable');
+    }
+    await _connectForRequest('gateway.connect');
+    return _request(method, params);
+  }
+
+  /// Hosted room member prompts (`room_member_prompts.dart`): read the
+  /// member session's open server→client requests and answer them with the
+  /// same RPCs Desktop's room uses. A read-only connection may only read.
+  Future<Map<String, dynamic>> roomPromptRequest(
+    String method,
+    Map<String, dynamic> params,
+  ) async {
+    const reads = {
+      'session.active_list',
+      'session.list',
+      'session.events.since',
+    };
+    const writes = {
+      'request.answer',
+      'clarify.lock',
+      'approval.respond',
+      'session.interrupt',
+      'session.compress',
+    };
+    if (!(reads.contains(method) ||
+        (writes.contains(method) && !_connection.readOnly) ||
+        (method == 'session.resume' &&
+            !_connection.readOnly &&
+            _isRoomMemberResume(params)))) {
+      throw TuiGatewayRpcError(method, 'Room prompt request unavailable');
+    }
+    await _connectForRequest('gateway.connect');
+    return _request(method, params, timeout: roomPromptTimeoutFor(method));
+  }
+
+  @visibleForTesting
+  static Duration roomPromptTimeoutFor(String method) =>
+      method == 'session.compress'
+      ? const Duration(seconds: 660)
+      : const Duration(seconds: 15);
+
+  /// `session.resume` passes only in the hosted room driver's own shape
+  /// (`hosted_room_server_rpc.py::resume`): a stalled member's durable room
+  /// session, `source: bot_room` (a live record with another source would
+  /// fail every hosted `prompt.submit` with 4120) and no transcript.
+  static bool _isRoomMemberResume(Map<String, dynamic> params) {
+    bool text(Object? v) => v is String && v.trim().isNotEmpty;
+    return params.length == 4 &&
+        text(params['session_id']) &&
+        text(params['profile']) &&
+        params['source'] == 'bot_room' &&
+        params['omit_messages'] == true;
+  }
+
+  /// Hosted connector RPCs for the Capabilities hub. Only `connectors.*`
+  /// (the Nous account connector family) and `connection.respond` pass; a
+  /// read-only connection may list and poll but never connect, wake,
+  /// settle or disconnect.
+  Future<Map<String, dynamic>> capabilitiesRequest(
+    String method,
+    Map<String, dynamic> params,
+  ) async {
+    if (!capabilitiesRpcAllowed(
+      method,
+      action: params['action'] is String ? params['action'] as String : null,
+      readOnly: _connection.readOnly,
+    )) {
+      throw TuiGatewayRpcError(method, 'Capability request unavailable');
+    }
+    await _connectForRequest('gateway.connect');
+    return _request(method, params);
+  }
+
+  static const Set<String> _capabilityReads = {
+    'connectors.list',
+    'connectors.catalog',
+    'connectors.accounts',
+    'connectors.operation.status',
+    'mcp.servers.status',
+    'connectors.tools',
+    'connectors.policy.get',
+  };
+
+  static const Set<String> _capabilityWrites = {
+    'connectors.connect',
+    'connectors.operation.wake',
+    'connectors.accounts.remove',
+    'connection.respond',
+    'connectors.policy.set',
+  };
+
+  /// Passive: a good `model.options` clears the note a 5098 left (no request).
+  void _noteRestartRecovered() =>
+      ServerRestartSignals.noteHealthy(_connection.host);
+
+  /// Passive: remembers RPC 5098 (`model.options` on a process older than its
+  /// checkout) so Diagnostics can say it. Never makes a request of its own.
+  void _noteRestartRequired(TuiGatewayRpcError error) =>
+      ServerRestartSignals.noteRpc(_connection.host, error.code, error.message);
+
+  /// `plugins.manage` is admitted per action: `list` reads, the lifecycle
+  /// actions write, anything else (`settings`, `onboarding`) stays closed.
+  static const Set<String> _pluginsManageWrites = {
+    'install',
+    'toggle',
+    'update',
+    'remove',
+  };
+
+  static bool capabilitiesRpcAllowed(
+    String method, {
+    required bool readOnly,
+    String? action,
+  }) {
+    if (method == 'plugins.manage') {
+      if (action == 'list') return true;
+      return !readOnly && _pluginsManageWrites.contains(action);
+    }
+    return _capabilityReads.contains(method) ||
+        (!readOnly && _capabilityWrites.contains(method));
+  }
+
+  static const Set<String> _displayReads = {
+    'display.status',
+    'display.thumbnail',
+  };
+
+  static const Set<String> _displayWrites = {
+    'display.start',
+    'display.observe',
+    'display.lease.acquire',
+    'display.lease.release',
+    'display.stop',
+  };
+
+  /// Whether [method] may run on a display socket.
+  ///
+  /// Status and thumbnail are reads. Starting the desktop, minting a VNC
+  /// ticket and changing the lease are writes, so a read-only connection
+  /// cannot take the screen.
+  static bool displayRpcAllowed(String method, {required bool readOnly}) {
+    if (_displayReads.contains(method)) return true;
+    return !readOnly && _displayWrites.contains(method);
+  }
+
+  /// `display.*` calls for the bot-screen viewer.
+  ///
+  /// A read-only connection can poll status and thumbnails. Anything that
+  /// starts the desktop or mints a control ticket is refused before the
+  /// socket is dialed.
+  Future<Map<String, dynamic>> displayRequest(
+    String method,
+    Map<String, dynamic> params,
+  ) async {
+    if (!displayRpcAllowed(method, readOnly: _connection.readOnly)) {
+      throw TuiGatewayRpcError(method, 'Display request unavailable');
+    }
+    final profile = params['profile'];
+    if (profile != null &&
+        (profile is! String ||
+            !RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$').hasMatch(profile))) {
+      throw TuiGatewayRpcError(method, 'Invalid profile name');
+    }
+    await _connectForRequest('gateway.connect');
+    return _request(method, params);
+  }
+
+  static const Set<String> _vaultReads = {'vault.list', 'vault.sources'};
+
+  static const Set<String> _vaultWrites = {
+    'vault.add',
+    'vault.remove',
+    'vault.source.set',
+    'vault.unlock',
+    'vault.lock',
+  };
+
+  /// Whether [method] may run for the Settings vault page. Listing the
+  /// saved items and the password managers is a read; adding, removing,
+  /// toggling a manager and unlocking or locking it are writes, so a
+  /// read-only connection can look but never change anything.
+  static bool vaultRpcAllowed(String method, {required bool readOnly}) {
+    if (_vaultReads.contains(method)) return true;
+    return !readOnly && _vaultWrites.contains(method);
+  }
+
+  /// `vault.*` calls of the Settings page «Contraseñas e inicios de sesión»
+  /// (Hermes Desktop's Settings → Passwords & Logins). The vault lives on
+  /// the server; nothing is stored here. `vault.add` and `vault.unlock`
+  /// carry a secret, so a refusal comes back with its code only, and no
+  /// param is ever logged on this path.
+  Future<Map<String, dynamic>> vaultRequest(
+    String method,
+    Map<String, dynamic> params,
+  ) async {
+    if (!vaultRpcAllowed(method, readOnly: _connection.readOnly)) {
+      throw TuiGatewayRpcError(method, 'Vault request unavailable');
+    }
+    final profile = params['profile'];
+    if (profile != null &&
+        (profile is! String ||
+            !RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$').hasMatch(profile))) {
+      throw TuiGatewayRpcError(method, 'Invalid profile name');
+    }
+    await _connectForRequest('gateway.connect');
+    if (SanitizedRpcFailureFactory.sensitiveMethods.contains(method)) {
+      return _requestConnected(method, params, redactRemoteError: true);
+    }
+    return _request(method, params);
+  }
+
+  late final BotProfileClient _botProfiles = BotProfileClient((
+    method,
+    params,
+  ) async {
+    // Reads of the bot's model catalog/reasoning stay available read-only.
+    if (_connection.readOnly &&
+        !const {'model.options', 'config.get'}.contains(method)) {
+      throw const TuiGatewayRpcError(
+        'profiles.configure',
+        'Connection is read only',
+      );
+    }
+    await _connectForRequest('gateway.connect');
+    return _request(method, params);
+  });
+
+  @override
+  Future<void> patchBotMetadata(
+    String profile,
+    Map<String, dynamic> patch, {
+    Set<String> remove = const {},
+  }) => _botProfiles.patchBotMetadata(profile, patch, remove: remove);
+
+  @override
+  Future<Map<String, dynamic>> describeBotProfile(String profile) =>
+      _botProfiles.describeBotProfile(profile);
+
+  @override
+  Future<Map<String, dynamic>> configureBotProfile(
+    String profile,
+    Map<String, dynamic> changes,
+  ) => _botProfiles.configureBotProfile(profile, changes);
+
+  @override
+  Future<DesktopModelCatalog> botModelOptions(String profile) =>
+      _botProfiles.botModelOptions(profile);
+
+  @override
+  Future<String?> botReasoning(String profile) =>
+      _botProfiles.botReasoning(profile);
+
+  @override
+  Future<void> setBotReasoning(String profile, String effort) =>
+      _botProfiles.setBotReasoning(profile, effort);
+
+  @override
+  Future<String> duplicateBotProfile(String profile) =>
+      _botProfiles.duplicateBotProfile(profile);
+
+  /// Escribe el avatar del profile en el asset store server-side, como hace
+  /// el editor de Hermes Desktop al guardar (la imagen no cabe en `ui_meta`,
+  /// que viaja en cada `profiles.list` y está capada a 64KB). El data URI se
+  /// valida en cliente con las mismas cotas que la lectura.
+  @override
+  Future<void> setProfileAvatar({
+    required String profile,
+    required String dataUri,
+  }) async {
+    const method = 'profiles.set_asset';
+    final owner = profile.trim();
+    if (!RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$').hasMatch(owner)) {
+      throw const TuiGatewayRpcError(method, 'Invalid profile name');
+    }
+    try {
+      AgentProfileAvatar.fromDataUri(dataUri);
+    } on FormatException {
+      throw const TuiGatewayRpcError(method, 'Invalid profile avatar payload');
+    }
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.profileAssets,
+      method,
+      {'name': owner, 'asset': 'avatar', 'data': dataUri},
+    );
+    if (result['ok'] != true) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes did not store the profile avatar',
+      );
+    }
+  }
+
+  /// Borra el avatar del profile: el roster vuelve a la cara geométrica
+  /// shape/color.
+  @override
+  Future<void> clearProfileAvatar(String profile) async {
+    const method = 'profiles.set_asset';
+    final owner = profile.trim();
+    if (!RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$').hasMatch(owner)) {
+      throw const TuiGatewayRpcError(method, 'Invalid profile name');
+    }
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.profileAssets,
+      method,
+      {'name': owner, 'asset': 'avatar', 'clear': true},
+    );
+    if (result['ok'] != true) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes did not clear the profile avatar',
+      );
+    }
+  }
+
+  // ── Creación de bots (paridad Bot Mode, CreateAgentDialog) ─────────────
+
+  /// Catálogo de skills del profile origen vía `profiles.describe`. Devuelve
+  /// `null` cuando el gateway no expone el método (-32601): el diálogo de
+  /// creación degrada ocultando la sección, como el checklist staged de
+  /// Desktop con un gateway antiguo.
+  @override
+  Future<List<DesktopProfileSkill>?> describeProfileSkills(
+    String profile,
+  ) async {
+    const method = 'profiles.describe';
+    final owner = profile.trim();
+    if (!RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$').hasMatch(owner)) {
+      throw const TuiGatewayRpcError(method, 'Invalid profile name');
+    }
+    await _connectForRequest('gateway.connect');
+    final Map<String, dynamic> result;
+    try {
+      result = await _request(method, {'name': owner});
+    } on TuiGatewayRpcError catch (error) {
+      if (error.code == -32601) return null;
+      rethrow;
+    }
+    final raw = result['skills'];
+    if (raw is! List) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid skill catalog',
+      );
+    }
+    final skills = <DesktopProfileSkill>[];
+    final seen = <String>{};
+    for (final entry in raw) {
+      if (entry is! Map) continue;
+      final name = entry['name']?.toString().trim() ?? '';
+      if (name.isEmpty ||
+          name.length > 128 ||
+          name.codeUnits.any((unit) => unit < 0x20 || unit == 0x7f) ||
+          !seen.add(name)) {
+        continue;
+      }
+      if (skills.length >= 512) break;
+      skills.add(
+        DesktopProfileSkill(
+          name: name,
+          enabled: entry['enabled'] != false,
+          label: entry['label'] is String ? entry['label'] as String : null,
+          description: entry['description'] is String
+              ? entry['description'] as String
+              : null,
+          group: entry['group'] is String ? entry['group'] as String : null,
+        ),
+      );
+    }
+    return List<DesktopProfileSkill>.unmodifiable(skills);
+  }
+
+  @override
+  Future<void> setProfileDisabledSkills({
+    required String profile,
+    required List<String> disabledSkills,
+  }) async {
+    const method = 'profiles.configure';
+    final owner = profile.trim();
+    if (!RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$').hasMatch(owner)) {
+      throw const TuiGatewayRpcError(method, 'Invalid profile name');
+    }
+    final safe = <String>[];
+    for (final skill in disabledSkills) {
+      final name = skill.trim();
+      if (name.isEmpty ||
+          name.length > 128 ||
+          name.codeUnits.any((unit) => unit < 0x20 || unit == 0x7f)) {
+        continue;
+      }
+      if (safe.length >= 512) break;
+      safe.add(name);
+    }
+    await _connectForRequest('gateway.connect');
+    final result = await _request(method, {
+      'name': owner,
+      'disabled_skills': safe,
+    });
+    if (result['ok'] == false) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes did not apply the skill selection',
+      );
+    }
+  }
+
+  // ── Mascotas nativas por perfil (pet.*) ───────────────────────────────
+
+  /// Params comunes de los RPCs `pet.*`: `profile` solo se envía cuando hay
+  /// uno explícito (vacío = perfil de arranque del gateway, ver
+  /// `_profile_scoped` upstream).
+  Map<String, dynamic> _petParams(String profile, {String method = 'pet.*'}) {
+    final trimmed = profile.trim();
+    if (trimmed.isNotEmpty &&
+        !RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$').hasMatch(trimmed)) {
+      throw TuiGatewayRpcError(method, 'Invalid profile name');
+    }
+    return {if (trimmed.isNotEmpty) 'profile': trimmed};
+  }
+
+  static String _petSlug(String slug, String method) {
+    final safe = slug.trim();
+    if (safe.isEmpty || safe.length > 128) {
+      throw TuiGatewayRpcError(method, 'Invalid pet slug');
+    }
+    return safe;
+  }
+
+  /// Mascota activa del perfil. Upstream es fail-open (`{enabled: false}`
+  /// ante cualquier problema), así que esto solo lanza ante error de
+  /// transporte o de capacidad (`-32601` en gateways antiguos).
+  @override
+  Future<ProfilePetInfo> profilePetInfo({
+    String profile = '',
+    String? knownRevision,
+  }) async {
+    const method = 'pet.info';
+    final revision = knownRevision?.trim() ?? '';
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.profilePets,
+      method,
+      {
+        ..._petParams(profile, method: method),
+        if (revision.isNotEmpty) 'knownRevision': revision,
+      },
+    );
+    return ProfilePetInfo.fromJson(result);
+  }
+
+  /// Galería adoptable del perfil (petdex mezclada con lo instalado).
+  /// [localOnly] evita el fetch remoto del manifest en el gateway.
+  @override
+  Future<ProfilePetGallery> profilePetGallery({
+    String profile = '',
+    bool localOnly = false,
+  }) async {
+    const method = 'pet.gallery';
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.profilePets,
+      method,
+      {
+        ..._petParams(profile, method: method),
+        if (localOnly) 'localOnly': true,
+      },
+    );
+    return ProfilePetGallery.fromJson(result);
+  }
+
+  /// Miniatura (data URI PNG) de una mascota para listas. Upstream es
+  /// fail-open (`{ok: false}`), que aquí se traduce a `null`.
+  @override
+  Future<String?> profilePetThumb({
+    String profile = '',
+    required String slug,
+    String url = '',
+  }) async {
+    const method = 'pet.thumb';
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.profilePets,
+      method,
+      {
+        ..._petParams(profile, method: method),
+        'slug': _petSlug(slug, method),
+        if (url.trim().isNotEmpty) 'url': url.trim(),
+      },
+    );
+    if (result['ok'] != true) return null;
+    final dataUri = result['dataUri'];
+    return dataUri is String && dataUri.isNotEmpty ? dataUri : null;
+  }
+
+  /// Adopta una mascota en el perfil: el gateway la instala si hace falta y
+  /// escribe `display.pet.slug` + `enabled=true` en la config del perfil.
+  @override
+  Future<ProfilePetSelection> profilePetSelect({
+    String profile = '',
+    required String slug,
+  }) async {
+    const method = 'pet.select';
+    final safeSlug = _petSlug(slug, method);
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.profilePets,
+      method,
+      {..._petParams(profile, method: method), 'slug': safeSlug},
+    );
+    if (result['ok'] != true) {
+      throw const TuiGatewayRpcError(method, 'Hermes did not select the pet');
+    }
+    return ProfilePetSelection(
+      slug: (result['slug'] ?? safeSlug).toString(),
+      displayName: (result['displayName'] ?? '').toString(),
+    );
+  }
+
+  /// Apaga la mascota del perfil (`display.pet.enabled=false`). Es la
+  /// semántica del "sin mascota" del picker de Hermes Desktop.
+  @override
+  Future<bool> profilePetDisable({String profile = ''}) async {
+    const method = 'pet.disable';
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.profilePets,
+      method,
+      _petParams(profile, method: method),
+    );
+    return result['ok'] == true;
+  }
+
+  /// Persists the canonical Bot Chat using the same server-side namespace as
+  /// Hermes Bot Mode, without confusing the durable stored id with the live
+  /// runtime id.
+  ///
+  /// `session.create` does not write an empty row to state.db. Materialising the
+  /// title first makes the stored id resumable before it is published in
+  /// `ui_meta`. The fresh roster read is a read-modify-write guard: the
+  /// `hermes-bots` value is replaced as one top-level ui_meta entry by Hermes,
+  /// so Android must preserve fields owned by Desktop (title, shape, colour,
+  /// etc.). A different pin discovered during that read is a concurrent owner
+  /// and fails closed instead of minting two forever-chats.
+  Future<void> persistCanonicalBotChat({
+    required String profile,
+    required String runtimeSessionId,
+    required String storedSessionId,
+  }) async {
+    final owner = profile.trim();
+    final runtimeId = _safeBotModeId(runtimeSessionId);
+    final storedId = _safeBotModeId(storedSessionId);
+    if (!RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$').hasMatch(owner) ||
+        runtimeId == null ||
+        storedId == null ||
+        storedId.startsWith('mob-')) {
+      throw const TuiGatewayRpcError(
+        'profiles.configure',
+        'Invalid canonical Bot Chat identity',
+      );
+    }
+
+    await _connectForRequest('gateway.connect');
+    var current = await _botModeProfile(owner);
+    _rejectConcurrentBotChatPin(current, storedId);
+    // Adopt-before-mint (Desktop parity): re-check the server-resolved
+    // canonical chat right before titling the new row. Another device may
+    // have created it since this screen resolved its target; titling ours
+    // too would fork the forever-chat. The untitled row stays unpinned.
+    final canonical = current.canonicalSession;
+    if (canonical != null &&
+        canonical.id != storedId &&
+        canonical.resolvedId != storedId) {
+      throw const TuiGatewayRpcError(
+        'profiles.configure',
+        'Canonical Bot Chat pin changed concurrently',
+      );
+    }
+
+    final title = await _request('session.title', {
+      'session_id': runtimeId,
+      'title': 'Bot Chat',
+    });
+    if (title['pending'] == true || title['title'] != 'Bot Chat') {
+      throw const TuiGatewayRpcError(
+        'session.title',
+        'Hermes did not persist the canonical Bot Chat row',
+      );
+    }
+
+    // The create request already asks for hidden:true. Re-applying it to the
+    // runtime proves the now-materialised row is hidden. Older gateways may not
+    // expose this optional method; they keep the chat visible but can still own
+    // a canonical server-side pin.
+    try {
+      await ensureCanonicalBotChatHidden(runtimeId);
+    } on TuiGatewayRpcError catch (error) {
+      if (error.code != -32601) rethrow;
+    }
+
+    // Re-read after materialisation so a concurrent Desktop edit cannot be
+    // overwritten by the metadata snapshot taken before session.title.
+    current = await _botModeProfile(owner);
+    _rejectConcurrentBotChatPin(current, storedId);
+    // RMW is deep-equal to the authoritative Desktop namespace except for the
+    // pin. New Bot Mode writes keep large art in profiles.set_asset, but legacy
+    // servers may already contain image/pet fields here; deleting them while
+    // adopting a chat would be destructive.
+    final botMeta = <String, dynamic>{...current.botModeUiMeta}
+      ..['chat'] = storedId;
+    final configured = await _request('profiles.configure', {
+      'name': owner,
+      'ui_meta': {'hermes-bots': botMeta},
+    });
+    final applied = configured['applied'];
+    if (configured['ok'] != true ||
+        applied is! Map ||
+        applied['ui_meta'] != true) {
+      throw const TuiGatewayRpcError(
+        'profiles.configure',
+        'Hermes did not persist the canonical Bot Chat pin',
+      );
+    }
+
+    final persisted = await _botModeProfile(owner);
+    if (persisted.botChatSessionId != storedId) {
+      throw const TuiGatewayRpcError(
+        'profiles.configure',
+        'Hermes did not confirm the canonical Bot Chat pin',
+      );
+    }
+  }
+
+  /// Revalidates the plugin-owned pin immediately before an official Bot Chat
+  /// prompt. The route can remain mounted while Desktop repins or removes its
+  /// chat; continuing with the captured id would target the wrong transcript.
+  Future<void> assertCanonicalBotChat({
+    required String profile,
+    required String storedSessionId,
+  }) async {
+    final owner = profile.trim();
+    final storedId = _safeBotModeId(storedSessionId);
+    if (!RegExp(r'^[a-z0-9][a-z0-9_-]{0,63}$').hasMatch(owner) ||
+        storedId == null ||
+        storedId.startsWith('mob-')) {
+      throw const TuiGatewayRpcError(
+        'profiles.list',
+        'Invalid canonical Bot Chat identity',
+      );
+    }
+    await _connectForRequest('gateway.connect');
+    final current = await _botModeProfile(owner);
+    if (current.hasInvalidBotChatPin || current.botChatSessionId != storedId) {
+      throw const TuiGatewayRpcError(
+        'profiles.list',
+        'Canonical Bot Chat pin changed or was removed',
+      );
+    }
+  }
+
+  Future<AgentProfile> _botModeProfile(String owner) async {
+    final profiles = await listProfiles();
+    for (final candidate in profiles) {
+      if (candidate.name == owner) return candidate;
+    }
+    throw const TuiGatewayRpcError(
+      'profiles.configure',
+      'Hermes profile disappeared before Bot Chat persistence',
+    );
+  }
+
+  static void _rejectConcurrentBotChatPin(
+    AgentProfile profile,
+    String storedSessionId,
+  ) {
+    if (profile.hasInvalidBotChatPin) {
+      throw const TuiGatewayRpcError(
+        'profiles.configure',
+        'Canonical Bot Chat pin is malformed',
+      );
+    }
+    final existingPin = profile.botChatSessionId;
+    if (existingPin != null && existingPin != storedSessionId) {
+      throw const TuiGatewayRpcError(
+        'profiles.configure',
+        'Canonical Bot Chat pin changed concurrently',
+      );
+    }
+  }
+
+  /// Hides an already-resumed canonical chat. The caller must supply the live
+  /// runtime id returned by `session.resume`; a stored id is deliberately never
+  /// accepted as an implicit lookup because `session.set_hidden` is runtime
+  /// scoped in Hermes Agent.
+  Future<void> ensureCanonicalBotChatHidden(String runtimeSessionId) async {
+    final runtimeId = _safeBotModeId(runtimeSessionId);
+    if (runtimeId == null || runtimeId.startsWith('mob-')) {
+      throw const TuiGatewayRpcError(
+        'session.set_hidden',
+        'Invalid Bot Chat runtime identity',
+      );
+    }
+    await _connectForRequest('gateway.connect');
+    final result = await _request('session.set_hidden', {
+      'session_id': runtimeId,
+      'hidden': true,
+    });
+    if (result['hidden'] != true) {
+      throw const TuiGatewayRpcError(
+        'session.set_hidden',
+        'Hermes did not confirm the hidden Bot Chat state',
+      );
+    }
+  }
+
+  static String? _safeBotModeId(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty ||
+        value.length > 512 ||
+        value.codeUnits.any((unit) => unit < 0x20 || unit == 0x7f)) {
+      return null;
+    }
+    return value;
+  }
+
+  @override
+  Future<DesktopSessionBinding> resumeExisting(
+    String storedSessionId, {
+    String profile = '',
+    bool omitMessages = false,
+    bool deferHistory = false,
+  }) async {
+    await _connectForRequest('gateway.connect');
+    if (_sessionAuthority.isCanonical) {
+      return _resumeCanonical(
+        storedSessionId,
+        profile: profile,
+        omitMessages: omitMessages,
+        deferHistory: deferHistory,
+        deferDispatch: _canonicalOwners.containsKey(storedSessionId),
+      );
+    }
+    final result = await _requestExclusiveSessionMutation('session.resume', {
+      'session_id': storedSessionId,
+      'source': 'desktop',
+      if (profile.trim().isNotEmpty) 'profile': profile.trim(),
+      if (omitMessages) 'omit_messages': true,
+      if (deferHistory) 'defer_history': true,
+    }, preserveCapabilityFailure: true);
+    return _parseSessionBinding(
+      result,
+      requestedStoredSessionId: storedSessionId,
+      created: false,
+      method: 'session.resume',
+    );
+  }
+
+  @override
+  Future<DesktopSessionSnapshot> resumeWatchSession(
+    String childSessionId, {
+    required String profile,
+  }) async {
+    // A watch must not become the socket's legacy event runtime nor replace
+    // the chat's watchdog anchor: it is read-only and owned by the page.
+    final result = await _requestExclusiveSessionMutation('session.resume', {
+      'session_id': childSessionId,
+      'source': 'desktop',
+      'cols': 96,
+      'lazy': true,
+      if (profile.trim().isNotEmpty) 'profile': profile.trim(),
+    }, preserveCapabilityFailure: true);
+    return _parseSessionSnapshot(
+      result,
+      requestedStoredSessionId: childSessionId,
+      created: false,
+      method: 'session.resume',
+      rememberLegacyRuntime: false,
+    );
+  }
+
+  @override
+  Future<DesktopSessionSnapshot> resumeExistingForRecovery(
+    String storedSessionId, {
+    String profile = '',
+  }) async {
+    await _connectForRequest('gateway.connect');
+    if (_sessionAuthority.isCanonical) {
+      // A typed snapshot, not a legacy binding: the recovery owner decides by
+      // capability, never by the type of the answer.
+      return _resumeCanonicalSnapshot(
+        storedSessionId,
+        profile: profile,
+        omitMessages: true,
+        deferDispatch: _canonicalOwners.containsKey(storedSessionId),
+      );
+    }
+    final result = await _requestExclusiveSessionMutation('session.resume', {
+      'session_id': storedSessionId,
+      'source': 'desktop',
+      // Recovery rebinds a durable session after a rejected live runtime. Its
+      // transcript is already REST/snapshot authority; omitting it keeps a
+      // heavily-compacted lineage on Gateway's bounded tip-only resume path.
+      'omit_messages': true,
+      if (profile.trim().isNotEmpty) 'profile': profile.trim(),
+    }, preserveCapabilityFailure: true);
+    return _parseSessionSnapshot(
+      result,
+      requestedStoredSessionId: storedSessionId,
+      created: false,
+      method: 'session.resume',
+      rememberLegacyRuntime: false,
+    );
+  }
+
+  /// Reattaches only when the exact current transport advertises one matching
+  /// durable/runtime pair. No helper in this transaction may reconnect.
+  @override
+  Future<DesktopRosterBoundRecovery> resumeAdvertisedExistingForRecovery(
+    String storedSessionId, {
+    String profile = '',
+  }) async {
+    const activeMethod = 'session.active_list';
+    const resumeMethod = 'session.resume';
+    if (storedSessionId.isEmpty ||
+        storedSessionId.length > 1024 ||
+        storedSessionId != storedSessionId.trim()) {
+      throw const TuiGatewayRpcError(
+        activeMethod,
+        'Invalid durable session identity',
+      );
+    }
+    final rosterCachedUnsupported = !_capabilityCache.canAttempt(
+      DesktopGatewayCapability.sessionActiveList,
+    );
+    if (!rosterCachedUnsupported ||
+        _sessionAuthority == SessionAuthorityCapability.unknown) {
+      // The capability is only known once the socket is ready: a cached
+      // standalone verdict must not pre-empt a canonical endpoint.
+      await _connectForRequest('gateway.connect');
+    }
+    if (_sessionAuthority.isCanonical) {
+      // The canonical snapshot IS the ownership proof (subscription id,
+      // epochs and a cut taken under the stream lock); the roster read is a
+      // standalone-only transaction. The frames after the cut stay held
+      // until the owner consumes this recovery.
+      final generation = _socketGeneration;
+      final channel = _channel;
+      final snapshot = await _resumeCanonicalSnapshot(
+        storedSessionId,
+        profile: profile,
+        omitMessages: true,
+        deferDispatch: true,
+      );
+      if (generation != _socketGeneration || !identical(_channel, channel)) {
+        throw const TuiGatewayRpcError(
+          resumeMethod,
+          'Connection lost before JSON-RPC response',
+          failureKind: TuiGatewayRpcFailureKind.connectionLost,
+        );
+      }
+      return DesktopRosterBoundRecovery._(
+        snapshot,
+        this,
+        _CanonicalRecoveryProof(
+          generation,
+          channel!,
+          _adoptionTokens[snapshot] ?? 0,
+        ),
+      );
+    }
+    if (rosterCachedUnsupported) {
+      throw const TuiGatewayRpcError(
+        activeMethod,
+        'Hermes Desktop capability is unavailable',
+        code: -32601,
+      );
+    }
+
+    await _connectForRequest('gateway.connect');
+    final lease = _captureSessionRosterLease(activeMethod);
+    DesktopActiveSessionList roster;
+    try {
+      final rosterResult = await _requestSessionRosterLease(
+        lease,
+        activeMethod,
+        const <String, dynamic>{},
+      );
+      roster = DesktopActiveSessionList.fromJson(rosterResult);
+      _requireSessionRosterLease(lease, activeMethod);
+      _capabilityCache.mark(
+        DesktopGatewayCapability.sessionActiveList,
+        DesktopGatewayCapabilityState.supported,
+      );
+    } on FormatException {
+      _capabilityCache.mark(
+        DesktopGatewayCapability.sessionActiveList,
+        DesktopGatewayCapabilityState.invalid,
+      );
+      throw const TuiGatewayRpcError(
+        activeMethod,
+        'Hermes returned an invalid active session inventory',
+      );
+    } on TuiGatewayRpcError catch (error) {
+      if (error.code == -32601) {
+        _capabilityCache.mark(
+          DesktopGatewayCapability.sessionActiveList,
+          DesktopGatewayCapabilityState.unsupported,
+        );
+      }
+      rethrow;
+    }
+    if (roster.hasMalformedRows) {
+      throw const TuiGatewayRpcError(
+        activeMethod,
+        'Hermes returned an invalid active session inventory',
+      );
+    }
+    final matches = roster.sessions
+        .where((row) => row.storedSessionId == storedSessionId)
+        .toList(growable: false);
+    if (matches.isEmpty) {
+      throw const TuiGatewayRpcError(
+        activeMethod,
+        'Hermes did not advertise an active runtime for this session',
+        data: {'reason': rosterSessionNotActiveReason},
+        origin: CompressionFailureOrigin.localPreflight,
+      );
+    }
+    if (matches.length != 1) {
+      throw const TuiGatewayRpcError(
+        activeMethod,
+        'Hermes did not prove one active session owner',
+      );
+    }
+    final advertised = matches.single;
+
+    final capabilityAllowed = await _awaitSessionRosterLease(
+      lease,
+      'gateway.capabilities',
+      () => _resolveExclusiveSubmitCapability(lease.generation, lease.channel),
+    );
+    if (!capabilityAllowed) {
+      throw const TuiGatewayRpcError(
+        resumeMethod,
+        'Hermes Agent cannot safely attach this session',
+        origin: CompressionFailureOrigin.localPreflight,
+      );
+    }
+    final result = await _requestSessionRosterLease(lease, resumeMethod, {
+      'session_id': storedSessionId,
+      'source': 'desktop',
+      'omit_messages': true,
+      if (profile.trim().isNotEmpty) 'profile': profile.trim(),
+    });
+    final snapshot = _parseSessionSnapshot(
+      result,
+      requestedStoredSessionId: storedSessionId,
+      created: false,
+      method: resumeMethod,
+      rememberLegacyRuntime: false,
+    );
+    _requireSessionRosterLease(lease, resumeMethod);
+    if (snapshot.runtimeSessionId != advertised.runtimeSessionId ||
+        snapshot.storedSessionId != storedSessionId) {
+      throw const TuiGatewayRpcError(
+        resumeMethod,
+        'Hermes returned a session outside the active roster proof',
+      );
+    }
+    return DesktopRosterBoundRecovery._(snapshot, this, lease);
+  }
+
+  @override
+  bool consumeRosterBoundRecovery(DesktopRosterBoundRecovery recovery) {
+    if (recovery._consumed || !identical(recovery._issuer, this)) return false;
+    final canonicalProof = recovery._transportProof;
+    if (canonicalProof is _CanonicalRecoveryProof) {
+      final sessionId = recovery.snapshot.storedSessionId;
+      final ledger = _canonicalLedgers[sessionId];
+      if (canonicalProof.generation != _socketGeneration ||
+          !_connected ||
+          !identical(canonicalProof.channel, _channel) ||
+          ledger == null ||
+          !ledger.isReady ||
+          ledger.adoptionToken != canonicalProof.token) {
+        return false;
+      }
+      recovery._consumed = true;
+      _commitCanonicalAdoption(sessionId, token: canonicalProof.token);
+      return true;
+    }
+    try {
+      final lease = recovery._transportProof;
+      if (lease is! _SessionRosterSocketLease) return false;
+      _requireSessionRosterLease(lease, 'session.resume');
+    } catch (_) {
+      return false;
+    }
+    recovery._consumed = true;
+    _adoptWatchdogSnapshot(recovery.snapshot);
+    return true;
+  }
+
+  /// The recovery owner left without consuming [recovery] (settled from the
+  /// durable transcript, failed run, stale identity): the held frames of that
+  /// canonical attach are released, never left waiting for an owner.
+  void releaseCanonicalRecovery(DesktopRosterBoundRecovery recovery) {
+    final proof = recovery._transportProof;
+    if (recovery._consumed ||
+        !identical(recovery._issuer, this) ||
+        proof is! _CanonicalRecoveryProof) {
+      return;
+    }
+    recovery._consumed = true;
+    _canonicalLedgers[recovery.snapshot.storedSessionId]?.releaseAdoption(
+      proof.token,
+    );
+  }
+
+  @override
+  bool consumeRosterBoundViewerAttachment(DesktopRosterBoundRecovery recovery) {
+    if (!consumeRosterBoundRecovery(recovery)) return false;
+    if (recovery._transportProof is _CanonicalRecoveryProof) return true;
+    _rememberLegacyEventRuntime(recovery.snapshot.runtimeSessionId);
+    return true;
+  }
+
+  @override
+  RecoveryProof recoveryProofForSnapshot(
+    DesktopSessionSnapshot snapshot, {
+    required String connectionId,
+    required String profile,
+    required int bindGeneration,
+    required int sessionGeneration,
+    required int turnGeneration,
+    required Set<RecoveryDomain> coverage,
+    int? postSnapshotSequence,
+  }) {
+    final channel = _channel;
+    if (channel == null) {
+      throw StateError('recovery channel is not current');
+    }
+    return _replayCoordinator.mintRecoveryProof(
+      connectionId: _connection.id,
+      durableSessionId: snapshot.storedSessionId,
+      runtimeSessionId: snapshot.runtimeSessionId,
+      profile: profile,
+      socketGeneration: _socketGeneration,
+      channel: channel,
+      bindGeneration: bindGeneration,
+      sessionGeneration: sessionGeneration,
+      turnGeneration: turnGeneration,
+      replayEpoch: _replayEpoch,
+      created: snapshot.created,
+      durableIdentityExplicit: snapshot.storedSessionIdentityExplicit,
+      identityAliasesConsistent: snapshot.identityAliasesConsistent,
+      // Current upstream exposes neither cross-domain recovery coverage nor an
+      // authoritative snapshot/replay cut. Caller assertions cannot mint either.
+      coverage: const <RecoveryDomain>{},
+      postSnapshotSequence: null,
+    );
+  }
+
+  @override
+  bool validateRecovery(RecoveryProof proof) {
+    final channel = _channel;
+    if (channel == null) return false;
+    return _replayCoordinator.canCommitRecovery(
+      proof,
+      socketGeneration: _socketGeneration,
+      channel: channel,
+      replayEpoch: _replayEpoch,
+    );
+  }
+
+  @override
+  bool commitRecovery(RecoveryProof proof) {
+    final channel = _channel;
+    if (channel == null) return false;
+    final committed = _replayCoordinator.commitRecovery(
+      proof,
+      socketGeneration: _socketGeneration,
+      channel: channel,
+      replayEpoch: _replayEpoch,
+    );
+    if (committed) {
+      _rememberLegacyEventRuntime(proof.runtimeSessionId);
+      _markWatchdogRuntimeBusy(proof.runtimeSessionId);
+      for (final held in _replayCoordinator.takeCommittedRecoveryEvents(
+        proof.runtimeSessionId,
+      )) {
+        if (_events.isClosed) break;
+        _events.add(
+          TuiGatewayEvent(
+            type: held.type,
+            sessionId: held.sessionId,
+            sequence: held.sequence,
+            transportGeneration: _socketGeneration,
+            producerChannel: channel,
+            payload: held.payload,
+          ),
+        );
+      }
+    }
+    return committed;
+  }
+
+  @override
+  bool recoveryAuthorityStillCurrent(RecoveryProof proof) {
+    final channel = _channel;
+    if (channel == null) return false;
+    return _replayCoordinator.isRecoveryAuthorityCurrent(
+      proof,
+      socketGeneration: _socketGeneration,
+      channel: channel,
+      replayEpoch: _replayEpoch,
+    );
+  }
+
+  @override
+  void commitRecoveryRuntime(String runtimeSessionId) {
+    // A bare runtime string carries no durable identity, generation or domain
+    // coverage. Preserve ABI compatibility while failing closed.
+  }
+
+  @override
+  Future<DesktopSessionBinding> createForFirstSubmit({
+    String profile = '',
+    List<Map<String, dynamic>> seedMessages = const [],
+    String model = '',
+  }) async {
+    if (_sessionAuthority.isCanonical ||
+        (_sessionAuthority == SessionAuthorityCapability.unknown &&
+            await _canonicalNow())) {
+      // The canonical create has its own closed key set and answers a
+      // snapshot; the standalone shape is never sent to an authority.
+      final requested = model.trim();
+      return DesktopSessionBinding.fromSnapshot(
+        await _createCanonical(
+          profile: profile,
+          seedMessages: seedMessages,
+          model:
+              requested.isNotEmpty && requested.toLowerCase() != 'hermes-agent'
+              ? requested
+              : null,
+        ),
+      );
+    }
+    final requestedModel = model.trim();
+    // `hermes-agent` es el id OpenAI-compatible que anuncia el API Server,
+    // no un modelo aceptado por proveedores como openai-codex. Persistirlo en
+    // session.create provoca HTTP 400 en el primer turno de cada chat nuevo.
+    // Omitido, Hermes resuelve el modelo activo real desde su configuración.
+    final explicitModel =
+        requestedModel.isNotEmpty &&
+            requestedModel.toLowerCase() != 'hermes-agent'
+        ? requestedModel
+        : null;
+    final result = await _requestExclusiveSessionMutation('session.create', {
+      'source': 'desktop',
+      if (profile.trim().isNotEmpty) 'profile': profile.trim(),
+      'model': ?explicitModel,
+      if (seedMessages.isNotEmpty) 'messages': seedMessages,
+    });
+    return _parseSessionBinding(
+      result,
+      requestedStoredSessionId: '',
+      created: true,
+      method: 'session.create',
+    );
+  }
+
+  @override
+  Future<DesktopSessionBinding> createForFirstSubmitConfigured({
+    String profile = '',
+    List<Map<String, dynamic>> seedMessages = const [],
+    required DesktopSessionCreateConfig config,
+  }) async {
+    if (_sessionAuthority.isCanonical ||
+        (_sessionAuthority == SessionAuthorityCapability.unknown &&
+            await _canonicalNow())) {
+      return DesktopSessionBinding.fromSnapshot(
+        await _createCanonical(
+          profile: profile,
+          seedMessages: seedMessages,
+          config: config,
+        ),
+      );
+    }
+    final selection = config.model;
+    final requestedTitle = config.title?.trim();
+    final safeTitle =
+        requestedTitle != null &&
+            requestedTitle.isNotEmpty &&
+            requestedTitle.length <= 256 &&
+            !requestedTitle.codeUnits.any((unit) => unit < 0x20 || unit == 0x7f)
+        ? requestedTitle
+        : null;
+    final workspace = config.workspace?.trim() ?? '';
+    final safeWorkspace =
+        workspace.isNotEmpty &&
+            workspace.length <= 4096 &&
+            !workspace.codeUnits.any((unit) => unit < 0x20 || unit == 0x7f)
+        ? workspace
+        : null;
+    Map<String, dynamic> params({required bool followProfile}) => {
+      'source': 'desktop',
+      if (profile.trim().isNotEmpty) 'profile': profile.trim(),
+      'title': ?safeTitle,
+      if (safeWorkspace != null) ...{
+        'cwd': safeWorkspace,
+        'cwd_explicit': true,
+      },
+      if (config.hidden) 'hidden': true,
+      if (followProfile) 'follow_profile_config': true,
+      if (selection != null) ...{
+        'model': selection.modelId,
+        'provider': selection.providerSlug,
+      },
+      if (config.reasoningEffort case final effort?)
+        'reasoning_effort': effort.wire,
+      if (config.fastMode case final mode?) 'fast': mode.enabled,
+      'close_on_disconnect': false,
+      if (seedMessages.isNotEmpty) 'messages': seedMessages,
+    };
+
+    Map<String, dynamic> result;
+    try {
+      result = await _requestExclusiveSessionMutation(
+        'session.create',
+        params(followProfile: config.followProfileConfig),
+      );
+    } on TuiGatewayRpcError catch (error) {
+      // A Gateway from before `follow_profile_config` refuses a parameter it
+      // does not know: the session is created as it was before the flag.
+      if (!config.followProfileConfig || error.code != -32602) rethrow;
+      result = await _requestExclusiveSessionMutation(
+        'session.create',
+        params(followProfile: false),
+      );
+    }
+    return _parseSessionBinding(
+      result,
+      requestedStoredSessionId: '',
+      created: true,
+      method: 'session.create',
+    );
+  }
+
+  DesktopSessionBinding _parseSessionBinding(
+    Map<String, dynamic> result, {
+    required String requestedStoredSessionId,
+    required bool created,
+    required String method,
+    bool rememberLegacyRuntime = true,
+  }) => DesktopSessionBinding.fromSnapshot(
+    _parseSessionSnapshot(
+      result,
+      requestedStoredSessionId: requestedStoredSessionId,
+      created: created,
+      method: method,
+      rememberLegacyRuntime: rememberLegacyRuntime,
+    ),
+  );
+
+  DesktopSessionSnapshot _parseSessionSnapshot(
+    Map<String, dynamic> result, {
+    required String requestedStoredSessionId,
+    required bool created,
+    required String method,
+    bool rememberLegacyRuntime = true,
+  }) {
+    try {
+      final snapshot = DesktopSessionSnapshot.fromJson(
+        result,
+        requestedStoredSessionId: requestedStoredSessionId,
+        created: created,
+        method: method,
+      );
+      _reviveReleasedRuntime(snapshot.runtimeSessionId);
+      if (rememberLegacyRuntime) {
+        _rememberLegacyEventRuntime(snapshot.runtimeSessionId);
+        _adoptWatchdogSnapshot(snapshot);
+      }
+      return snapshot;
+    } on FormatException {
+      throw TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid session snapshot',
+      );
+    }
+  }
+
+  @override
+  DesktopGatewayCapabilityState capabilityState(
+    DesktopGatewayCapability capability,
+  ) => _capabilityCache.state(capability);
+
+  @override
+  Future<DesktopSessionSnapshot> activateSession(
+    String runtimeSessionId, {
+    required String storedSessionId,
+  }) async {
+    const method = 'session.activate';
+    final runtime = _validatedRuntimeId(method, runtimeSessionId);
+    final stored = storedSessionId.trim();
+    if (stored.isEmpty) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Missing durable session identity',
+      );
+    }
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.sessionActivate,
+      method,
+      {'session_id': runtime, 'cols': 96},
+    );
+    try {
+      final snapshot = DesktopSessionSnapshot.fromJson(
+        result,
+        requestedStoredSessionId: stored,
+        created: false,
+        method: method,
+      );
+      if (snapshot.runtimeSessionId != runtime ||
+          snapshot.storedSessionId != stored) {
+        throw const FormatException('session.activate identity mismatch');
+      }
+      _reviveReleasedRuntime(snapshot.runtimeSessionId);
+      _rememberLegacyEventRuntime(snapshot.runtimeSessionId);
+      _adoptWatchdogSnapshot(snapshot);
+      return snapshot;
+    } on FormatException {
+      _capabilityCache.mark(
+        DesktopGatewayCapability.sessionActivate,
+        DesktopGatewayCapabilityState.invalid,
+      );
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid activation snapshot',
+      );
+    }
+  }
+
+  @override
+  Future<bool> closeSession(String runtimeSessionId) async {
+    const method = 'session.close';
+    final runtime = _validatedRuntimeId(method, runtimeSessionId);
+    final result = await _request(method, {'session_id': runtime});
+    final closed = result['closed'];
+    if (closed is! bool) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid close response',
+        origin: CompressionFailureOrigin.malformed,
+      );
+    }
+    if (closed) {
+      _retireWatchdogRuntime(runtime);
+      _withheldTurnEnds.remove(runtime);
+    }
+    return closed;
+  }
+
+  @override
+  Future<DesktopActiveSessionList> listActiveSessions({
+    String currentRuntimeSessionId = '',
+  }) async {
+    const method = 'session.active_list';
+    final current = currentRuntimeSessionId.trim();
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.sessionActiveList,
+      method,
+      {if (current.isNotEmpty) 'current_session_id': current},
+    );
+    try {
+      return DesktopActiveSessionList.fromJson(result);
+    } on FormatException {
+      _capabilityCache.mark(
+        DesktopGatewayCapability.sessionActiveList,
+        DesktopGatewayCapabilityState.invalid,
+      );
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid active session inventory',
+      );
+    }
+  }
+
+  @override
+  Future<DesktopModelCatalog> modelOptions(
+    String runtimeSessionId, {
+    bool refresh = false,
+    bool connectedOnly = false,
+  }) async {
+    const method = 'model.options';
+    final runtime = _validatedRuntimeId(method, runtimeSessionId);
+    final Map<String, dynamic> result;
+    try {
+      result = await _requestOptionalCapability(
+        DesktopGatewayCapability.modelOptions,
+        method,
+        {
+          'session_id': runtime,
+          'explicit_only': true,
+          'include_unconfigured': false,
+          'refresh': refresh,
+        },
+        connectedOnly: connectedOnly,
+      );
+    } on TuiGatewayRpcError catch (error) {
+      _noteRestartRequired(error);
+      rethrow;
+    }
+    if (result['providers'] is! List) {
+      _capabilityCache.mark(
+        DesktopGatewayCapability.modelOptions,
+        DesktopGatewayCapabilityState.invalid,
+      );
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid model catalog',
+      );
+    }
+    final catalog = DesktopModelCatalog.fromJson(result);
+    // Every entry has to be a provider for this to count as the server being
+    // well again; a list with a bad entry is not a validated catalog.
+    if ((result['providers'] as List).every((entry) => entry is Map)) {
+      _noteRestartRecovered();
+    }
+    return catalog;
+  }
+
+  /// mk1215: `model.options` without `session_id`; the server resolves the
+  /// catalog from the profile's config (`_profile_scoped`, no live agent).
+  @override
+  Future<DesktopModelCatalog> globalModelOptions({
+    String profile = '',
+    bool refresh = false,
+    Duration? timeout,
+    bool connectedOnly = false,
+  }) async {
+    const method = 'model.options';
+    final owner = profile.trim();
+    if (!_capabilityCache.canAttempt(DesktopGatewayCapability.modelOptions)) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes Desktop capability is unavailable',
+        code: -32601,
+      );
+    }
+    final Map<String, dynamic> result;
+    // Desktop's requestModelOptions uses the 30 s gateway RPC budget. Do not
+    // charge catalogue enumeration to the short transport-readiness budget.
+    // Explicit callers retain their original combined deadline.
+    const readinessTimeout = Duration(seconds: 6);
+    const catalogRequestTimeout = Duration(seconds: 30);
+    final deadline = timeout == null ? null : _now().add(timeout);
+    final connectTimeout = timeout != null && timeout < readinessTimeout
+        ? timeout
+        : readinessTimeout;
+    try {
+      if (connectedOnly) {
+        _requireConnectedWithoutDialing(method);
+      } else {
+        await _connectForRequest(method).timeout(connectTimeout);
+      }
+      final remaining = deadline?.difference(_now()) ?? catalogRequestTimeout;
+      if (remaining <= Duration.zero) {
+        throw const TuiGatewayRpcError(
+          method,
+          'Timeout waiting for JSON-RPC response',
+          failureKind: TuiGatewayRpcFailureKind.timeout,
+        );
+      }
+      result = await _requestConnected(method, {
+        if (owner.isNotEmpty && owner != 'default')
+          ..._petParams(owner, method: method),
+        'explicit_only': true,
+        'include_unconfigured': false,
+        'refresh': refresh,
+      }, timeout: remaining);
+    } on TuiGatewayRpcError catch (error) {
+      _noteRestartRequired(error);
+      if (error.code == -32601) {
+        _capabilityCache.mark(
+          DesktopGatewayCapability.modelOptions,
+          DesktopGatewayCapabilityState.unsupported,
+        );
+      }
+      rethrow;
+    }
+    if (result['providers'] is! List) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid model catalog',
+      );
+    }
+    _capabilityCache.mark(
+      DesktopGatewayCapability.modelOptions,
+      DesktopGatewayCapabilityState.supported,
+    );
+    final catalog = DesktopModelCatalog.fromJson(result);
+    // Every entry has to be a provider for this to count as the server being
+    // well again; a list with a bad entry is not a validated catalog.
+    if ((result['providers'] as List).every((entry) => entry is Map)) {
+      _noteRestartRecovered();
+    }
+    return catalog;
+  }
+
+  Map<String, dynamic> _freeTierParams(String profile) => {
+    'profile': profile.trim().isEmpty || profile.trim() == 'default'
+        ? null
+        : profile.trim(),
+  };
+
+  @override
+  Future<FreeTierStatus> freeTierStatus({String profile = ''}) async {
+    const method = 'free_tier.status';
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.freeTier,
+      method,
+      _freeTierParams(profile),
+    );
+    try {
+      return FreeTierStatus.fromJson(result);
+    } on FormatException {
+      _capabilityCache.mark(
+        DesktopGatewayCapability.freeTier,
+        DesktopGatewayCapabilityState.invalid,
+      );
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid free-tier status',
+      );
+    }
+  }
+
+  @override
+  Future<FreeTierAckNotice> ackFreeTierNotice({String profile = ''}) async {
+    const method = 'free_tier.ack_notice';
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.freeTier,
+      method,
+      _freeTierParams(profile),
+    );
+    try {
+      return FreeTierAckNotice.fromJson(result);
+    } on FormatException {
+      _capabilityCache.mark(
+        DesktopGatewayCapability.freeTier,
+        DesktopGatewayCapabilityState.invalid,
+      );
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid free-tier notice acknowledgement',
+      );
+    }
+  }
+
+  @override
+  Future<DesktopContextBreakdown> contextBreakdown(
+    String runtimeSessionId,
+  ) async {
+    const method = 'session.context_breakdown';
+    final runtime = _validatedRuntimeId(method, runtimeSessionId);
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.sessionContextBreakdown,
+      method,
+      {'session_id': runtime},
+    );
+    try {
+      return DesktopContextBreakdown.fromJson(result);
+    } on FormatException {
+      _capabilityCache.mark(
+        DesktopGatewayCapability.sessionContextBreakdown,
+        DesktopGatewayCapabilityState.invalid,
+      );
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid context breakdown',
+      );
+    }
+  }
+
+  /// Hermes answers both from the provider's / portal's usage APIs (it
+  /// lists them as long handlers), so they get their own bounded wait.
+  static const _accountUsageTimeout = Duration(seconds: 45);
+
+  @override
+  Future<Map<String, dynamic>> sessionUsage(String runtimeSessionId) {
+    const method = 'session.usage';
+    final runtime = _validatedRuntimeId(method, runtimeSessionId);
+    return _request(method, {
+      'session_id': runtime,
+    }, timeout: _accountUsageTimeout);
+  }
+
+  @override
+  Future<Map<String, dynamic>> usageBars() => _request(
+    'usage.bars',
+    const <String, dynamic>{},
+    timeout: _accountUsageTimeout,
+  );
+
+  @override
+  Future<DesktopCommandCatalog> commandsCatalog() async {
+    const method = 'commands.catalog';
+    final result = await _request(
+      method,
+      const <String, dynamic>{},
+      timeout: const Duration(seconds: 20),
+    );
+    return DesktopCommandCatalog.fromJson(result);
+  }
+
+  @override
+  Future<SlashCompletionBatch> completeSlash(String text) =>
+      completeSlashInSession(text);
+
+  @override
+  Future<SlashCompletionBatch> completeSlashInSession(
+    String text, {
+    String? runtimeSessionId,
+    String? profile,
+  }) async {
+    const method = 'complete.slash';
+    final input = text;
+    if (input.length > 4096 ||
+        input.contains(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'))) {
+      throw const TuiGatewayRpcError(method, 'Invalid slash completion input');
+    }
+    final hasRuntime = runtimeSessionId != null && runtimeSessionId.isNotEmpty;
+    final result = await _request(method, {
+      'text': input,
+      if (hasRuntime)
+        'session_id': _validatedRuntimeId(method, runtimeSessionId)
+      else
+        ..._petParams(profile ?? '', method: method),
+    }, timeout: const Duration(seconds: 20));
+    return SlashCompletionBatch.fromJson(result, input: input);
+  }
+
+  @override
+  Future<PathCompletionBatch> completePath(
+    String word, {
+    required String runtimeSessionId,
+  }) async {
+    const method = 'complete.path';
+    if (word.isEmpty ||
+        word.length > 1024 ||
+        word.contains(RegExp(r'[\x00-\x1F\x7F]'))) {
+      throw const TuiGatewayRpcError(method, 'Invalid path completion input');
+    }
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.composerPathCompletion,
+      method,
+      {
+        'word': word,
+        'session_id': _validatedRuntimeId(method, runtimeSessionId),
+      },
+      connectedOnly: true,
+    );
+    return PathCompletionBatch.fromJson(result);
+  }
+
+  @override
+  Future<DesktopCommandRpcResult> slashExec(
+    String runtimeSessionId,
+    String command,
+  ) async {
+    const method = 'slash.exec';
+    final result = await _requestExclusiveSessionMutation(method, {
+      'session_id': _validatedRuntimeId(method, runtimeSessionId),
+      'command': _validatedSlashCommand(method, command),
+    }, timeout: const Duration(minutes: 3));
+    return DesktopCommandRpcResult.fromJson(
+      _payloadSanitizer.sanitizeCommandResponse(result),
+      compressionWireEvidence: DesktopCompressionLegacyEvidence.fromWire(
+        result,
+      ),
+    );
+  }
+
+  @override
+  Future<DesktopCommandRpcResult> commandDispatch(
+    String runtimeSessionId, {
+    required String name,
+    String arg = '',
+  }) async {
+    const method = 'command.dispatch';
+    final commandName = CommandDescriptor.tryNormalizeName(name);
+    if (commandName == null) {
+      throw const TuiGatewayRpcError(method, 'Invalid command name');
+    }
+    final argument = arg.trim();
+    if (argument.length > commandArgumentMaxLength ||
+        argument.contains(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'))) {
+      throw const TuiGatewayRpcError(method, 'Invalid command argument');
+    }
+    final result = await _requestExclusiveSessionMutation(method, {
+      'session_id': _validatedRuntimeId(method, runtimeSessionId),
+      'name': commandName,
+      'arg': argument,
+    }, timeout: const Duration(minutes: 3));
+    return DesktopCommandRpcResult.fromJson(
+      _payloadSanitizer.sanitizeCommandResponse(result),
+      compressionWireEvidence: DesktopCompressionLegacyEvidence.fromWire(
+        result,
+      ),
+    );
+  }
+
+  String _validatedSubagentId(String method, String value) {
+    final parsed = _subagentOpaqueId(value);
+    if (parsed == null) {
+      throw TuiGatewayRpcError(method, 'Invalid subagent identity');
+    }
+    return parsed;
+  }
+
+  String _validatedSubagentSteerText(String value) {
+    if (value.isEmpty ||
+        value.length > 16384 ||
+        value.contains(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'))) {
+      throw const TuiGatewayRpcError(
+        'subagent.steer',
+        'Invalid subagent steer text',
+      );
+    }
+    return value;
+  }
+
+  @override
+  Future<List<DesktopSubagentSnapshot>> listSubagents(
+    String runtimeSessionId,
+  ) async {
+    const method = 'subagent.list';
+    final result = await _request(method, {
+      'session_id': _validatedRuntimeId(method, runtimeSessionId),
+    });
+    final rawRows = result['subagents'];
+    if (rawRows is! List) {
+      throw const TuiGatewayRpcError(method, 'Invalid subagent list result');
+    }
+    return List<DesktopSubagentSnapshot>.unmodifiable(
+      rawRows
+          .map(DesktopSubagentSnapshot.tryParse)
+          .whereType<DesktopSubagentSnapshot>(),
+    );
+  }
+
+  @override
+  Future<List<DesktopFailedDelegation>> listFailedDelegations(
+    String runtimeSessionId,
+  ) async {
+    const method = 'subagent.list';
+    final result = await _request(method, {
+      'session_id': _validatedRuntimeId(method, runtimeSessionId),
+    });
+    final raw = result['delegations'];
+    if (raw is! List) return const [];
+    final seen = <String>{};
+    return List<DesktopFailedDelegation>.unmodifiable(
+      raw
+          .map(DesktopFailedDelegation.tryParse)
+          .whereType<DesktopFailedDelegation>()
+          .where((row) => seen.add(row.stableId))
+          .take(20),
+    );
+  }
+
+  @override
+  Future<DesktopSubagentTailResult> tailSubagent(
+    String runtimeSessionId,
+    String subagentId,
+  ) async {
+    const method = 'subagent.tail';
+    final result = await _request(method, {
+      'session_id': _validatedRuntimeId(method, runtimeSessionId),
+      'subagent_id': _validatedSubagentId(method, subagentId),
+    });
+    try {
+      return DesktopSubagentTailResult.fromJson(result);
+    } on FormatException {
+      throw const TuiGatewayRpcError(method, 'Invalid subagent tail result');
+    }
+  }
+
+  @override
+  Future<DesktopSubagentSteerResult> steerSubagent(
+    String runtimeSessionId,
+    String subagentId,
+    String text,
+  ) async {
+    const method = 'subagent.steer';
+    final requestedId = _validatedSubagentId(method, subagentId);
+    final result = await _request(method, {
+      'session_id': _validatedRuntimeId(method, runtimeSessionId),
+      'subagent_id': requestedId,
+      'text': _validatedSubagentSteerText(text),
+    });
+    try {
+      return DesktopSubagentSteerResult.fromJson(
+        result,
+        requestedSubagentId: requestedId,
+      );
+    } on FormatException {
+      throw const TuiGatewayRpcError(method, 'Invalid subagent steer result');
+    }
+  }
+
+  @override
+  Future<DesktopSubagentInterruptResult> interruptSubagent(
+    String runtimeSessionId,
+    String subagentId,
+  ) async {
+    const method = 'subagent.interrupt';
+    final requestedId = _validatedSubagentId(method, subagentId);
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.subagentInterrupt,
+      method,
+      {
+        'session_id': _validatedRuntimeId(method, runtimeSessionId),
+        'subagent_id': requestedId,
+      },
+    );
+    try {
+      return DesktopSubagentInterruptResult.fromJson(
+        result,
+        requestedSubagentId: requestedId,
+      );
+    } on FormatException {
+      _capabilityCache.mark(
+        DesktopGatewayCapability.subagentInterrupt,
+        DesktopGatewayCapabilityState.invalid,
+      );
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid subagent interrupt result',
+      );
+    }
+  }
+
+  @override
+  Future<void> respondToConnection(
+    String runtimeSessionId,
+    String opId,
+    Map<String, dynamic> result,
+  ) async {
+    const method = 'connection.respond';
+    await _request(method, {
+      'op_id': opId,
+      'owner': {
+        'type': 'session',
+        'session_id': _validatedRuntimeId(method, runtimeSessionId),
+      },
+      'result': result,
+    });
+  }
+
+  @override
+  Future<void> wakeConnectionOperation(
+    String runtimeSessionId,
+    String opId,
+  ) async {
+    const method = 'connectors.operation.wake';
+    await _request(method, {
+      'op_id': opId,
+      'owner': {
+        'type': 'session',
+        'session_id': _validatedRuntimeId(method, runtimeSessionId),
+      },
+    });
+  }
+
+  @override
+  Future<bool> delegationPaused() =>
+      _delegationCall('delegation.status', const <String, dynamic>{});
+
+  @override
+  Future<bool> setDelegationPaused(bool paused) =>
+      _delegationCall('delegation.pause', {'paused': paused});
+
+  Future<bool> _delegationCall(
+    String method,
+    Map<String, dynamic> params,
+  ) async {
+    final result = await _requestOptionalCapability(
+      DesktopGatewayCapability.delegationControl,
+      method,
+      params,
+    );
+    final paused = result['paused'];
+    if (paused is! bool) {
+      _capabilityCache.mark(
+        DesktopGatewayCapability.delegationControl,
+        DesktopGatewayCapabilityState.invalid,
+      );
+      throw TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid delegation state',
+      );
+    }
+    return paused;
+  }
+
+  String _validatedControlValue(String value, {required int maxLength}) {
+    final normalized = value.trim();
+    if (normalized.isEmpty ||
+        normalized.length > maxLength ||
+        normalized.contains(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'))) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    return normalized;
+  }
+
+  DesktopControlFailure _controlFailureFor(Object error) {
+    if (error is DesktopControlFailure) return error;
+    if (error is TuiGatewayRpcError) {
+      return switch (error.code) {
+        -32601 => const DesktopControlFailure(
+          DesktopControlFailureKind.unsupported,
+          code: -32601,
+        ),
+        4007 => const DesktopControlFailure(
+          DesktopControlFailureKind.unavailable,
+          code: 4007,
+        ),
+        4030 => const DesktopControlFailure(
+          DesktopControlFailureKind.forbidden,
+          code: 4030,
+        ),
+        final code when code == null => const DesktopControlFailure(
+          DesktopControlFailureKind.unavailable,
+        ),
+        final code => DesktopControlFailure(
+          DesktopControlFailureKind.rejected,
+          code: code,
+        ),
+      };
+    }
+    return const DesktopControlFailure(DesktopControlFailureKind.unavailable);
+  }
+
+  Future<Map<String, dynamic>> _controlRequest(
+    String method,
+    Map<String, dynamic> params, {
+    Duration timeout = const Duration(seconds: 120),
+    DesktopGatewayCapability? capability,
+  }) async {
+    if (capability != null && !_capabilityCache.canAttempt(capability)) {
+      throw const DesktopControlFailure(
+        DesktopControlFailureKind.unsupported,
+        code: -32601,
+      );
+    }
+    // N6a: identical read-only requests in flight on this socket share one
+    // frame; every caller gets the same result or the same failure.
+    final shareKey = _coalescedControlReads.contains(method)
+        ? '$_socketGeneration|$method|${jsonEncode(params)}'
+        : null;
+    final shared = shareKey == null ? null : _inflightControlReads[shareKey];
+    if (shared != null) return shared;
+    final flight = _controlRequestOnce(method, params, timeout, capability);
+    if (shareKey == null) return flight;
+    _inflightControlReads[shareKey] = flight;
+    try {
+      return await flight;
+    } finally {
+      if (identical(_inflightControlReads[shareKey], flight)) {
+        _inflightControlReads.remove(shareKey);
+      }
+    }
+  }
+
+  static const _coalescedControlReads = {
+    'spawn_tree.list',
+    'process.list',
+    'session.control.read',
+  };
+  final Map<String, Future<Map<String, dynamic>>> _inflightControlReads = {};
+
+  Future<Map<String, dynamic>> _controlRequestOnce(
+    String method,
+    Map<String, dynamic> params,
+    Duration timeout,
+    DesktopGatewayCapability? capability,
+  ) async {
+    try {
+      final result = await _request(method, params, timeout: timeout);
+      if (capability != null) {
+        _capabilityCache.mark(
+          capability,
+          DesktopGatewayCapabilityState.supported,
+        );
+      }
+      return result;
+    } catch (error) {
+      if (capability != null &&
+          error is TuiGatewayRpcError &&
+          error.code == -32601) {
+        _capabilityCache.mark(
+          capability,
+          DesktopGatewayCapabilityState.unsupported,
+        );
+      }
+      throw _controlFailureFor(error);
+    }
+  }
+
+  void _requireWritableControlConnection() {
+    if (_connection.readOnly) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.forbidden);
+    }
+  }
+
+  Never _invalidControlResponse([DesktopGatewayCapability? capability]) {
+    if (capability != null) {
+      _capabilityCache.mark(capability, DesktopGatewayCapabilityState.invalid);
+    }
+    throw const DesktopControlFailure(
+      DesktopControlFailureKind.invalidResponse,
+    );
+  }
+
+  @override
+  Future<RecoveryTimeline> listRecovery(String runtimeSessionId) async {
+    final runtime = _validatedControlValue(runtimeSessionId, maxLength: 512);
+    final result = await _controlRequest('rollback.list', {
+      'session_id': runtime,
+    }, capability: DesktopGatewayCapability.recoveryCenter);
+    try {
+      if (result['enabled'] is! bool || result['checkpoints'] is! List) {
+        return _invalidControlResponse(DesktopGatewayCapability.recoveryCenter);
+      }
+      return RecoveryTimeline.fromJson(result);
+    } catch (_) {
+      return _invalidControlResponse(DesktopGatewayCapability.recoveryCenter);
+    }
+  }
+
+  @override
+  Future<RecoveryDiff> diffRecovery(
+    String runtimeSessionId,
+    String checkpointHash,
+  ) async {
+    final result = await _controlRequest('rollback.diff', {
+      'session_id': _validatedControlValue(runtimeSessionId, maxLength: 512),
+      'hash': _validatedControlValue(checkpointHash, maxLength: 128),
+    }, capability: DesktopGatewayCapability.recoveryCenter);
+    try {
+      if (result['stat'] is! String || result['diff'] is! String) {
+        return _invalidControlResponse(DesktopGatewayCapability.recoveryCenter);
+      }
+      return RecoveryDiff.fromJson(result);
+    } catch (_) {
+      return _invalidControlResponse(DesktopGatewayCapability.recoveryCenter);
+    }
+  }
+
+  @override
+  Future<RecoveryRestoreResult> restoreRecovery(
+    String runtimeSessionId,
+    String checkpointHash,
+  ) async {
+    _requireWritableControlConnection();
+    final result = await _controlRequest(
+      'rollback.restore',
+      {
+        'session_id': _validatedControlValue(runtimeSessionId, maxLength: 512),
+        'hash': _validatedControlValue(checkpointHash, maxLength: 128),
+      },
+      timeout: const Duration(minutes: 2),
+      capability: DesktopGatewayCapability.recoveryCenter,
+    );
+    try {
+      if (result['success'] is! bool) {
+        return _invalidControlResponse(DesktopGatewayCapability.recoveryCenter);
+      }
+      return RecoveryRestoreResult.fromJson(result);
+    } catch (_) {
+      return _invalidControlResponse(DesktopGatewayCapability.recoveryCenter);
+    }
+  }
+
+  @override
+  Future<ExtensionsInventory> extensionsInventory({
+    String runtimeSessionId = '',
+  }) async {
+    final runtime = runtimeSessionId.trim();
+    final results = await Future.wait([
+      _controlRequest('plugins.manage', const {
+        'action': 'list',
+      }, capability: DesktopGatewayCapability.extensionsCenter),
+      _controlRequest('tools.list', {
+        if (runtime.isNotEmpty)
+          'session_id': _validatedControlValue(runtime, maxLength: 512),
+      }, capability: DesktopGatewayCapability.extensionsCenter),
+      // Optional classification data: old gateways can still publish built-in
+      // groups even when they do not implement the MCP inventory contract.
+      _controlRequest(
+        'mcp.servers.list',
+        const {},
+      ).catchError((_) => <String, dynamic>{}),
+    ]);
+    try {
+      if (results[0]['plugins'] is! List || results[1]['toolsets'] is! List) {
+        return _invalidControlResponse(
+          DesktopGatewayCapability.extensionsCenter,
+        );
+      }
+      return ExtensionsInventory.fromJson(
+        plugins: results[0],
+        toolsets: results[1],
+        mcp: results[2],
+      );
+    } catch (_) {
+      return _invalidControlResponse(DesktopGatewayCapability.extensionsCenter);
+    }
+  }
+
+  @override
+  Future<void> setPluginEnabled(String name, bool enabled) async {
+    _requireWritableControlConnection();
+    final result = await _controlRequest('plugins.manage', {
+      'action': 'toggle',
+      'name': _validatedControlValue(name, maxLength: 160),
+      'enable': enabled,
+    }, capability: DesktopGatewayCapability.extensionsCenter);
+    if (result['ok'] != true) {
+      _invalidControlResponse(DesktopGatewayCapability.extensionsCenter);
+    }
+  }
+
+  @override
+  Future<void> setToolsetEnabled(
+    String name,
+    bool enabled, {
+    String runtimeSessionId = '',
+  }) async {
+    _requireWritableControlConnection();
+    final target = _validatedControlValue(name, maxLength: 160);
+    final runtime = runtimeSessionId.trim();
+    final result = await _controlRequest(
+      'tools.configure',
+      {
+        'action': enabled ? 'enable' : 'disable',
+        'names': [target],
+        if (runtime.isNotEmpty)
+          'session_id': _validatedControlValue(runtime, maxLength: 512),
+      },
+      timeout: const Duration(minutes: 2),
+      capability: DesktopGatewayCapability.extensionsCenter,
+    );
+    final unknown = result['unknown'];
+    if (unknown is! List || unknown.map((value) => '$value').contains(target)) {
+      _invalidControlResponse(DesktopGatewayCapability.extensionsCenter);
+    }
+  }
+
+  @override
+  Future<void> reloadMcp({
+    String runtimeSessionId = '',
+    required bool confirmed,
+  }) async {
+    _requireWritableControlConnection();
+    if (!confirmed) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    final runtime = runtimeSessionId.trim();
+    final result = await _controlRequest(
+      'reload.mcp',
+      {
+        'confirm': true,
+        if (runtime.isNotEmpty)
+          'session_id': _validatedControlValue(runtime, maxLength: 512),
+      },
+      timeout: const Duration(minutes: 2),
+      capability: DesktopGatewayCapability.extensionsCenter,
+    );
+    if (result['status'] != 'reloaded') {
+      _invalidControlResponse(DesktopGatewayCapability.extensionsCenter);
+    }
+  }
+
+  Future<T> _dashboardExtensionRequest<T>(Future<T> Function() request) async {
+    try {
+      return await request();
+    } catch (error) {
+      if (error is DesktopControlFailure) rethrow;
+      _throwDashboardExtensionFailure(error);
+    }
+  }
+
+  Never _throwDashboardExtensionFailure(Object error) {
+    if (error is DashboardAuthException) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.forbidden);
+    }
+    if (error is DashboardHttpException) {
+      final status = error.statusCode;
+      if (status == 404 || status == 405) {
+        throw DesktopControlFailure(
+          DesktopControlFailureKind.unsupported,
+          code: status,
+        );
+      }
+      if (status == 401 || status == 403) {
+        throw DesktopControlFailure(
+          DesktopControlFailureKind.forbidden,
+          code: status,
+        );
+      }
+      if (status == 400 || status == 409 || status == 412 || status == 422) {
+        throw DesktopControlFailure(
+          DesktopControlFailureKind.rejected,
+          code: status,
+        );
+      }
+      throw DesktopControlFailure(
+        DesktopControlFailureKind.unavailable,
+        code: status,
+      );
+    }
+    if (error is FormatException ||
+        error is TypeError ||
+        error is StateError ||
+        error is ArgumentError) {
+      throw const DesktopControlFailure(
+        DesktopControlFailureKind.invalidResponse,
+      );
+    }
+    throw const DesktopControlFailure(DesktopControlFailureKind.unavailable);
+  }
+
+  List<Map<String, dynamic>> _extensionRows(Object? raw) {
+    if (raw is! List) {
+      throw const DesktopControlFailure(
+        DesktopControlFailureKind.invalidResponse,
+      );
+    }
+    return raw
+        .take(300)
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<List<DesktopPluginManagementEntry>> managedPlugins() {
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiGet('dashboard/plugins/hub');
+      return _extensionRows(result['plugins'])
+          .map(DesktopPluginManagementEntry.tryParse)
+          .whereType<DesktopPluginManagementEntry>()
+          .toList(growable: false);
+    });
+  }
+
+  @override
+  Future<DesktopExtensionInstallResult> installPlugin(
+    String identifier, {
+    required bool enable,
+  }) {
+    _requireWritableControlConnection();
+    final safeIdentifier = identifier.trim();
+    if (!isSafePluginInstallIdentifier(safeIdentifier)) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiPost(
+        'dashboard/agent-plugins/install',
+        body: {'identifier': safeIdentifier, 'force': false, 'enable': enable},
+        timeout: const Duration(minutes: 3),
+      );
+      final parsed = DesktopExtensionInstallResult.fromPluginJson(result);
+      if (!parsed.accepted) {
+        throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+      }
+      return parsed;
+    });
+  }
+
+  @override
+  Future<void> updatePlugin(String name) {
+    _requireWritableControlConnection();
+    final safeName = _validatedControlValue(name, maxLength: 160);
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiPost(
+        'dashboard/agent-plugins/${Uri.encodeComponent(safeName)}/update',
+        timeout: const Duration(minutes: 3),
+      );
+      if (result['ok'] != true) {
+        throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+      }
+    });
+  }
+
+  @override
+  Future<void> removePlugin(String name) {
+    _requireWritableControlConnection();
+    final safeName = _validatedControlValue(name, maxLength: 160);
+    return _dashboardExtensionRequest(
+      () => _dashboard.apiDelete(
+        'dashboard/agent-plugins/${Uri.encodeComponent(safeName)}',
+      ),
+    );
+  }
+
+  @override
+  Future<List<DesktopMcpServerEntry>> mcpServers() {
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiGet('mcp/servers');
+      return _extensionRows(result['servers'])
+          .map(DesktopMcpServerEntry.tryParse)
+          .whereType<DesktopMcpServerEntry>()
+          .toList(growable: false);
+    });
+  }
+
+  @override
+  Future<List<DesktopMcpCatalogEntry>> mcpCatalog() {
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiGet('mcp/catalog');
+      return _extensionRows(result['entries'])
+          .map(DesktopMcpCatalogEntry.tryParse)
+          .whereType<DesktopMcpCatalogEntry>()
+          .toList(growable: false);
+    });
+  }
+
+  @override
+  Future<DesktopExtensionInstallResult> installMcpCatalogEntry(
+    String name, {
+    Map<String, String> environment = const {},
+  }) {
+    _requireWritableControlConnection();
+    final safeName = _validatedControlValue(name, maxLength: 160);
+    if (environment.length > 40) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    final safeEnvironment = <String, String>{};
+    for (final entry in environment.entries) {
+      final key = entry.key.trim();
+      final value = entry.value;
+      if (!RegExp(r'^[A-Za-z_][A-Za-z0-9_]{0,127}$').hasMatch(key) ||
+          value.length > 8192 ||
+          value.contains('\u0000')) {
+        throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+      }
+      safeEnvironment[key] = value;
+    }
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiPost(
+        'mcp/catalog/install',
+        body: {'name': safeName, 'env': safeEnvironment, 'enable': true},
+        timeout: const Duration(minutes: 2),
+      );
+      final parsed = DesktopExtensionInstallResult.fromMcpJson(result);
+      if (!parsed.accepted) {
+        throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+      }
+      return parsed;
+    });
+  }
+
+  @override
+  Future<void> setMcpServerEnabled(String name, bool enabled) {
+    _requireWritableControlConnection();
+    final safeName = _validatedControlValue(name, maxLength: 160);
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiPut(
+        'mcp/servers/${Uri.encodeComponent(safeName)}/enabled',
+        body: {'enabled': enabled},
+      );
+      if (result['ok'] != true) {
+        throw const DesktopControlFailure(
+          DesktopControlFailureKind.invalidResponse,
+        );
+      }
+    });
+  }
+
+  @override
+  Future<void> removeMcpServer(String name) {
+    _requireWritableControlConnection();
+    final safeName = _validatedControlValue(name, maxLength: 160);
+    return _dashboardExtensionRequest(
+      () =>
+          _dashboard.apiDelete('mcp/servers/${Uri.encodeComponent(safeName)}'),
+    );
+  }
+
+  @override
+  Future<DesktopMcpProbeResult> testMcpServer(String name) {
+    final safeName = _validatedControlValue(name, maxLength: 160);
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiPost(
+        'mcp/servers/${Uri.encodeComponent(safeName)}/test',
+        timeout: const Duration(minutes: 1),
+      );
+      if (result['ok'] is! bool) {
+        throw const DesktopControlFailure(
+          DesktopControlFailureKind.invalidResponse,
+        );
+      }
+      return DesktopMcpProbeResult.fromJson(result);
+    });
+  }
+
+  @override
+  Future<DesktopMcpServerEntry> addMcpServer(McpServerDraft draft) {
+    _requireWritableControlConnection();
+    if (draft.url case final uri?) {
+      try {
+        TransportPrivacy.requireAllowed(uri.toString());
+      } on ArgumentError {
+        throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+      }
+    }
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiPost(
+        'mcp/servers',
+        body: draft.toRequestJson(),
+        timeout: const Duration(minutes: 1),
+      );
+      final parsed = DesktopMcpServerEntry.tryParse(result);
+      if (parsed == null) {
+        throw const DesktopControlFailure(
+          DesktopControlFailureKind.invalidResponse,
+        );
+      }
+      return parsed;
+    });
+  }
+
+  @override
+  Future<McpOAuthFlow> startMcpOAuth(String name) {
+    _requireWritableControlConnection();
+    final safeName = _validatedControlValue(name, maxLength: 160);
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiPost(
+        'mcp/servers/${Uri.encodeComponent(safeName)}/auth',
+        timeout: const Duration(seconds: 45),
+      );
+      return McpOAuthFlow.fromJson(result);
+    });
+  }
+
+  @override
+  Future<McpOAuthFlow> mcpOAuthFlow(String flowId) {
+    final safeFlow = _validatedControlValue(flowId, maxLength: 256);
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiGet(
+        'mcp/oauth/flows/${Uri.encodeComponent(safeFlow)}',
+      );
+      return McpOAuthFlow.fromJson(result);
+    });
+  }
+
+  @override
+  Future<WebhookSnapshot> webhookSnapshot() {
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiGet('webhooks');
+      return WebhookSnapshot.fromJson(result);
+    });
+  }
+
+  @override
+  Future<WebhookEnableResult> enableWebhooks() {
+    _requireWritableControlConnection();
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiPost(
+        'webhooks/enable',
+        timeout: const Duration(minutes: 1),
+      );
+      final parsed = WebhookEnableResult.fromJson(result);
+      if (!parsed.ok) {
+        throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+      }
+      return parsed;
+    });
+  }
+
+  @override
+  Future<WebhookCreateReceipt> createWebhook(WebhookDraft draft) {
+    _requireWritableControlConnection();
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiPost(
+        'webhooks',
+        body: draft.toRequestJson(),
+      );
+      return WebhookCreateReceipt.fromJson(result);
+    });
+  }
+
+  @override
+  Future<void> setWebhookEnabled(String name, bool enabled) {
+    _requireWritableControlConnection();
+    final safeName = _validatedWebhookName(name);
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiPut(
+        'webhooks/${Uri.encodeComponent(safeName)}/enabled',
+        body: {'enabled': enabled},
+      );
+      if (result['ok'] != true) {
+        throw const DesktopControlFailure(
+          DesktopControlFailureKind.invalidResponse,
+        );
+      }
+    });
+  }
+
+  @override
+  Future<void> removeWebhook(String name) {
+    _requireWritableControlConnection();
+    final safeName = _validatedWebhookName(name);
+    return _dashboardExtensionRequest(
+      () => _dashboard.apiDelete('webhooks/${Uri.encodeComponent(safeName)}'),
+    );
+  }
+
+  @override
+  Future<A2aServerCapability?> a2aServerCapability() {
+    return _dashboardExtensionRequest(() async {
+      final result = await _dashboard.apiGet('messaging/platforms');
+      return A2aServerCapability.tryFromPlatformsJson(result);
+    });
+  }
+
+  String _validatedWebhookName(String raw) {
+    final value = _validatedControlValue(raw, maxLength: 160).toLowerCase();
+    if (!RegExp(r'^[a-z0-9][a-z0-9_-]*$').hasMatch(value)) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    return value;
+  }
+
+  @override
+  Future<AgentCenterSnapshot> agentCenterSnapshot({
+    String runtimeSessionId = '',
+  }) async {
+    final runtime = runtimeSessionId.trim();
+    final safeRuntime = runtime.isEmpty
+        ? ''
+        : _validatedControlValue(runtime, maxLength: 512);
+    final snapshotsFuture = _controlRequest('spawn_tree.list', {
+      if (safeRuntime.isNotEmpty) 'session_id': safeRuntime,
+      'cross_session': safeRuntime.isEmpty,
+      'limit': 50,
+    }, capability: DesktopGatewayCapability.agentCenter);
+    final processesFuture = safeRuntime.isEmpty
+        ? Future<Map<String, dynamic>>.value(const {'processes': <Object>[]})
+        : _controlRequest('process.list', {
+            'session_id': safeRuntime,
+          }, capability: DesktopGatewayCapability.agentCenter);
+    final results = await Future.wait([snapshotsFuture, processesFuture]);
+    try {
+      if (results[0]['entries'] is! List || results[1]['processes'] is! List) {
+        return _invalidControlResponse(DesktopGatewayCapability.agentCenter);
+      }
+      return AgentCenterSnapshot.fromJson(
+        snapshots: results[0],
+        processes: results[1],
+      );
+    } catch (_) {
+      return _invalidControlResponse(DesktopGatewayCapability.agentCenter);
+    }
+  }
+
+  @override
+  Future<SpawnTreeDetail> loadSpawnTree(String opaquePath) async {
+    final result = await _controlRequest('spawn_tree.load', {
+      'path': _validatedControlValue(opaquePath, maxLength: 2048),
+    }, capability: DesktopGatewayCapability.agentCenter);
+    try {
+      if (result['subagents'] is! List) {
+        return _invalidControlResponse(DesktopGatewayCapability.agentCenter);
+      }
+      return SpawnTreeDetail.fromJson(result);
+    } catch (_) {
+      return _invalidControlResponse(DesktopGatewayCapability.agentCenter);
+    }
+  }
+
+  @override
+  Future<String> startBackgroundTask(
+    String runtimeSessionId,
+    String text,
+  ) async {
+    _requireWritableControlConnection();
+    final task = _validatedControlValue(text, maxLength: 2000);
+    final result = await _controlRequest(
+      'prompt.background',
+      {
+        'session_id': _validatedControlValue(runtimeSessionId, maxLength: 512),
+        'text': task,
+      },
+      timeout: const Duration(minutes: 2),
+      capability: DesktopGatewayCapability.agentCenter,
+    );
+    final taskId = result['task_id'];
+    if (taskId is! String || taskId.trim().isEmpty || taskId.length > 512) {
+      return _invalidControlResponse(DesktopGatewayCapability.agentCenter);
+    }
+    return taskId;
+  }
+
+  @override
+  bool get turnSideKnownUnsupported =>
+      !_capabilityCache.canAttempt(DesktopGatewayCapability.turnSide);
+
+  @override
+  bool get turnBranchKnownUnsupported =>
+      !_capabilityCache.canAttempt(DesktopGatewayCapability.turnBranch);
+
+  Future<String> _sideAgentRequest(
+    String method,
+    String runtimeSessionId,
+    String text,
+  ) async {
+    _requireWritableControlConnection();
+    final result = await _controlRequest(
+      method,
+      {
+        'session_id': _validatedControlValue(runtimeSessionId, maxLength: 512),
+        'text': _validatedControlValue(text, maxLength: 2000),
+      },
+      timeout: const Duration(seconds: 30),
+      capability: DesktopGatewayCapability.turnSide,
+    );
+    final taskId = parseSideAgentTaskId(result);
+    if (taskId == null) {
+      return _invalidControlResponse(DesktopGatewayCapability.turnSide);
+    }
+    return taskId;
+  }
+
+  /// The `task_id` of a `prompt.btw` / `prompt.background` result, or null
+  /// when the result does not carry a usable one.
+  static String? parseSideAgentTaskId(Map<String, dynamic> result) {
+    final taskId = result['task_id'];
+    if (taskId is! String || taskId.trim().isEmpty || taskId.length > 512) {
+      return null;
+    }
+    return taskId;
+  }
+
+  @override
+  Future<String> askSideQuestion(String runtimeSessionId, String text) =>
+      _sideAgentRequest('prompt.btw', runtimeSessionId, text);
+
+  @override
+  Future<String> startBackgroundPrompt(String runtimeSessionId, String text) =>
+      _sideAgentRequest('prompt.background', runtimeSessionId, text);
+
+  @override
+  Future<DesktopBranchResult> branchSession(
+    String runtimeSessionId, {
+    int? count,
+    String? name,
+    required String idempotencyKey,
+  }) => _branchRequest(
+    'session.branch',
+    runtimeSessionId,
+    count: count,
+    name: name,
+    idempotencyKey: idempotencyKey,
+    capability: DesktopGatewayCapability.turnBranch,
+  );
+
+  @override
+  Future<DesktopBranchResult> branchWholeSession(
+    String runtimeSessionId, {
+    String? name,
+    required String idempotencyKey,
+  }) => _branchRequest(
+    'session.branch_whole',
+    runtimeSessionId,
+    name: name,
+    idempotencyKey: idempotencyKey,
+    // A missing `branch_whole` is answered by `session.branch` without
+    // `count`, so it must not switch the whole feature off.
+    capability: null,
+  );
+
+  /// `session.branch_stored`: whole-session branch of a stored parent, copied
+  /// by the owning server (Desktop `forkBranch`, `use-session-actions`). The
+  /// same [idempotencyKey] returns the same child after a lost response.
+  Future<DesktopBranchResult> branchStoredSession(
+    String parentStoredId, {
+    String? profile,
+    required String idempotencyKey,
+  }) async {
+    _requireWritableControlConnection();
+    final owner = profile?.trim() ?? '';
+    final result = await _controlRequest('session.branch_stored', {
+      'cols': 96,
+      'source': 'desktop',
+      if (owner.isNotEmpty) 'profile': owner,
+      'parent_session_id': _validatedControlValue(
+        parentStoredId,
+        maxLength: 512,
+      ),
+      'idempotency_key': _validatedControlValue(idempotencyKey, maxLength: 128),
+    }, timeout: const Duration(seconds: 60));
+    return parseBranchResult(result) ?? _invalidControlResponse();
+  }
+
+  Future<DesktopBranchResult> _branchRequest(
+    String method,
+    String runtimeSessionId, {
+    int? count,
+    String? name,
+    required String idempotencyKey,
+    required DesktopGatewayCapability? capability,
+  }) async {
+    _requireWritableControlConnection();
+    if (count != null && count < 1) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    final cleanName = name?.trim();
+    final result = await _controlRequest(
+      method,
+      {
+        'session_id': _validatedControlValue(runtimeSessionId, maxLength: 512),
+        'count': ?count,
+        if (cleanName != null && cleanName.isNotEmpty)
+          'name': _validatedControlValue(cleanName, maxLength: 200),
+        'idempotency_key': _validatedControlValue(
+          idempotencyKey,
+          maxLength: 128,
+        ),
+      },
+      timeout: const Duration(seconds: 60),
+      capability: capability,
+    );
+    return parseBranchResult(result) ?? _invalidControlResponse(capability);
+  }
+
+  /// A `session.branch` / `session.branch_whole` result, or null when the
+  /// child ids are unusable. `messages`, `info` and `messages_omitted` are
+  /// optional and never read: the child chat loads its own transcript.
+  static DesktopBranchResult? parseBranchResult(Map<String, dynamic> result) {
+    final runtimeId = result['session_id'];
+    final storedId = result['stored_session_id'];
+    final title = result['title'];
+    final messageCount = result['message_count'];
+    if (runtimeId is! String ||
+        runtimeId.trim().isEmpty ||
+        storedId is! String ||
+        storedId.trim().isEmpty ||
+        storedId != storedId.trim() ||
+        storedId.length > 512) {
+      return null;
+    }
+    return DesktopBranchResult(
+      runtimeSessionId: runtimeId,
+      storedSessionId: storedId,
+      title: title is String ? title : '',
+      messageCount: messageCount is int && messageCount >= 0 ? messageCount : 0,
+    );
+  }
+
+  @override
+  Future<void> killBackgroundProcess(
+    String runtimeSessionId,
+    String processId,
+  ) async {
+    _requireWritableControlConnection();
+    await _controlRequest('process.kill', {
+      'session_id': _validatedControlValue(runtimeSessionId, maxLength: 512),
+      'process_id': _validatedControlValue(processId, maxLength: 512),
+    }, capability: DesktopGatewayCapability.agentCenter);
+  }
+
+  @override
+  Future<void> stopBackgroundProcesses(String runtimeSessionId) async {
+    _requireWritableControlConnection();
+    await _controlRequest('process.stop', {
+      'session_id': _validatedControlValue(runtimeSessionId, maxLength: 512),
+    });
+  }
+
+  @override
+  Future<ProjectTreeSnapshot> projectTree() async {
+    final result = await _controlRequest('projects.tree', const {
+      'preview_limit': 3,
+    }, capability: DesktopGatewayCapability.projectsCenter);
+    try {
+      if (result['projects'] is! List) {
+        return _invalidControlResponse(DesktopGatewayCapability.projectsCenter);
+      }
+      return ProjectTreeSnapshot.fromJson(result);
+    } catch (_) {
+      return _invalidControlResponse(DesktopGatewayCapability.projectsCenter);
+    }
+  }
+
+  @override
+  Future<ProjectNode?> projectSessions(String projectId) async {
+    final result = await _controlRequest('projects.project_sessions', {
+      'project_id': _validatedControlValue(projectId, maxLength: 2048),
+    }, capability: DesktopGatewayCapability.projectsCenter);
+    final rawProject = result['project'];
+    if (rawProject == null) return null;
+    if (rawProject is! Map) {
+      return _invalidControlResponse(DesktopGatewayCapability.projectsCenter);
+    }
+    try {
+      return ProjectNode.tryParse(Map<String, dynamic>.from(rawProject)) ??
+          _invalidControlResponse(DesktopGatewayCapability.projectsCenter);
+    } catch (_) {
+      return _invalidControlResponse(DesktopGatewayCapability.projectsCenter);
+    }
+  }
+
+  @override
+  Future<void> setSessionWorkingDirectory(
+    String runtimeSessionId,
+    String path,
+  ) async {
+    _requireWritableControlConnection();
+    final result = await _controlRequest('session.cwd.set', {
+      'session_id': _validatedControlValue(runtimeSessionId, maxLength: 512),
+      'cwd': _validatedControlValue(path, maxLength: 4096),
+    }, capability: DesktopGatewayCapability.projectsCenter);
+    if (result['cwd'] is! String) {
+      _invalidControlResponse(DesktopGatewayCapability.projectsCenter);
+    }
+  }
+
+  // ── Project management (same RPCs / REST routes as Hermes Desktop) ──────
+
+  @override
+  bool get projectWritesAllowed => !_connection.readOnly;
+
+  /// Project ids are `p_<hex>` for saved projects; a path never reaches the
+  /// write RPCs (auto projects are adopted through `projects.create`).
+  String _savedProjectId(String id) {
+    final value = _validatedControlValue(id, maxLength: 128);
+    if (!RegExp(r'^p_[A-Za-z0-9_-]+$').hasMatch(value)) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    return value;
+  }
+
+  static final RegExp _projectColorPattern = RegExp(
+    r'^(#[0-9A-Fa-f]{3,8}|hsl\(\d{1,3} \d{1,3}% \d{1,3}%\))$',
+  );
+  static final RegExp _projectIconPattern = RegExp(r'^[a-z][a-z0-9-]{0,40}$');
+
+  String _projectAppearanceValue(String value, RegExp pattern) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return '';
+    if (!pattern.hasMatch(trimmed)) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    return trimmed;
+  }
+
+  String _projectName(String name) =>
+      _validatedControlValue(name, maxLength: 120);
+
+  @override
+  Future<void> updateProject(
+    String id, {
+    String? name,
+    String? color,
+    String? icon,
+  }) async {
+    _requireWritableControlConnection();
+    final result = await _controlRequest('projects.update', {
+      'id': _savedProjectId(id),
+      if (name != null) 'name': _projectName(name),
+      if (color != null)
+        'color': _projectAppearanceValue(color, _projectColorPattern),
+      if (icon != null)
+        'icon': _projectAppearanceValue(icon, _projectIconPattern),
+    }, capability: DesktopGatewayCapability.projectManagement);
+    if (result['project'] is! Map) {
+      _invalidControlResponse(DesktopGatewayCapability.projectManagement);
+    }
+  }
+
+  @override
+  Future<void> createProject({
+    required String name,
+    required String primaryPath,
+    String? color,
+    String? icon,
+  }) async {
+    _requireWritableControlConnection();
+    final path = _validatedControlValue(primaryPath, maxLength: 4096);
+    final safeColor = color == null
+        ? ''
+        : _projectAppearanceValue(color, _projectColorPattern);
+    final safeIcon = icon == null
+        ? ''
+        : _projectAppearanceValue(icon, _projectIconPattern);
+    final result = await _controlRequest('projects.create', {
+      'name': _projectName(name),
+      'folders': [path],
+      'primary_path': path,
+      if (safeColor.isNotEmpty) 'color': safeColor,
+      if (safeIcon.isNotEmpty) 'icon': safeIcon,
+      'use': false,
+    }, capability: DesktopGatewayCapability.projectManagement);
+    if (result['project'] is! Map) {
+      _invalidControlResponse(DesktopGatewayCapability.projectManagement);
+    }
+  }
+
+  @override
+  Future<void> deleteProject(String id) async {
+    _requireWritableControlConnection();
+    final result = await _controlRequest('projects.delete', {
+      'id': _savedProjectId(id),
+    }, capability: DesktopGatewayCapability.projectManagement);
+    if (result['projects'] is! List) {
+      _invalidControlResponse(DesktopGatewayCapability.projectManagement);
+    }
+  }
+
+  @override
+  Future<void> setActiveProject(String id) async {
+    _requireWritableControlConnection();
+    await _controlRequest('projects.set_active', {
+      'id': _savedProjectId(id),
+    }, capability: DesktopGatewayCapability.projectManagement);
+  }
+
+  // ── Project creation (Desktop project dialog / "Open folder…") ─────────
+
+  @override
+  bool get projectCreationKnownUnsupported =>
+      !_capabilityCache.canAttempt(DesktopGatewayCapability.projectManagement);
+
+  @override
+  Future<ProjectCreated> createProjectFromFolders({
+    required String name,
+    required List<String> folders,
+    String? primaryPath,
+    bool use = true,
+  }) async {
+    _requireWritableControlConnection();
+    final paths = [
+      for (final folder in folders) _validatedProjectFolder(folder),
+    ];
+    if (paths.isEmpty) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    final primary = primaryPath == null
+        ? null
+        : _validatedProjectFolder(primaryPath);
+    final result = await _controlRequest('projects.create', {
+      'name': _projectName(name),
+      'folders': paths,
+      'primary_path': ?primary,
+      'use': use,
+    }, capability: DesktopGatewayCapability.projectManagement);
+    final project = result['project'];
+    if (project is! Map || project['id'] is! String) {
+      _invalidControlResponse(DesktopGatewayCapability.projectManagement);
+    }
+    String folderOf(Object? raw) =>
+        raw is Map && raw['path'] is String ? (raw['path'] as String) : '';
+    final rawFolders = project['folders'];
+    final stored = project['primary_path'];
+    return ProjectCreated(
+      id: project['id'] as String,
+      primaryPath: stored is String && stored.trim().isNotEmpty
+          ? stored.trim()
+          : rawFolders is List && rawFolders.isNotEmpty
+          ? folderOf(rawFolders.first)
+          : primary ?? paths.first,
+    );
+  }
+
+  /// A server folder for `projects.create` / `projects.add_folder`: trimmed,
+  /// non-blank, at most 4096 chars and free of every control character
+  /// (newlines and tabs included, which the generic check lets through).
+  String _validatedProjectFolder(String folder) {
+    final value = _validatedControlValue(folder, maxLength: 4096);
+    if (value.contains(RegExp(r'[\x00-\x1F\x7F]'))) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    return value;
+  }
+
+  @override
+  Future<void> addProjectFolder(String id, String path) async {
+    _requireWritableControlConnection();
+    final result = await _controlRequest('projects.add_folder', {
+      'id': _savedProjectId(id),
+      'path': _validatedProjectFolder(path),
+      'is_primary': false,
+    }, capability: DesktopGatewayCapability.projectManagement);
+    if (result['project'] is! Map) {
+      _invalidControlResponse(DesktopGatewayCapability.projectManagement);
+    }
+  }
+
+  @override
+  Future<String?> projectDefaultFolder() async {
+    try {
+      final result = await _dashboardExtensionRequest(
+        () => _dashboard.apiGet('fs/default-cwd'),
+      );
+      final cwd = result['cwd'];
+      return cwd is String && isAbsoluteServerPath(cwd)
+          ? normalizeServerPath(cwd)
+          : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> scanProjectRepos() async {
+    try {
+      // The scan rewrites host state, so a read-only connection skips it.
+      _requireWritableControlConnection();
+      await _controlRequest('projects.discover_repos', {'scan': true});
+    } catch (_) {
+      // Best effort, like Desktop: the last known tree stays on screen.
+    }
+  }
+
+  /// Re-homes a STORED session's workspace (`session.workspace.move`): the
+  /// git branch and root are replaced and a live agent follows. [sessionKey]
+  /// is the stored id, never the runtime one. It is a long handler on the
+  /// server (git probes on an arbitrary mount), so it waits generously, and a
+  /// dropped socket fails it without a retry. Failures are sanitized:
+  /// 4007 unavailable, -32601 unsupported, 4016/4017/5007 rejected.
+  Future<SessionWorkspaceMoveResult> moveSessionWorkspace({
+    required String sessionKey,
+    required String cwd,
+    String? profile,
+  }) async {
+    _requireWritableControlConnection();
+    final key = _validatedControlValue(sessionKey, maxLength: 512);
+    final folder = _validatedControlValue(cwd, maxLength: 4096);
+    final owner = profile?.trim() ?? '';
+    final result = await _controlRequest('session.workspace.move', {
+      'session_key': key,
+      'cwd': folder,
+      if (owner.isNotEmpty) 'profile': owner,
+    }, timeout: const Duration(minutes: 3));
+    return SessionWorkspaceMoveResult.tryParse(result) ??
+        _invalidControlResponse();
+  }
+
+  Future<T> _projectGitRequest<T>(
+    Future<T> Function() request, {
+    DesktopGatewayCapability capability =
+        DesktopGatewayCapability.projectWorktrees,
+  }) async {
+    if (!_capabilityCache.canAttempt(capability)) {
+      throw const DesktopControlFailure(
+        DesktopControlFailureKind.unsupported,
+        code: 404,
+      );
+    }
+    try {
+      final value = await _dashboardExtensionRequest(request);
+      _capabilityCache.mark(
+        capability,
+        DesktopGatewayCapabilityState.supported,
+      );
+      return value;
+    } on DesktopControlFailure catch (failure) {
+      if (failure.kind == DesktopControlFailureKind.unsupported) {
+        _capabilityCache.mark(
+          capability,
+          DesktopGatewayCapabilityState.unsupported,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  /// True only once the server has answered a `session.foreign.*` call on
+  /// this connection (see [confirmForeignSessions]); an unconfirmed server, a
+  /// -32601 one and a read-only connection all keep the import entry hidden.
+  bool get foreignSessionsAvailable =>
+      !_connection.readOnly &&
+      _capabilityCache.state(DesktopGatewayCapability.foreignSessions) ==
+          DesktopGatewayCapabilityState.supported;
+
+  /// Asks for the first page of foreign sessions once, to learn whether the
+  /// server has the methods. Nothing is imported and errors are swallowed.
+  Future<bool> confirmForeignSessions() async {
+    if (_connection.readOnly) return false;
+    if (_capabilityCache.state(DesktopGatewayCapability.foreignSessions) ==
+        DesktopGatewayCapabilityState.unknown) {
+      try {
+        await foreignList();
+      } catch (_) {}
+    }
+    return foreignSessionsAvailable;
+  }
+
+  static const Duration _foreignTimeout = Duration(seconds: 60);
+
+  Map<String, dynamic> _foreignParams(
+    String? profile,
+    Map<String, Object?> rest,
+  ) {
+    final owner = profile?.trim() ?? '';
+    return {
+      if (owner.isNotEmpty) 'profile': owner,
+      for (final entry in rest.entries)
+        if (entry.value != null) entry.key: entry.value,
+    };
+  }
+
+  /// Foreign ids are opaque handles: sent exactly as received.
+  String _foreignHandle(String id) {
+    if (id.isEmpty || id.length > 1024) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    return id;
+  }
+
+  /// False once `message.react` answered -32601 on this connection (or for a
+  /// read-only one): reactions are then not offered.
+  /// True only once the server has answered `message.react` (a reaction, or
+  /// the probe's invalid-params refusal); unknown stays hidden.
+  @override
+  bool get messageReactionsAvailable =>
+      !_connection.readOnly &&
+      _capabilityCache.state(DesktopGatewayCapability.messageReactions) ==
+          DesktopGatewayCapabilityState.supported;
+
+  Future<bool>? _reactionProbe;
+
+  /// One probe per connection: chats that ask while it is in flight share its
+  /// answer instead of sending the same request again.
+  @override
+  Future<bool> confirmMessageReactions(String runtimeSessionId) {
+    if (_connection.readOnly) return Future.value(false);
+    if (_capabilityCache.state(DesktopGatewayCapability.messageReactions) !=
+        DesktopGatewayCapabilityState.unknown) {
+      return Future.value(messageReactionsAvailable);
+    }
+    return _reactionProbe ??= _probeMessageReactions(
+      runtimeSessionId,
+    ).whenComplete(() => _reactionProbe = null);
+  }
+
+  Future<bool> _probeMessageReactions(String runtimeSessionId) async {
+    try {
+      await _request('message.react', {
+        'session_id': _validatedControlValue(runtimeSessionId, maxLength: 512),
+      });
+      _capabilityCache.mark(
+        DesktopGatewayCapability.messageReactions,
+        DesktopGatewayCapabilityState.supported,
+      );
+    } on TuiGatewayRpcError catch (error) {
+      if (error.code == -32601) {
+        _capabilityCache.mark(
+          DesktopGatewayCapability.messageReactions,
+          DesktopGatewayCapabilityState.unsupported,
+        );
+      } else if (error.code == -32602 || error.code == 4023) {
+        // -32602: invalid params; 4023: the agent's own refusal when neither
+        // row_id nor newest_role is given. Either means the method answered.
+        _capabilityCache.mark(
+          DesktopGatewayCapability.messageReactions,
+          DesktopGatewayCapabilityState.supported,
+        );
+      }
+    } catch (_) {
+      // Nothing learned.
+    }
+    return messageReactionsAvailable;
+  }
+
+  /// `config.set {key, value}` for a renderer switch the agent must see
+  /// (`display.message_reactions`). Profile-scoped like Desktop's mirror.
+  @override
+  Future<void> setDisplayToggle(
+    String key,
+    bool value, {
+    String? profile,
+  }) async {
+    if (key != kMessageReactionsDisplayKey) {
+      throw ArgumentError('unsupported display toggle');
+    }
+    _requireWritableControlConnection();
+    final owner = profile?.trim() ?? '';
+    await _request('config.set', {
+      'key': key,
+      'value': value ? 'true' : 'false',
+      if (owner.isNotEmpty) 'profile': owner,
+    });
+  }
+
+  @override
+  Future<({int rowId, List<MessageReaction> reactions})> reactToMessage(
+    String runtimeSessionId, {
+    int? rowId,
+    String? newestRole,
+    String? emoji,
+    String? profile,
+  }) async {
+    if (rowId == null && (newestRole == null || newestRole.isEmpty)) {
+      throw ArgumentError('a reaction needs a row id or newest_role');
+    }
+    _requireWritableControlConnection();
+    final owner = profile?.trim() ?? '';
+    final result = await _controlRequest('message.react', {
+      'session_id': _validatedControlValue(runtimeSessionId, maxLength: 512),
+      if (owner.isNotEmpty) 'profile': owner,
+      if (rowId != null) 'row_id': rowId else 'newest_role': newestRole,
+      'emoji': ?emoji,
+      'author': 'user',
+    }, capability: DesktopGatewayCapability.messageReactions);
+    final id = result['row_id'];
+    final list = result['reactions'];
+    if (id is! int || list is! List) {
+      _invalidControlResponse(DesktopGatewayCapability.messageReactions);
+    }
+    return (rowId: id, reactions: parseReactions(list));
+  }
+
+  @override
+  Future<ForeignSessionPage> foreignList({
+    String? profile,
+    ForeignSource? source,
+    int? offset,
+  }) async {
+    final result = await _controlRequest(
+      'session.foreign.list',
+      _foreignParams(profile, {'source': source?.wire, 'offset': offset}),
+      timeout: _foreignTimeout,
+      capability: DesktopGatewayCapability.foreignSessions,
+    );
+    return ForeignSessionPage.fromJson(result);
+  }
+
+  @override
+  Future<ForeignPreview> foreignPreview(String id, {String? profile}) async {
+    final result = await _controlRequest(
+      'session.foreign.preview',
+      _foreignParams(profile, {'id': _foreignHandle(id)}),
+      timeout: _foreignTimeout,
+      capability: DesktopGatewayCapability.foreignSessions,
+    );
+    return ForeignPreview.fromJson(result);
+  }
+
+  @override
+  Future<ForeignImportResult> foreignImport(
+    String id, {
+    String? profile,
+  }) async {
+    _requireWritableControlConnection();
+    final result = await _controlRequest(
+      'session.foreign.import',
+      _foreignParams(profile, {'id': _foreignHandle(id)}),
+      timeout: _foreignTimeout,
+      capability: DesktopGatewayCapability.foreignSessions,
+    );
+    final parsed = ForeignImportResult.tryParse(result);
+    if (parsed == null) {
+      _invalidControlResponse(DesktopGatewayCapability.foreignSessions);
+    }
+    return parsed;
+  }
+
+  // Git review: Desktop's review pane over `/api/git/review/*`.
+
+  /// A diff past this budget is not loaded (the screen says it is too large).
+  static const int _gitDiffMaxBytes = 512 * 1024;
+
+  /// A commit runs status, identity, add and commit on the server, each with
+  /// its own 30 s limit there (hooks included).
+  static const Duration _gitCommitTimeout = Duration(minutes: 2);
+
+  /// Reads, diffs and stage / unstage: Desktop's fetch deadline
+  /// (`apps/desktop/electron/hardening.ts`, `DEFAULT_FETCH_TIMEOUT_MS`), the
+  /// same 30 s each git step has on the server (`hermes_cli/web_git.py`).
+  /// The Dashboard client's 10 s default gave up on a large repository
+  /// that Desktop reads, and could report a failed `git add` that the
+  /// server then finished.
+  static const Duration gitRouteTimeout = Duration(seconds: 30);
+
+  @override
+  bool get gitWritesAllowed => !_connection.readOnly;
+
+  @override
+  bool get gitReviewKnownUnsupported =>
+      !_capabilityCache.canAttempt(DesktopGatewayCapability.gitReview);
+
+  /// A refused git action (400) keeps only its classified reason
+  /// ([GitActionFailure]); everything else maps like the other git routes.
+  Future<T> _gitReviewRequest<T>(Future<T> Function() request) async {
+    GitActionProblem? problem;
+    try {
+      return await _projectGitRequest(() async {
+        try {
+          return await request();
+        } on DashboardHttpException catch (error) {
+          if (error.statusCode == 400) {
+            problem = classifyGitFailureDetail(error.body);
+          }
+          rethrow;
+        }
+      }, capability: DesktopGatewayCapability.gitReview);
+    } on DesktopControlFailure catch (failure) {
+      final reason = problem;
+      if (reason != null &&
+          failure.kind == DesktopControlFailureKind.rejected) {
+        throw GitActionFailure(reason);
+      }
+      rethrow;
+    }
+  }
+
+  String _gitPath(String repoPath) =>
+      _validatedControlValue(repoPath, maxLength: 4096);
+
+  @override
+  Future<GitRepoStatus?> gitRepoStatus(String repoPath) {
+    final endpoint = _gitQuery('status', repoPath);
+    return _gitReviewRequest(
+      () async => GitRepoStatus.tryParse(
+        await _dashboard.apiGetWithin(endpoint, timeout: gitRouteTimeout),
+      ),
+    );
+  }
+
+  @override
+  Future<GitReviewList> gitReviewList(
+    String repoPath, {
+    GitReviewScope scope = GitReviewScope.uncommitted,
+  }) {
+    final endpoint =
+        '${_gitQuery('review/list', repoPath)}'
+        '&scope=${Uri.encodeQueryComponent(scope.wire)}';
+    return _gitReviewRequest(
+      () async => GitReviewList.fromJson(
+        await _dashboard.apiGetWithin(endpoint, timeout: gitRouteTimeout),
+      ),
+    );
+  }
+
+  @override
+  Future<GitReviewDiff> gitReviewDiff(
+    String repoPath,
+    GitReviewFile file, {
+    GitReviewScope scope = GitReviewScope.uncommitted,
+  }) {
+    final path = _validatedControlValue(file.path, maxLength: 4096);
+    final endpoint =
+        '${_gitQuery('review/diff', repoPath)}'
+        '&file=${Uri.encodeQueryComponent(path)}'
+        '&scope=${Uri.encodeQueryComponent(scope.wire)}'
+        '&staged=${file.staged}';
+    return _gitReviewRequest(() async {
+      final Map<String, dynamic> result;
+      try {
+        result = await _dashboard.apiGetBoundedWithin(
+          endpoint,
+          maxBytes: _gitDiffMaxBytes,
+          timeout: gitRouteTimeout,
+        );
+      } on SessionTranscriptTooLargeException {
+        return const GitReviewDiff(tooLarge: true);
+      }
+      final diff = result['diff'];
+      return parseGitDiff(diff is String ? diff : '');
+    });
+  }
+
+  @override
+  Future<void> gitStage(String repoPath, String file) =>
+      _gitFileMutation('review/stage', repoPath, file);
+
+  @override
+  Future<void> gitUnstage(String repoPath, String file) =>
+      _gitFileMutation('review/unstage', repoPath, file);
+
+  Future<void> _gitFileMutation(String route, String repoPath, String file) {
+    _requireWritableControlConnection();
+    final body = {
+      'path': _gitPath(repoPath),
+      'file': _validatedControlValue(file, maxLength: 4096),
+    };
+    return _gitReviewRequest(() async {
+      await _dashboard.apiPost(
+        'git/$route',
+        body: body,
+        timeout: gitRouteTimeout,
+      );
+    });
+  }
+
+  @override
+  Future<void> gitCommit(String repoPath, String message) {
+    _requireWritableControlConnection();
+    final body = {
+      'path': _gitPath(repoPath),
+      'message': _validatedControlValue(message, maxLength: 20000),
+    };
+    return _gitReviewRequest(() async {
+      await _dashboard.apiPost(
+        'git/review/commit',
+        body: body,
+        timeout: _gitCommitTimeout,
+      );
+    });
+  }
+
+  // Git hub: the rest of `/api/git/*` (`hermes_cli/web_routers/git.py`),
+  // under the same capability flag and error mapping as the review pane.
+
+  @override
+  Future<GitGhAuth> gitGhAuth({bool refresh = false}) {
+    final endpoint = refresh ? 'git/gh-auth?refresh=true' : 'git/gh-auth';
+    return _gitReviewRequest(
+      () async => GitGhAuth.fromJson(
+        await _dashboard.apiGetWithin(endpoint, timeout: gitRouteTimeout),
+      ),
+    );
+  }
+
+  @override
+  Future<List<GitWorktree>> gitWorktrees(String repoPath) {
+    final endpoint = _gitQuery('worktrees', repoPath);
+    return _gitReviewRequest(() async {
+      final result = await _dashboard.apiGetWithin(
+        endpoint,
+        timeout: gitRouteTimeout,
+      );
+      final rows = result['worktrees'];
+      return List.unmodifiable([
+        if (rows is List)
+          for (final row in rows) ?GitWorktree.tryParse(row),
+      ]);
+    });
+  }
+
+  @override
+  Future<List<ProjectGitBranch>> gitBranches(String repoPath) {
+    final endpoint = _gitQuery('branches', repoPath);
+    return _gitReviewRequest(() async {
+      final result = await _dashboard.apiGetWithin(
+        endpoint,
+        timeout: gitRouteTimeout,
+      );
+      return _extensionRows(result['branches'])
+          .map(ProjectGitBranch.tryParse)
+          .whereType<ProjectGitBranch>()
+          .toList(growable: false);
+    });
+  }
+
+  @override
+  Future<List<ProjectGitBaseBranch>> gitBaseBranches(String repoPath) {
+    final endpoint = _gitQuery('base-branches', repoPath);
+    return _gitReviewRequest(() async {
+      final result = await _dashboard.apiGetWithin(
+        endpoint,
+        timeout: gitRouteTimeout,
+      );
+      return _extensionRows(result['branches'])
+          .map(ProjectGitBaseBranch.tryParse)
+          .whereType<ProjectGitBaseBranch>()
+          .toList(growable: false);
+    });
+  }
+
+  @override
+  Future<GitCommitContext> gitCommitContext(String repoPath) {
+    final endpoint = _gitQuery('review/commit-context', repoPath);
+    return _gitReviewRequest(() async {
+      try {
+        return GitCommitContext.fromJson(
+          await _dashboard.apiGetBoundedWithin(
+            endpoint,
+            maxBytes: _gitDiffMaxBytes,
+            timeout: gitRouteTimeout,
+          ),
+        );
+      } on SessionTranscriptTooLargeException {
+        // The server caps the diff at 120k characters; past the app's
+        // budget the help is simply not shown.
+        return const GitCommitContext();
+      }
+    });
+  }
+
+  @override
+  Future<GitShipInfo> gitShipInfo(String repoPath) {
+    final endpoint = _gitQuery('review/ship-info', repoPath);
+    return _gitReviewRequest(
+      () async => GitShipInfo.fromJson(
+        await _dashboard.apiGetWithin(endpoint, timeout: gitRouteTimeout),
+      ),
+    );
+  }
+
+  @override
+  Future<PullRequestList> gitPullRequests(
+    String repoPath, {
+    required List<String> branches,
+  }) {
+    final body = {
+      'path': _gitPath(repoPath),
+      'branches': [
+        for (final b in branches) _validatedControlValue(b, maxLength: 512),
+      ],
+      'numbers': const <int>[],
+    };
+    return _gitReviewRequest(
+      () async => PullRequestList.fromJson(
+        await _dashboard.apiPost(
+          'git/review/pr-list',
+          body: body,
+          timeout: gitRouteTimeout,
+        ),
+      ),
+    );
+  }
+
+  /// `stage` / `unstage` / `revert` on the whole tree: the body carries
+  /// only the folder (the server then runs `-A` / `HEAD` / `.`).
+  Future<void> _gitTreeMutation(
+    String route,
+    String repoPath, {
+    Duration timeout = gitRouteTimeout,
+  }) {
+    _requireWritableControlConnection();
+    final body = {'path': _gitPath(repoPath)};
+    return _gitReviewRequest(() async {
+      await _dashboard.apiPost('git/$route', body: body, timeout: timeout);
+    });
+  }
+
+  @override
+  Future<void> gitStageAll(String repoPath) =>
+      _gitTreeMutation('review/stage', repoPath);
+
+  @override
+  Future<void> gitUnstageAll(String repoPath) =>
+      _gitTreeMutation('review/unstage', repoPath);
+
+  @override
+  Future<void> gitRevert(String repoPath, {String? file}) => file == null
+      ? _gitTreeMutation('review/revert', repoPath)
+      : _gitFileMutation('review/revert', repoPath, file);
+
+  @override
+  Future<void> gitCommitAndPush(String repoPath, String message) {
+    _requireWritableControlConnection();
+    final body = {
+      'path': _gitPath(repoPath),
+      'message': _validatedControlValue(message, maxLength: 20000),
+      'push': true,
+    };
+    return _gitReviewRequest(() async {
+      await _dashboard.apiPost(
+        'git/review/commit',
+        body: body,
+        timeout: _gitCommitTimeout,
+      );
+    });
+  }
+
+  @override
+  Future<void> gitPush(String repoPath) =>
+      _gitTreeMutation('review/push', repoPath, timeout: _gitCommitTimeout);
+
+  @override
+  Future<GitCreatedPullRequest> gitCreatePullRequest(String repoPath) {
+    _requireWritableControlConnection();
+    final body = {'path': _gitPath(repoPath)};
+    return _gitReviewRequest(
+      () async => GitCreatedPullRequest.fromJson(
+        await _dashboard.apiPost(
+          'git/review/create-pr',
+          body: body,
+          timeout: _gitCommitTimeout,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<ProjectWorktreeResult> gitWorktreeAdd(
+    String repoPath, {
+    String? branch,
+    String? base,
+    String? existingBranch,
+  }) {
+    _requireWritableControlConnection();
+    final path = _gitPath(repoPath);
+    String? ref(String? value) {
+      final trimmed = value?.trim() ?? '';
+      if (trimmed.isEmpty) return null;
+      return _validatedControlValue(trimmed, maxLength: 255);
+    }
+
+    final newBranch = ref(branch);
+    final existing = ref(existingBranch);
+    if (newBranch == null && existing == null) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    final body = <String, dynamic>{
+      'path': path,
+      if (newBranch != null) ...{'name': newBranch, 'branch': newBranch},
+      'base': ?ref(base),
+      'existingBranch': ?existing,
+    };
+    return _gitReviewRequest(() async {
+      final result = await _dashboard.apiPost(
+        'git/worktree/add',
+        body: body,
+        timeout: _gitCommitTimeout,
+      );
+      final created = result['path'];
+      if (created is! String || created.trim().isEmpty) {
+        throw const DesktopControlFailure(
+          DesktopControlFailureKind.invalidResponse,
+        );
+      }
+      final createdBranch = result['branch'];
+      return ProjectWorktreeResult(
+        path: created.trim(),
+        branch: createdBranch is String ? createdBranch : (newBranch ?? ''),
+      );
+    });
+  }
+
+  @override
+  Future<void> gitWorktreeRemove(
+    String repoPath,
+    String worktreePath, {
+    bool force = false,
+  }) {
+    _requireWritableControlConnection();
+    final body = {
+      'path': _gitPath(repoPath),
+      'worktreePath': _validatedControlValue(worktreePath, maxLength: 4096),
+      'force': force,
+    };
+    return _gitReviewRequest(() async {
+      await _dashboard.apiPost(
+        'git/worktree/remove',
+        body: body,
+        timeout: gitRouteTimeout,
+      );
+    });
+  }
+
+  @override
+  Future<void> gitBranchSwitch(String repoPath, String branch) {
+    _requireWritableControlConnection();
+    final body = {
+      'path': _gitPath(repoPath),
+      'branch': _validatedControlValue(branch, maxLength: 255),
+    };
+    return _gitReviewRequest(() async {
+      await _dashboard.apiPost(
+        'git/branch/switch',
+        body: body,
+        timeout: gitRouteTimeout,
+      );
+    });
+  }
+
+  @override
+  Future<PullRequestList> prList(
+    String repoPath, {
+    List<String> branches = const [],
+    List<int> numbers = const [],
+  }) {
+    final body = {
+      'path': _validatedControlValue(repoPath, maxLength: 4096),
+      'branches': [
+        for (final b in branches) _validatedControlValue(b, maxLength: 512),
+      ],
+      'numbers': numbers,
+    };
+    return _projectGitRequest(
+      () async => PullRequestList.fromJson(
+        await _dashboard.apiPost('git/review/pr-list', body: body),
+      ),
+      capability: DesktopGatewayCapability.projectPullRequests,
+    );
+  }
+
+  @override
+  Future<PullRequestScan> scanSessionPullRequests(List<String> ids) {
+    final body = {
+      'ids': [
+        for (final id in ids) _validatedControlValue(id, maxLength: 1024),
+      ],
+    };
+    return _projectGitRequest(
+      () async => PullRequestScan.fromJson(
+        await _dashboard.apiPost('profiles/sessions/pull-requests', body: body),
+      ),
+      capability: DesktopGatewayCapability.sessionPullRequestScan,
+    );
+  }
+
+  String _gitQuery(String route, String repoPath) {
+    final path = _validatedControlValue(repoPath, maxLength: 4096);
+    return 'git/$route?path=${Uri.encodeQueryComponent(path)}';
+  }
+
+  @override
+  Future<List<ProjectGitBaseBranch>> listBaseBranches(String repoPath) {
+    final endpoint = _gitQuery('base-branches', repoPath);
+    return _projectGitRequest(() async {
+      final result = await _dashboard.apiGet(endpoint);
+      return _extensionRows(result['branches'])
+          .map(ProjectGitBaseBranch.tryParse)
+          .whereType<ProjectGitBaseBranch>()
+          .toList(growable: false);
+    });
+  }
+
+  @override
+  Future<List<ProjectGitBranch>> listBranches(String repoPath) {
+    final endpoint = _gitQuery('branches', repoPath);
+    return _projectGitRequest(() async {
+      final result = await _dashboard.apiGet(endpoint);
+      return _extensionRows(result['branches'])
+          .map(ProjectGitBranch.tryParse)
+          .whereType<ProjectGitBranch>()
+          .toList(growable: false);
+    });
+  }
+
+  @override
+  Future<ProjectWorktreeResult> addWorktree(
+    String repoPath, {
+    String? branch,
+    String? base,
+    String? existingBranch,
+  }) {
+    _requireWritableControlConnection();
+    final path = _validatedControlValue(repoPath, maxLength: 4096);
+    String? ref(String? value) {
+      final trimmed = value?.trim() ?? '';
+      if (trimmed.isEmpty) return null;
+      return _validatedControlValue(trimmed, maxLength: 255);
+    }
+
+    final newBranch = ref(branch);
+    final body = <String, dynamic>{
+      'path': path,
+      if (newBranch != null) ...{'name': newBranch, 'branch': newBranch},
+      'base': ?ref(base),
+      'existingBranch': ?ref(existingBranch),
+    };
+    if (newBranch == null && body['existingBranch'] == null) {
+      throw const DesktopControlFailure(DesktopControlFailureKind.rejected);
+    }
+    return _projectGitRequest(() async {
+      final result = await _dashboard.apiPost(
+        'git/worktree/add',
+        body: body,
+        timeout: const Duration(minutes: 2),
+      );
+      final created = result['path'];
+      if (created is! String || created.trim().isEmpty) {
+        throw const DesktopControlFailure(
+          DesktopControlFailureKind.invalidResponse,
+        );
+      }
+      final createdBranch = result['branch'];
+      return ProjectWorktreeResult(
+        path: created.trim(),
+        branch: createdBranch is String ? createdBranch : (newBranch ?? ''),
+      );
+    });
+  }
+
+  @override
+  Future<void> switchBranch(String repoPath, String branch) {
+    _requireWritableControlConnection();
+    final body = {
+      'path': _validatedControlValue(repoPath, maxLength: 4096),
+      'branch': _validatedControlValue(branch, maxLength: 255),
+    };
+    return _projectGitRequest(() async {
+      await _dashboard.apiPost('git/branch/switch', body: body);
+    });
+  }
+
+  String _fsQuery(String route, String path) {
+    final value = _validatedControlValue(path, maxLength: 4096);
+    return 'fs/$route?path=${Uri.encodeQueryComponent(value)}';
+  }
+
+  @override
+  bool get projectFilesKnownUnsupported =>
+      !_capabilityCache.canAttempt(DesktopGatewayCapability.projectFiles);
+
+  @override
+  Future<ProjectDirectoryListing> listProjectDirectory(String path) async {
+    final endpoint = _fsQuery('list', path);
+    if (projectFilesKnownUnsupported) {
+      throw const DesktopControlFailure(
+        DesktopControlFailureKind.unsupported,
+        code: 404,
+      );
+    }
+    try {
+      final listing = await _dashboardExtensionRequest(() async {
+        final result = await _dashboard.apiGet(endpoint);
+        final raw = result['entries'];
+        if (raw is! List) {
+          throw const DesktopControlFailure(
+            DesktopControlFailureKind.invalidResponse,
+          );
+        }
+        final error = result['error'];
+        return ProjectDirectoryListing(
+          entries: raw
+              .take(projectFsListingLimit)
+              .map(ProjectFsEntry.tryParse)
+              .whereType<ProjectFsEntry>()
+              .toList(growable: false),
+          error: error is String && error.trim().isNotEmpty ? error : null,
+        );
+      });
+      _capabilityCache.mark(
+        DesktopGatewayCapability.projectFiles,
+        DesktopGatewayCapabilityState.supported,
+      );
+      return listing;
+    } on DesktopControlFailure catch (failure) {
+      if (failure.kind == DesktopControlFailureKind.unsupported) {
+        _capabilityCache.mark(
+          DesktopGatewayCapability.projectFiles,
+          DesktopGatewayCapabilityState.unsupported,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  /// File reads never gate the capability: on these routes a 404 means the
+  /// file vanished, not that the server lacks them.
+  Future<T> _projectFileRead<T>(Future<T> Function() request) async {
+    try {
+      return await _dashboardExtensionRequest(request);
+    } on DesktopControlFailure catch (failure) {
+      if (failure.kind == DesktopControlFailureKind.unsupported) {
+        throw DesktopControlFailure(
+          DesktopControlFailureKind.unavailable,
+          code: failure.code,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<ProjectFilePreview> readProjectFileText(String path) async {
+    final endpoint = _fsQuery('read-text', path);
+    return _projectFileRead(() async {
+      final result = await _dashboard.apiGet(endpoint);
+      final text = result['text'];
+      if (text is! String) {
+        throw const DesktopControlFailure(
+          DesktopControlFailureKind.invalidResponse,
+        );
+      }
+      final size = result['byteSize'];
+      final mime = result['mimeType'];
+      final served = result['path'];
+      return ProjectFilePreview(
+        path: served is String && served.isNotEmpty ? served : path,
+        text: text,
+        binary: result['binary'] == true,
+        truncated: result['truncated'] == true,
+        byteSize: size is num ? size.toInt() : text.length,
+        mimeType: mime is String ? mime : 'text/plain',
+      );
+    });
+  }
+
+  @override
+  Future<Uint8List> readProjectFileBytes(String path) async {
+    final endpoint = _fsQuery('read-data-url', path);
+    return _projectFileRead(() async {
+      final result = await _dashboard.apiGet(endpoint);
+      final dataUrl = result['dataUrl'];
+      final comma = dataUrl is String ? dataUrl.indexOf(',') : -1;
+      if (dataUrl is! String ||
+          !dataUrl.startsWith('data:') ||
+          comma < 0 ||
+          !dataUrl.substring(0, comma).endsWith(';base64')) {
+        throw const DesktopControlFailure(
+          DesktopControlFailureKind.invalidResponse,
+        );
+      }
+      return base64Decode(dataUrl.substring(comma + 1));
+    });
+  }
+
+  // ── Project file writes (Desktop remote mode / Dashboard Files routes) ──
+
+  static DesktopGatewayCapability _fileWriteCapability(
+    ProjectFileWriteAction action,
+  ) => switch (action) {
+    ProjectFileWriteAction.createFolder =>
+      DesktopGatewayCapability.projectFileMkdir,
+    ProjectFileWriteAction.writeText =>
+      DesktopGatewayCapability.projectFileWriteText,
+    ProjectFileWriteAction.upload => DesktopGatewayCapability.projectFileUpload,
+    ProjectFileWriteAction.delete => DesktopGatewayCapability.projectFileDelete,
+  };
+
+  @override
+  bool get projectFileWritesAllowed => !_connection.readOnly;
+
+  @override
+  bool projectFileWriteKnownUnsupported(ProjectFileWriteAction action) =>
+      !_capabilityCache.canAttempt(_fileWriteCapability(action));
+
+  /// Runs one write route. A read-only connection never reaches the wire.
+  /// 404/405 gate only that route; on `DELETE /api/files` a 404 means the
+  /// entry vanished, so only 405 gates it there.
+  Future<T> _projectFileWrite<T>(
+    ProjectFileWriteAction action,
+    Future<T> Function() request,
+  ) async {
+    _requireWritableControlConnection();
+    final capability = _fileWriteCapability(action);
+    if (!_capabilityCache.canAttempt(capability)) {
+      throw const DesktopControlFailure(
+        DesktopControlFailureKind.unsupported,
+        code: 404,
+      );
+    }
+    try {
+      final value = await _dashboardExtensionRequest(request);
+      _capabilityCache.mark(
+        capability,
+        DesktopGatewayCapabilityState.supported,
+      );
+      return value;
+    } on DesktopControlFailure catch (failure) {
+      if (failure.kind == DesktopControlFailureKind.unsupported) {
+        if (action == ProjectFileWriteAction.delete && failure.code == 404) {
+          throw const DesktopControlFailure(
+            DesktopControlFailureKind.unavailable,
+            code: 404,
+          );
+        }
+        _capabilityCache.mark(
+          capability,
+          DesktopGatewayCapabilityState.unsupported,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<String> createProjectFolder(String path) async {
+    final value = _validatedControlValue(path, maxLength: 4096);
+    return _projectFileWrite(ProjectFileWriteAction.createFolder, () async {
+      final result = await _dashboard.apiPost(
+        'files/mkdir',
+        body: {'path': value},
+      );
+      final created = result['path'];
+      return created is String && created.trim().isNotEmpty
+          ? created.trim()
+          : value;
+    });
+  }
+
+  @override
+  Future<void> writeProjectFileText(String path, String content) async {
+    final value = _validatedControlValue(path, maxLength: 4096);
+    return _projectFileWrite(ProjectFileWriteAction.writeText, () async {
+      await _dashboard.apiPost(
+        'fs/write-text',
+        body: {'path': value, 'content': content},
+      );
+    });
+  }
+
+  @override
+  Future<String> uploadProjectFile(
+    String path, {
+    required String localPath,
+    required String filename,
+  }) async {
+    final value = _validatedControlValue(path, maxLength: 4096);
+    return _projectFileWrite(ProjectFileWriteAction.upload, () async {
+      final result = await _dashboard.apiPostMultipartFile(
+        'files/upload-stream',
+        fieldName: 'file',
+        filePath: localPath,
+        filename: filename,
+        fields: {'path': value, 'overwrite': 'false'},
+      );
+      final stored = result['path'];
+      return stored is String && stored.trim().isNotEmpty
+          ? stored.trim()
+          : value;
+    });
+  }
+
+  @override
+  Future<void> deleteProjectEntry(String path) async {
+    final value = _validatedControlValue(path, maxLength: 4096);
+    return _projectFileWrite(ProjectFileWriteAction.delete, () async {
+      await _dashboard.apiDelete(
+        'files',
+        body: {'path': value, 'recursive': false},
+      );
+    });
+  }
+
+  static const Set<String> _validSessionControlActions = {
+    'goal.pause',
+    'goal.resume',
+    'goal.clear',
+    'goal.unwait',
+    'loop.pause',
+    'loop.resume',
+    'loop.stop',
+    'heartbeat.pause',
+    'heartbeat.resume',
+    'heartbeat.clear',
+  };
+
+  @override
+  Future<SessionControlSnapshot> readSessionControl(
+    String runtimeSessionId,
+  ) async {
+    final result = await _controlRequest('session.control.read', {
+      'session_id': _validatedControlValue(runtimeSessionId, maxLength: 512),
+    }, capability: DesktopGatewayCapability.sessionControl);
+    return SessionControlSnapshot.fromJson(result['control']);
+  }
+
+  @override
+  Future<SessionGoalSnapshot?> readSessionGoal(String runtimeSessionId) async =>
+      (await readSessionControl(runtimeSessionId)).goal;
+
+  @override
+  Future<void> sendSessionControlAction(
+    String runtimeSessionId,
+    String action,
+  ) async {
+    if (!_validSessionControlActions.contains(action)) {
+      throw ArgumentError.value(
+        action,
+        'action',
+        'not a supported session control action',
+      );
+    }
+    _requireWritableControlConnection();
+    await _controlRequest('session.control', {
+      'session_id': _validatedControlValue(runtimeSessionId, maxLength: 512),
+      'action': action,
+    }, capability: DesktopGatewayCapability.sessionControl);
+  }
+
+  @override
+  Future<void> sendGoalAction(String runtimeSessionId, String action) async {
+    if (!action.startsWith('goal.')) {
+      throw ArgumentError.value(
+        action,
+        'action',
+        'not a supported goal action',
+      );
+    }
+    await sendSessionControlAction(runtimeSessionId, action);
+  }
+
+  @override
+  Future<void> submitPrompt(String runtimeSessionId, String text) async {
+    await _requestPromptSubmit({'session_id': runtimeSessionId, 'text': text});
+    _markWatchdogRuntimeBusy(runtimeSessionId);
+  }
+
+  @override
+  Future<void> submitPromptWithSurface(
+    String runtimeSessionId,
+    String text,
+    PromptClientSurface surface,
+  ) async {
+    await _requestPromptSubmit(
+      mergePromptSubmitParams({
+        'session_id': runtimeSessionId,
+        'text': text,
+      }, surface.toParams()),
+    );
+    _markWatchdogRuntimeBusy(runtimeSessionId);
+  }
+
+  @override
+  Future<void> submitQueuedPrompt(String runtimeSessionId, String text) =>
+      _submitQueued(runtimeSessionId, text, const {});
+
+  @override
+  Future<void> submitQueuedPromptWithSurface(
+    String runtimeSessionId,
+    String text,
+    PromptClientSurface surface,
+  ) => _submitQueued(runtimeSessionId, text, surface.toParams());
+
+  Future<void> _submitQueued(
+    String runtimeSessionId,
+    String text,
+    Map<String, dynamic> extraParams,
+  ) async {
+    await _requestPromptSubmit(
+      mergePromptSubmitParams({
+        'session_id': runtimeSessionId,
+        'text': text,
+        'queued': true,
+      }, extraParams),
+    );
+    _markWatchdogRuntimeBusy(runtimeSessionId);
+  }
+
+  @override
+  Future<void> submitInterruptedPrompt(String runtimeSessionId, String text) =>
+      _submitInterrupted(runtimeSessionId, text, const {});
+
+  @override
+  Future<void> submitInterruptedPromptWithSurface(
+    String runtimeSessionId,
+    String text,
+    PromptClientSurface surface,
+  ) => _submitInterrupted(runtimeSessionId, text, surface.toParams());
+
+  Future<void> _submitInterrupted(
+    String runtimeSessionId,
+    String text,
+    Map<String, dynamic> extraParams,
+  ) async {
+    final deadline = DateTime.now().add(const Duration(seconds: 6));
+    while (true) {
+      try {
+        await _requestPromptSubmit(
+          mergePromptSubmitParams({
+            'session_id': runtimeSessionId,
+            'text': text,
+            'interrupted': true,
+          }, extraParams),
+        );
+        _markWatchdogRuntimeBusy(runtimeSessionId);
+        return;
+      } on TuiGatewayRpcError catch (error) {
+        // Mismo settle de Hermes Desktop: un Gateway antiguo puede seguir
+        // desmontando el turno interrumpido aunque ya haya confirmado Stop.
+        if (error.code != 4009 || !DateTime.now().isBefore(deadline)) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+      }
+    }
+  }
+
+  @override
+  Future<DesktopTurnAck> submitPromptIdempotent(
+    String runtimeSessionId,
+    String text,
+    String clientTurnId,
+  ) => _submitIdempotent(runtimeSessionId, text, clientTurnId, const {});
+
+  @override
+  Future<DesktopTurnAck> submitPromptIdempotentWithSurface(
+    String runtimeSessionId,
+    String text,
+    String clientTurnId,
+    PromptClientSurface surface,
+  ) => _submitIdempotent(
+    runtimeSessionId,
+    text,
+    clientTurnId,
+    surface.toParams(),
+  );
+
+  Future<DesktopTurnAck> _submitIdempotent(
+    String runtimeSessionId,
+    String text,
+    String clientTurnId,
+    Map<String, dynamic> extraParams, {
+    bool queued = false,
+  }) async {
+    final result = await _requestPromptSubmit(
+      mergePromptSubmitParams({
+        'session_id': runtimeSessionId,
+        'text': text,
+        'client_turn_id': clientTurnId,
+        if (queued) 'queued': true,
+      }, extraParams),
+    );
+    final ack = DesktopTurnAck.fromJson(
+      result,
+      expectedClientTurnId: clientTurnId,
+    );
+    _markWatchdogRuntimeBusy(runtimeSessionId);
+    return ack;
+  }
+
+  @override
+  Future<DesktopTurnAck> submitQueuedPromptIdempotent(
+    String runtimeSessionId,
+    String text,
+    String clientTurnId,
+  ) => _submitIdempotent(
+    runtimeSessionId,
+    text,
+    clientTurnId,
+    const {},
+    queued: true,
+  );
+
+  @override
+  Future<DesktopTurnAck> submitQueuedPromptIdempotentWithSurface(
+    String runtimeSessionId,
+    String text,
+    String clientTurnId,
+    PromptClientSurface surface,
+  ) => _submitIdempotent(
+    runtimeSessionId,
+    text,
+    clientTurnId,
+    surface.toParams(),
+    queued: true,
+  );
+
+  @override
+  Future<DesktopTurnStatus> getTurnStatus(
+    String sessionId,
+    String clientTurnId,
+  ) async {
+    final result = await _request('turn.status', {
+      'session_id': sessionId,
+      'client_turn_id': clientTurnId,
+    });
+    return DesktopTurnStatus.fromJson(
+      result,
+      expectedClientTurnId: clientTurnId,
+    );
+  }
+
+  @override
+  Future<int?> resolveDurableUserRowId(
+    String runtimeSessionId, {
+    required String sourceText,
+    required int expectedOrdinal,
+  }) async {
+    try {
+      final page = await sessionHistory(sessionId: runtimeSessionId);
+      final durableUsers = page.messages
+          .where((message) {
+            final displayKind =
+                message['display_kind']?.toString().trim() ?? '';
+            final rowId = message['row_id'];
+            return message['role'] == 'user' &&
+                displayKind.isEmpty &&
+                rowId is int &&
+                rowId > 0;
+          })
+          .toList(growable: false);
+      final wanted = sourceText.trim();
+      if (wanted.isEmpty) return null;
+      final matches = durableUsers
+          .where((message) {
+            final durableText = (message['text'] ?? message['content'] ?? '')
+                .toString()
+                .trim();
+            return durableText == wanted;
+          })
+          .toList(growable: false);
+      if (matches.length == 1) return matches.single['row_id'] as int;
+      if (matches.length > 1 &&
+          expectedOrdinal >= durableUsers.length - 1 &&
+          identical(matches.last, durableUsers.last)) {
+        return matches.last['row_id'] as int;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> submitRewindPrompt(
+    String runtimeSessionId,
+    String text,
+    int truncateBeforeUserOrdinal,
+  ) async {
+    await _requestPromptSubmit({
+      'session_id': runtimeSessionId,
+      'text': text,
+      'truncate_before_user_ordinal': truncateBeforeUserOrdinal,
+      'confirm_truncate': true,
+      if (truncateBeforeUserOrdinal == 0) 'confirm_empty_truncate': true,
+    });
+    _markWatchdogRuntimeBusy(runtimeSessionId);
+  }
+
+  @override
+  Future<DesktopRewindAck> submitDurableRewindPrompt(
+    String runtimeSessionId,
+    String text,
+    int truncateBeforeUserOrdinal, {
+    required int truncateBeforeRowId,
+    List<int> rebindSurvivorRowIds = const [],
+  }) async {
+    final rebind = <int>{...rebindSurvivorRowIds};
+    final result = await _requestPromptSubmit({
+      'session_id': runtimeSessionId,
+      'text': text,
+      'truncate_before_row_id': truncateBeforeRowId,
+      'confirm_truncate': true,
+      // Direccionando por row id el ordinal tail-local se descartó, así que no
+      // puede decidir esto: el objetivo durable es el autoritativo y un corte
+      // a la primera fila del active tip debe permitirse explícitamente. El
+      // gateway lo ignora cuando el prefijo no queda vacío
+      // (`rewind.ts:348-350`).
+      'confirm_empty_truncate': true,
+      if (rebind.isNotEmpty)
+        'rebind_survivor_row_ids': rebind.toList(growable: false),
+    });
+    final ack = DesktopRewindAck.fromJson(result);
+    _markWatchdogRuntimeBusy(runtimeSessionId);
+    return ack;
+  }
+
+  @override
+  Future<DesktopAttachmentResult> attachImageBytes(
+    String runtimeSessionId, {
+    required String filename,
+    required String contentBase64,
+  }) async {
+    final canonical =
+        _sessionAuthority.isCanonical ||
+        (_sessionAuthority == SessionAuthorityCapability.unknown &&
+            await _canonicalNow());
+    final params = <String, dynamic>{
+      'session_id': runtimeSessionId,
+      'filename': filename,
+      'content_base64': contentBase64,
+    };
+    // The authority only STAGES the upload: the image reaches the model when
+    // the next `prompt.submit` names it in `attachments`.
+    final result = canonical
+        ? await _requestConnected('image.attach_bytes', params)
+        : await _requestExclusiveSessionMutation('image.attach_bytes', params);
+    if (result['attached'] != true) {
+      throw const TuiGatewayRpcError(
+        'image.attach_bytes',
+        'Hermes did not attach the image',
+      );
+    }
+    final path = result['path']?.toString();
+    if (canonical) {
+      final mime = result['mime'];
+      if (path == null || path.isEmpty || mime is! String || mime.isEmpty) {
+        throw const TuiGatewayRpcError(
+          'image.attach_bytes',
+          'Hermes omitted the staged image reference',
+          origin: CompressionFailureOrigin.malformed,
+        );
+      }
+      final staged = _canonicalStagedImages.putIfAbsent(
+        runtimeSessionId.trim(),
+        () => <Map<String, String>>[],
+      );
+      if (staged.length >= _maxStagedCanonicalImages) {
+        throw const TuiGatewayRpcError(
+          'image.attach_bytes',
+          'Too many staged images',
+        );
+      }
+      staged.removeWhere((item) => item['path'] == path);
+      staged.add(<String, String>{'path': path, 'mime': mime});
+    }
+    return DesktopAttachmentResult(path: path);
+  }
+
+  @override
+  Future<DesktopAttachmentResult> attachFileBytes(
+    String runtimeSessionId, {
+    required String filename,
+    required String mimeType,
+    required String contentBase64,
+  }) async {
+    final params = <String, dynamic>{
+      'session_id': runtimeSessionId,
+      'path': filename,
+      'name': filename,
+      'data_url': 'data:$mimeType;base64,$contentBase64',
+    };
+    final canonical =
+        _sessionAuthority.isCanonical ||
+        (_sessionAuthority == SessionAuthorityCapability.unknown &&
+            await _canonicalNow());
+    // The reply carries the `@file:` reference the prompt text embeds.
+    final result = canonical
+        ? await _requestConnected('file.attach', params)
+        : await _requestExclusiveSessionMutation('file.attach', params);
+    if (result['attached'] != true || result['ref_text'] == null) {
+      throw const TuiGatewayRpcError(
+        'file.attach',
+        'Hermes did not attach the file',
+      );
+    }
+    return DesktopAttachmentResult(
+      path: result['path']?.toString(),
+      refText: result['ref_text']?.toString(),
+    );
+  }
+
+  @override
+  Future<void> detachImage(String runtimeSessionId, String path) async {
+    if (_sessionAuthority.isCanonical) {
+      // Staging only: dropping the reference keeps the image out of the next
+      // submit; there is no server-side attachment state to undo.
+      _canonicalStagedImages[runtimeSessionId.trim()]?.removeWhere(
+        (item) => item['path'] == path,
+      );
+      return;
+    }
+    await _requestExclusiveSessionMutation('image.detach', {
+      'session_id': runtimeSessionId,
+      'path': path,
+    }, timeout: const Duration(seconds: 10));
+  }
+
+  /// `session.steer` / `session.redirect`: on the authority they are bound to
+  /// the execution generation the chat proved (`CanonicalCorrectionParams`).
+  Future<Map<String, dynamic>> _correction(
+    String method,
+    String runtimeSessionId,
+    String text,
+  ) async {
+    if (_sessionAuthority.isCanonical ||
+        (_sessionAuthority == SessionAuthorityCapability.unknown &&
+            await _canonicalNow())) {
+      final ledger = _readyCanonicalLedger(
+        method,
+        _validatedRuntimeId(method, runtimeSessionId),
+      );
+      return _requestConnected(method, <String, dynamic>{
+        'session_id': ledger.sessionId,
+        'execution_generation': ledger.currentGeneration,
+        'text': text,
+        if (ledger.profile.isNotEmpty) 'profile': ledger.profile,
+      }, timeout: const Duration(seconds: 10));
+    }
+    return _requestExclusiveSessionMutation(method, {
+      'session_id': runtimeSessionId,
+      'text': text,
+    }, timeout: const Duration(seconds: 10));
+  }
+
+  @override
+  Future<void> steer(String runtimeSessionId, String text) async {
+    final result = await _correction('session.steer', runtimeSessionId, text);
+    if (result['status'] != 'queued') {
+      throw TuiGatewayRpcError(
+        'session.steer',
+        'Hermes rejected the steering instruction',
+        code: result['status'] == 'rejected'
+            ? TuiGatewayRpcError.steerRejectedCode : null,
+      );
+    }
+  }
+
+  @override
+  Future<DesktopRedirectDisposition> redirect(
+    String runtimeSessionId,
+    String text,
+  ) async {
+    const method = 'session.redirect';
+    final result = await _correction(method, runtimeSessionId, text);
+    return switch (result['status']) {
+      'redirected' => DesktopRedirectDisposition.redirected,
+      'queued' => DesktopRedirectDisposition.queued,
+      _ => DesktopRedirectDisposition.rejected,
+    };
+  }
+
+  @override
+  Future<void> interrupt(String runtimeSessionId) async {
+    if (_sessionAuthority.isCanonical ||
+        (_sessionAuthority == SessionAuthorityCapability.unknown &&
+            await _canonicalNow())) {
+      const method = 'session.interrupt';
+      final ledger = _readyCanonicalLedger(
+        method,
+        _validatedRuntimeId(method, runtimeSessionId),
+      );
+      await _requestConnected(
+        method,
+        CanonicalWire.interrupt(
+          sessionId: ledger.sessionId,
+          generation: ledger.currentGeneration,
+          profile: ledger.profile,
+        ),
+        timeout: const Duration(seconds: 10),
+      );
+      return;
+    }
+    await _request('session.interrupt', {
+      'session_id': runtimeSessionId,
+    }, timeout: const Duration(seconds: 10));
+  }
+
+  @override
+  Future<DesktopCompressionResult> compressSession(
+    String runtimeSessionId, {
+    String focusTopic = '',
+  }) async {
+    const method = 'session.compress';
+    if (runtimeSessionId != runtimeSessionId.trim()) {
+      throw const TuiGatewayRpcError(
+        method,
+        'Invalid runtime session identity',
+      );
+    }
+    final runtime = _validatedRuntimeId(method, runtimeSessionId);
+    final focus = focusTopic.trim();
+    final result = await _requestExclusiveSessionMutation(method, {
+      'session_id': runtime,
+      if (focus.isNotEmpty) 'focus_topic': focus,
+    }, timeout: sessionCompressRpcTimeout);
+    try {
+      return DesktopCompressionResult.fromJson(result);
+    } on FormatException {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid session compression result',
+        origin: CompressionFailureOrigin.malformed,
+      );
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> openServerRequests(
+    String runtimeSessionId,
+  ) async {
+    const method = 'session.events.since';
+    final runtime = _validatedRuntimeId(method, runtimeSessionId);
+    await _connectForRequest(method);
+    if (_sessionAuthority.isCanonical) {
+      return _canonicalOpenRequests(runtime);
+    }
+    // `last_seen` above any sequence: no event is replayed, only the open
+    // requests, which the response handler also registers on this socket so
+    // the answer goes back as a response frame.
+    final result = await _requestConnected(method, <String, dynamic>{
+      'session_id': runtime,
+      'last_seen': _openRequestsProbeLastSeen,
+    }, timeout: const Duration(seconds: 10));
+    final open = result['open_requests'];
+    if (open is! List) return const [];
+    return [
+      for (final entry in open)
+        if (entry is Map<String, dynamic>) entry,
+    ];
+  }
+
+  static const int _openRequestsProbeLastSeen = 9007199254740991;
+
+  @override
+  Future<Map<String, dynamic>> compressionEventReplay(String runtimeSessionId) {
+    const method = 'session.events.since';
+    final runtime = _validatedRuntimeId(method, runtimeSessionId);
+    return _requestConnected(method, <String, dynamic>{
+      'session_id': runtime,
+      'last_seen': 0,
+    }, timeout: const Duration(seconds: 10));
+  }
+
+  String _validatedRuntimeId(String method, String runtimeSessionId) {
+    final value = runtimeSessionId.trim();
+    if (value.isEmpty) {
+      throw TuiGatewayRpcError(method, 'Missing runtime session identity');
+    }
+    return value;
+  }
+
+  String _validatedSlashCommand(String method, String raw) {
+    final trimmed = raw.trim();
+    // A name (at most 64) and a space before the argument.
+    if (trimmed.isEmpty || trimmed.length > commandArgumentMaxLength + 66) {
+      throw TuiGatewayRpcError(method, 'Invalid slash command');
+    }
+    final firstSpace = trimmed.indexOf(RegExp(r'\s'));
+    final rawName = firstSpace < 0 ? trimmed : trimmed.substring(0, firstSpace);
+    final name = CommandDescriptor.tryNormalizeName(rawName);
+    if (name == null) {
+      throw TuiGatewayRpcError(method, 'Invalid slash command');
+    }
+    final arguments = firstSpace < 0
+        ? ''
+        : trimmed.substring(firstSpace).trim();
+    // The argument, not the whole line, takes the bound: the same as
+    // command.dispatch and the chat's own check (commandArgumentMaxLength).
+    if (arguments.length > commandArgumentMaxLength ||
+        arguments.contains(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'))) {
+      throw TuiGatewayRpcError(method, 'Invalid slash command');
+    }
+    return arguments.isEmpty ? name : '$name $arguments';
+  }
+
+  Future<DesktopConfigSetResult> _setSessionConfig({
+    required String runtimeSessionId,
+    required DesktopSessionConfigKey key,
+    required String value,
+    bool confirmExpensiveModel = false,
+  }) async {
+    const method = 'config.set';
+    final result = await _request(method, {
+      'session_id': _validatedRuntimeId(method, runtimeSessionId),
+      'key': key.wire,
+      'value': value,
+      if (key == DesktopSessionConfigKey.model)
+        'confirm_expensive_model': confirmExpensiveModel,
+    });
+    try {
+      return DesktopConfigSetResult.fromJson(result, expectedKey: key);
+    } on FormatException {
+      throw const TuiGatewayRpcError(
+        method,
+        'Hermes returned an invalid session config response',
+      );
+    }
+  }
+
+  @override
+  Future<DesktopConfigSetResult> setSessionModel(
+    String runtimeSessionId,
+    DesktopModelSelection selection, {
+    bool confirmExpensiveModel = false,
+  }) => _setSessionConfig(
+    runtimeSessionId: runtimeSessionId,
+    key: DesktopSessionConfigKey.model,
+    value: selection.sessionWireValue,
+    confirmExpensiveModel: confirmExpensiveModel,
+  );
+
+  @override
+  Future<DesktopConfigSetResult> setSessionReasoning(
+    String runtimeSessionId,
+    DesktopReasoningEffort effort,
+  ) => _setSessionConfig(
+    runtimeSessionId: runtimeSessionId,
+    key: DesktopSessionConfigKey.reasoning,
+    value: effort.wire,
+  );
+
+  @override
+  Future<DesktopConfigSetResult> setSessionFastMode(
+    String runtimeSessionId,
+    DesktopFastMode mode,
+  ) => _setSessionConfig(
+    runtimeSessionId: runtimeSessionId,
+    key: DesktopSessionConfigKey.fast,
+    value: mode.wire,
+  );
+
+  String _interactiveRequestId(String method, String requestId) {
+    if (requestId.trim().isEmpty) {
+      throw TuiGatewayRpcError(method, 'Missing interactive request identity');
+    }
+    return requestId;
+  }
+
+  @override
+  Future<DesktopPromptResponse> respondToClarify(
+    String requestId,
+    String answer, {
+    String? questionId,
+  }) async {
+    const method = 'clarify.respond';
+    if (_sessionAuthority.isCanonical ||
+        (_sessionAuthority == SessionAuthorityCapability.unknown &&
+            await _canonicalNow())) {
+      if (questionId != null) {
+        throw _canonicalUnsupported(method, 'batch clarify answers');
+      }
+      final result = await _answerCanonicalPrompt(
+        method: method,
+        kind: 'clarify',
+        session: null,
+        promptId: _interactiveRequestId(method, requestId),
+        value: answer,
+      );
+      if (result == null) {
+        return DesktopPromptResponse.fromJson(
+          const <String, dynamic>{'status': 'expired'},
+          method: method,
+          allowExpired: true,
+        );
+      }
+      return DesktopPromptResponse.fromJson(
+        <String, dynamic>{
+          'status': result['status'] == 'resolved' ? 'ok' : 'expired',
+        },
+        method: method,
+        allowExpired: true,
+      );
+    }
+    if (_openServerRequests.containsKey(requestId)) {
+      if (questionId != null) {
+        // Batch clarify: answers lock one at a time; the last lock resolves the
+        // server request itself.
+        const lockMethod = 'clarify.lock';
+        final result = await _request(lockMethod, {
+          'request_id': _interactiveRequestId(lockMethod, requestId),
+          'question_id': questionId,
+          'answer': answer,
+        });
+        final remaining = result['remaining'];
+        if (result['status'] == 'expired' ||
+            (remaining is List && remaining.isEmpty)) {
+          _openServerRequests.remove(requestId);
+        }
+        return DesktopPromptResponse.fromJson(
+          result,
+          method: lockMethod,
+          allowExpired: true,
+        );
+      }
+      if (!_respondServerRequest(requestId, {'answer': answer})) {
+        // The socket that owns the request is gone; the backend re-delivers it
+        // as `open_requests` on resume, so the card must stay answerable.
+        throw const TuiGatewayRpcError(
+          'clarify',
+          'Hermes Desktop WebSocket was replaced',
+        );
+      }
+      return const DesktopPromptResponse._(
+        DesktopPromptResponseStatus.ok,
+        deliveryAcknowledged: false,
+      );
+    }
+    if (requestId.startsWith(_serverRequestIdPrefix)) {
+      // A v7 server request that is not open on this socket: it reached
+      // another socket, or this one was replaced after the card was drawn.
+      // Hermes has no `clarify.respond` any more; `clarify.lock` and the
+      // `request.answer` proxy settle the request from any connection.
+      try {
+        if (questionId != null) {
+          const lockMethod = 'clarify.lock';
+          final result = await _request(lockMethod, {
+            'request_id': requestId,
+            'question_id': questionId,
+            'answer': answer,
+          });
+          return DesktopPromptResponse.fromJson(
+            result,
+            method: lockMethod,
+            allowExpired: true,
+          );
+        }
+        const answerMethod = 'request.answer';
+        final result = await _request(answerMethod, {
+          'id': requestId,
+          'result': {'answer': answer},
+        });
+        return DesktopPromptResponse.fromJson(
+          result,
+          method: answerMethod,
+          allowExpired: true,
+        );
+      } on TuiGatewayRpcError catch (error) {
+        // Older v7 builds without the proxy keep the legacy RPC below.
+        if (error.code != -32601) rethrow;
+      }
+    }
+    final params = <String, Object?>{
+      'request_id': _interactiveRequestId(method, requestId),
+      'answer': answer,
+    };
+    if (questionId != null) params['question_id'] = questionId;
+    final result = await _request(method, params);
+    return DesktopPromptResponse.fromJson(
+      result,
+      method: method,
+      allowExpired: true,
+    );
+  }
+
+  @override
+  Future<DesktopPromptResponse> skipClarify(String requestId) async {
+    if (_sessionAuthority.isCanonical ||
+        (_sessionAuthority == SessionAuthorityCapability.unknown &&
+            await _canonicalNow())) {
+      throw _canonicalUnsupported('clarify.respond', 'skipping a question');
+    }
+    if (_openServerRequests.containsKey(requestId)) {
+      // Desktop `respondToServerRequest(request.requestId, {})`.
+      if (!_respondServerRequest(requestId, const <String, Object?>{})) {
+        // As an answer: the backend re-delivers the request on resume.
+        throw const TuiGatewayRpcError(
+          'clarify',
+          'Hermes Desktop WebSocket was replaced',
+        );
+      }
+      return const DesktopPromptResponse._(
+        DesktopPromptResponseStatus.ok,
+        deliveryAcknowledged: false,
+      );
+    }
+    if (requestId.startsWith(_serverRequestIdPrefix)) {
+      // Not open on this socket: the `request.answer` proxy settles it from
+      // any connection, with the same empty result.
+      try {
+        const answerMethod = 'request.answer';
+        final result = await _request(answerMethod, {
+          'id': requestId,
+          'result': const <String, Object?>{},
+        });
+        return DesktopPromptResponse.fromJson(
+          result,
+          method: answerMethod,
+          allowExpired: true,
+        );
+      } on TuiGatewayRpcError catch (error) {
+        if (error.code != -32601) rethrow;
+      }
+    }
+    // Hermes before server requests: an empty answer is its only skip.
+    const method = 'clarify.respond';
+    final result = await _request(method, {
+      'request_id': _interactiveRequestId(method, requestId),
+      'answer': '',
+    });
+    return DesktopPromptResponse.fromJson(
+      result,
+      method: method,
+      allowExpired: true,
+    );
+  }
+
+  /// Hermes mints every server→client request id as `srq-<hex>`
+  /// (`tui_gateway/server_requests.py`); legacy prompt ids never use it.
+  static const _serverRequestIdPrefix = 'srq-';
+
+  @override
+  Future<DesktopPromptResponse> respondToSudo(
+    String requestId,
+    EphemeralSensitiveValue password,
+  ) => _respondWithSensitiveValue(
+    method: 'sudo.respond',
+    requestId: requestId,
+    valueKey: 'password',
+    value: password,
+  );
+
+  @override
+  Future<DesktopPromptResponse> respondToSecret(
+    String requestId,
+    EphemeralSensitiveValue value,
+  ) => _respondWithSensitiveValue(
+    method: 'secret.respond',
+    requestId: requestId,
+    valueKey: 'value',
+    value: value,
+  );
+
+  Future<DesktopPromptResponse> _respondWithSensitiveValue({
+    required String method,
+    required String requestId,
+    required String valueKey,
+    required EphemeralSensitiveValue value,
+  }) async {
+    try {
+      late final Future<DesktopPromptResponse> pendingResponse;
+      try {
+        final opaqueRequestId = _interactiveRequestId(method, requestId);
+        await _connectForRequest('gateway.connect');
+        pendingResponse = _sendSensitiveResponseConnected(
+          method: method,
+          requestId: opaqueRequestId,
+          valueKey: valueKey,
+          value: value,
+        );
+      } finally {
+        // The sole disposal owner runs for validation/connect/sink failures and
+        // before awaiting a remote response.
+        value.dispose();
+      }
+      return await pendingResponse;
+    } catch (error) {
+      if (SanitizedRpcFailureFactory.isCertified(error)) {
+        rethrow;
+      }
+      // Recreate the failure locally. Raw transport/auth/ready/socket stacks are
+      // never attached to a sensitive completer or returned to its caller.
+      throw SanitizedRpcFailureFactory.transport(method);
+    }
+  }
+
+  Future<DesktopPromptResponse> _sendSensitiveResponseConnected({
+    required String method,
+    required String requestId,
+    required String valueKey,
+    required EphemeralSensitiveValue value,
+  }) {
+    final ephemeralValue = value.take();
+    if (_openServerRequests.containsKey(requestId)) {
+      // v7 server requests answer every one-string prompt under `value`.
+      if (!_respondServerRequest(requestId, {'value': ephemeralValue})) {
+        return Future<DesktopPromptResponse>.error(
+          TuiGatewayRpcError(method, 'Hermes Desktop WebSocket was replaced'),
+        );
+      }
+      // A bare response frame: nothing acknowledges it. The value is not
+      // kept; if it died with the socket the user enters it again.
+      return Future<DesktopPromptResponse>.value(
+        const DesktopPromptResponse._(
+          DesktopPromptResponseStatus.ok,
+          deliveryAcknowledged: false,
+        ),
+      );
+    }
+    return _requestConnected(method, {
+      'request_id': requestId,
+      valueKey: ephemeralValue,
+    }, redactRemoteError: true).then(
+      (result) => DesktopPromptResponse.fromJson(
+        result,
+        method: method,
+        allowExpired: true,
+      ),
+    );
+  }
+
+  @override
+  Future<DesktopPromptResponse> respondToTerminalRead(String requestId) async {
+    const method = 'terminal.read.respond';
+    if (_openServerRequests.containsKey(requestId)) {
+      if (!_respondServerRequest(requestId, {
+        'value': TerminalReadResponsePolicy.noOwnedTerminalText,
+      })) {
+        throw const TuiGatewayRpcError(
+          'terminal.read',
+          'Hermes Desktop WebSocket was replaced',
+        );
+      }
+      // A bare response frame, like clarify/sudo/secret: nothing
+      // acknowledges it.
+      return const DesktopPromptResponse._(
+        DesktopPromptResponseStatus.ok,
+        deliveryAcknowledged: false,
+      );
+    }
+    final result = await _request(method, {
+      'request_id': _interactiveRequestId(method, requestId),
+      'text': TerminalReadResponsePolicy.noOwnedTerminalText,
+    });
+    return DesktopPromptResponse.fromJson(result, method: method);
+  }
+
+  @override
+  Future<void> resolveApproval(
+    String runtimeSessionId,
+    String choice, {
+    bool resolveAll = false,
+    String? requestId,
+  }) async {
+    if (_sessionAuthority.isCanonical ||
+        (_sessionAuthority == SessionAuthorityCapability.unknown &&
+            await _canonicalNow())) {
+      const method = 'approval.respond';
+      if (resolveAll) {
+        throw _canonicalUnsupported(
+          method,
+          'approve-all has no canonical form',
+        );
+      }
+      final id = requestId == null || requestId.isEmpty ? null : requestId;
+      final ledger = _readyCanonicalLedger(
+        method,
+        _validatedRuntimeId(method, runtimeSessionId),
+      );
+      final promptId =
+          id ??
+          (ledger.prompts.values.where((p) => p.isApproval).length == 1
+              ? ledger.prompts.values.firstWhere((p) => p.isApproval).promptId
+              : null);
+      if (promptId == null) throw _canonicalExpired(method);
+      final result = await _answerCanonicalPrompt(
+        method: method,
+        kind: 'approval',
+        session: ledger.sessionId,
+        promptId: promptId,
+        value: choice,
+      );
+      if (result == null) throw _canonicalExpired(method);
+      return;
+    }
+    if (requestId != null && requestId.isNotEmpty) {
+      final serverRequestId = _approvalServerRequestIds[requestId];
+      if (serverRequestId != null &&
+          _respondServerRequest(serverRequestId, {
+            'choice': choice,
+            if (resolveAll) 'all': true,
+          })) {
+        _approvalServerRequestIds.remove(requestId);
+        _rememberAnsweredApproval(serverRequestId, requestId);
+        return;
+      }
+    } else if (resolveAll) {
+      for (final open in _openServerRequests.values) {
+        if (open.method != 'approval' || open.sessionId != runtimeSessionId) {
+          continue;
+        }
+        if (_respondServerRequest(open.id, {'choice': choice, 'all': true})) {
+          _approvalServerRequestIds.removeWhere((_, id) => id == open.id);
+          return;
+        }
+        break;
+      }
+    }
+    if (resolveAll || requestId == null) {
+      await _request('approval.respond', {
+        'session_id': _validatedRuntimeId('approval.respond', runtimeSessionId),
+        'choice': choice,
+        if (resolveAll) 'all': true,
+        if (requestId != null && requestId.isNotEmpty) 'request_id': requestId,
+      });
+      return;
+    }
+    await resolveApprovalChecked(
+      runtimeSessionId,
+      choice,
+      requestId: requestId,
+    );
+  }
+
+  @override
+  Future<DesktopApprovalResult> resolveApprovalChecked(
+    String runtimeSessionId,
+    String choice, {
+    required String requestId,
+  }) async {
+    const method = 'approval.respond';
+    if (_sessionAuthority.isCanonical ||
+        (_sessionAuthority == SessionAuthorityCapability.unknown &&
+            await _canonicalNow())) {
+      final request = _subagentOpaqueId(requestId);
+      if (request == null ||
+          !const {'once', 'session', 'always', 'deny'}.contains(choice)) {
+        throw const TuiGatewayRpcError(method, 'Invalid approval response');
+      }
+      final result = await _answerCanonicalPrompt(
+        method: method,
+        kind: 'approval',
+        session: _validatedRuntimeId(method, runtimeSessionId),
+        promptId: request,
+        value: choice,
+      );
+      if (result == null) throw _canonicalExpired(method);
+      return DesktopApprovalResult(
+        resolved: result['status'] == 'resolved' ? 1 : 0,
+      );
+    }
+    final request = _subagentOpaqueId(requestId);
+    if (request == null ||
+        !const {'once', 'session', 'always', 'deny'}.contains(choice)) {
+      throw const TuiGatewayRpcError(method, 'Invalid approval response');
+    }
+    final serverRequestId = _approvalServerRequestIds[request];
+    if (serverRequestId != null &&
+        _respondServerRequest(serverRequestId, {'choice': choice})) {
+      // The response frame is the first-wins answer by construction: it can
+      // only settle the request it was minted for.
+      _approvalServerRequestIds.remove(request);
+      _rememberAnsweredApproval(serverRequestId, request);
+      return const DesktopApprovalResult(
+        resolved: 1,
+        deliveryAcknowledged: false,
+      );
+    }
+    final result = await _request(method, {
+      'session_id': _validatedRuntimeId(method, runtimeSessionId),
+      'choice': choice,
+      'request_id': request,
+    });
+    try {
+      return DesktopApprovalResult.fromJson(result);
+    } on FormatException {
+      throw const TuiGatewayRpcError(method, 'Invalid approval response');
+    }
+  }
+
+  @override
+  Future<void> disconnectIdle() async {
+    if (_closed) return;
+    await _disconnectTransport('client_background_idle');
+  }
+
+  Future<void> _disconnectTransport(String reason) async {
+    // Replies still owed on this socket (RPCs + an unanswered heartbeat). A
+    // deliberate close waits for them, capped, before the close frame: Hermes'
+    // uvicorn stack handles the close independently of the handler, so a reply
+    // written after it fails and the socket is logged as a failed send or 1006
+    // instead of a clean close.
+    final owed = _pending.length + (_heartbeatAwaitingReply ? 1 : 0);
+    final owedChannel = _channel;
+    if (owedChannel != null && owed > 0 && _connected) {
+      _awaitResponses[owedChannel] = _OwedResponses(owed);
+    }
+    _socketGeneration++;
+    // A parked in-flight ticket/handshake must not hold the next resume dial
+    // hostage. Its generation is fenced; late completion owns no new state.
+    _connecting = null;
+    final ready = _gatewayReadyCompleter;
+    _gatewayReadyCompleter = null;
+    if (ready != null && !ready.isCompleted) {
+      ready.completeError(const TuiGatewayRpcError(
+        'gateway.ready', 'Background transport parked',
+        failureKind: TuiGatewayRpcFailureKind.connectionLost,
+      ));
+    }
+    _cancelProbeRetry();
+    _cancelRedial(StateError('Hermes Desktop gateway closed'));
+    _parked = reason == 'client_background_idle';
+    _connected = false;
+    _stopHeartbeat();
+    _retireWatchdogRuntime();
+    _resetLegacyEventRuntimeAnchor();
+    _capabilityCache.resetForReconnect();
+    _failPending(StateError('Hermes Desktop gateway closed'));
+    final subscription = _subscription;
+    final channel = _channel;
+    _subscription = null;
+    _channel = null;
+    await _teardownTransport(
+      channel,
+      subscription,
+      closeCode: TuiGatewayCloseCodes.normal,
+      closeReason: reason,
+    );
+  }
+
+  Future<void> _teardownTransport(
+    WebSocketChannel? channel,
+    StreamSubscription<dynamic>? subscription, {
+    required int closeCode,
+    required String closeReason,
+  }) async {
+    if (channel == null && subscription == null) return;
+    if (channel != null) {
+      final readyAt = _channelReadyAt[channel];
+      if (readyAt != null) {
+        _channelReadyAt[channel] = null;
+        final peerCode = closeReason == 'stream_done'
+            ? channel.closeCode
+            : null;
+        GatewaySocketMeter.instance.recordClose(
+          reason: closeReason,
+          code: peerCode ?? closeCode,
+          life: _now().difference(readyAt),
+          tag: _meterTag,
+        );
+        GatewaySocketMeter.instance.socketDown(_meterSocketKey);
+      }
+    }
+
+    Future<void> bestEffort(Future<dynamic> Function() operation) async {
+      try {
+        await operation();
+      } catch (_) {
+        // El error que importa pertenece al transporte/RPC original. La
+        // limpieza nunca lo reemplaza ni deja una Future sin gestionar.
+      }
+    }
+
+    final elapsed = Stopwatch()..start();
+    Duration remaining() {
+      final left = _transportTeardownBudget - elapsed.elapsed;
+      return left.isNegative ? Duration.zero : left;
+    }
+
+    // 1. Close frame first, always with a code and reason (a frame without a
+    //    code is logged by the server as 1005).
+    // 2. Keep reading until the peer echoes the close (stream done), capped,
+    //    so replies already in flight are consumed instead of reset.
+    // 3. Only then cancel the subscription. Cancelling in parallel with close
+    //    shuts the read side down (SHUT_RD) and a late reply triggers a TCP
+    //    RST, which the server logs as 1006 even though Console closed cleanly.
+    final owed = channel == null ? null : _awaitResponses[channel];
+    if (owed != null && subscription != null) {
+      final cap = remaining() < _closeDrainCap ? remaining() : _closeDrainCap;
+      try {
+        await owed.settled.future.timeout(cap);
+      } catch (_) {
+        // Server too slow: close anyway.
+      }
+    }
+    final closing = channel == null
+        ? Future<void>.value()
+        : bestEffort(() => channel.sink.close(closeCode, closeReason));
+    final drained = channel == null ? null : _streamDrained[channel];
+    if (drained != null && subscription != null) {
+      final cap = remaining() < _closeDrainCap ? remaining() : _closeDrainCap;
+      try {
+        await drained.future.timeout(cap);
+      } catch (_) {
+        // Peer never echoed the close: fall through to cancel.
+      }
+    }
+    final pending = <Future<void>>[closing];
+    if (subscription != null) {
+      pending.add(bestEffort(subscription.cancel));
+    }
+    try {
+      await Future.wait(pending).timeout(remaining());
+    } catch (_) {
+      // Un sink todavía no enlazado o un onCancel remoto pueden no completar.
+      // Las referencias propietarias ya se retiraron antes de entrar aquí.
+    }
+  }
+
+  void _rememberLegacyEventRuntime(String runtimeSessionId) {
+    // Un Gateway antiguo puede omitir `session_id` en eventos foreground. El
+    // socket de chat es reutilizable, así que solo inferimos mientras una única
+    // identidad runtime haya sido ligada durante esta generación de conexión.
+    if (!_connected || _legacyEventRuntimeAmbiguous) return;
+    final runtime = runtimeSessionId.trim();
+    if (runtime.isEmpty) return;
+    final current = _legacyEventRuntimeId;
+    if (current == null) {
+      _legacyEventRuntimeId = runtime;
+    } else if (current != runtime) {
+      _legacyEventRuntimeId = null;
+      _legacyEventRuntimeAmbiguous = true;
+    }
+  }
+
+  void _resetLegacyEventRuntimeAnchor() {
+    _legacyEventRuntimeId = null;
+    _legacyEventRuntimeAmbiguous = false;
+  }
+
+  @override
+  Future<void> close() async {
+    if (_closed) return;
+    _closed = true;
+    await _disconnectTransport('client_dispose');
+    if (!_events.isClosed) await _events.close();
+    _link.notify();
+  }
+}
+
+/// Counts JSON-RPC responses a detached channel still owes before its close.
+final class _OwedResponses {
+  _OwedResponses(this._remaining);
+
+  int _remaining;
+  final Completer<void> settled = Completer<void>();
+
+  void observe(dynamic raw) {
+    if (settled.isCompleted || raw is! String) return;
+    try {
+      final frame = jsonDecode(raw);
+      if (frame is Map &&
+          frame.containsKey('id') &&
+          !frame.containsKey('method')) {
+        if (--_remaining <= 0) settle();
+      }
+    } catch (_) {}
+  }
+
+  void settle() {
+    if (!settled.isCompleted) settled.complete();
+  }
+}
+
+final class _OpenServerRequest {
+  final String id;
+  final String method;
+  final String sessionId;
+  final int generation;
+  final WebSocketChannel channel;
+
+  const _OpenServerRequest({
+    required this.id,
+    required this.method,
+    required this.sessionId,
+    required this.generation,
+    required this.channel,
+  });
+}
+
+/// Busy/idle bookkeeping of one runtime the silent-fanout watchdog follows.
+final class _WatchdogRuntime {
+  bool busy = false;
+  DateTime? lastActivityAt;
+  int revision = 0;
+  int rosterReads = 0;
+}
+
+class _PendingRpc {
+  final String method;
+  final Completer<Map<String, dynamic>> completer;
+  final Timer timer;
+  final bool redactRemoteError;
+
+  const _PendingRpc(
+    this.method,
+    this.completer,
+    this.timer, {
+    this.redactRemoteError = false,
+  });
+}

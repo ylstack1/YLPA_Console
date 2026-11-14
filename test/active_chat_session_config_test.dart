@@ -1,0 +1,886 @@
+import 'dart:async';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hermes_android/core/models/command_descriptor.dart';
+import 'package:hermes_android/core/models/desktop_active_session.dart';
+import 'package:hermes_android/core/models/desktop_compression_result.dart';
+import 'package:hermes_android/core/models/desktop_session_config.dart';
+import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
+import 'package:hermes_android/core/services/active_chat_service.dart';
+import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:hermes_android/core/services/desktop_gateway_capabilities.dart';
+import 'package:hermes_android/core/services/home_widget_publisher.dart';
+import 'package:hermes_android/core/services/session_config_reducer.dart';
+import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+
+import 'support/in_memory_compression_restore_storage.dart';
+import 'support/test_api_client.dart';
+
+class _ConfiguredCreateGateway
+    implements
+        HermesDesktopGateway,
+        HermesDesktopSessionLifecycleGateway,
+        HermesDesktopConfiguredSessionLifecycleGateway,
+        HermesDesktopSessionConfigGateway,
+        HermesDesktopCompressionGateway,
+        HermesDesktopRewindResolverGateway,
+        HermesDesktopDurableRewindGateway,
+        HermesDesktopLifecycleGateway,
+        HermesDesktopSessionActivityGateway {
+  final StreamController<TuiGatewayEvent> _events =
+      StreamController<TuiGatewayEvent>.broadcast();
+
+  int legacyResumeCalls = 0;
+  int resumeExistingCalls = 0;
+  int legacyCreateCalls = 0;
+  int configuredCreateCalls = 0;
+  DesktopSessionCreateConfig? observedConfig;
+  String? observedProfile;
+  final List<String> observedResumeProfiles = [];
+  List<Map<String, dynamic>>? observedSeed;
+  String? submittedRuntime;
+  final List<({DesktopModelSelection model, bool confirmed})> modelChanges = [];
+  Object? configError;
+  Object? configuredCreateError;
+  Object? activationError;
+  bool resumeExistingSucceeds = false;
+  bool deferModelChanges = false;
+  bool connected = true;
+  int activationCalls = 0;
+  int activeListCalls = 0;
+  int idleDisconnects = 0;
+  late DesktopCompressionResult compressionResult;
+
+  @override
+  Stream<TuiGatewayEvent> get events => _events.stream;
+
+  @override
+  bool get isConnected => connected;
+
+  @override
+  Future<void> connect() async {
+    connected = true;
+  }
+
+  void disconnectForTest() => connected = false;
+
+  @override
+  Future<DesktopSessionSnapshot> resumeExisting(
+    String storedSessionId, {
+    String profile = '',
+    bool omitMessages = false,
+    bool deferHistory = false,
+  }) async {
+    resumeExistingCalls += 1;
+    observedResumeProfiles.add(profile);
+    if (resumeExistingSucceeds) {
+      return DesktopSessionSnapshot(
+        runtimeSessionId: 'runtime-configured',
+        storedSessionId: resumeExistingCalls > 1
+            ? 'stored-reentered'
+            : 'stored-configured',
+        storedSessionIdProvenance:
+            DesktopStoredSessionIdProvenance.storedSessionId,
+        lineageRootId: 'draft-mobile',
+        created: false,
+        info: const DesktopSessionRuntimeInfo(
+          model: 'openai/gpt-5.5-codex',
+          provider: 'openai-codex',
+          fast: false,
+        ),
+      );
+    }
+    throw const TuiGatewayRpcError('session.resume', 'not found', code: 4007);
+  }
+
+  @override
+  Future<DesktopSessionSnapshot> createForFirstSubmit({
+    String profile = '',
+    List<Map<String, dynamic>> seedMessages = const [],
+    String model = '',
+  }) async {
+    legacyCreateCalls += 1;
+    throw StateError('legacy create must not receive configured submission');
+  }
+
+  @override
+  Future<DesktopSessionSnapshot> createForFirstSubmitConfigured({
+    String profile = '',
+    List<Map<String, dynamic>> seedMessages = const [],
+    required DesktopSessionCreateConfig config,
+  }) async {
+    configuredCreateCalls += 1;
+    final error = configuredCreateError;
+    if (error != null) throw error;
+    observedConfig = config;
+    observedProfile = profile;
+    observedSeed = seedMessages;
+    return const DesktopSessionSnapshot(
+      runtimeSessionId: 'runtime-configured',
+      storedSessionId: 'stored-configured',
+      created: true,
+      info: DesktopSessionRuntimeInfo(
+        model: 'openai/gpt-5.5-codex',
+        provider: 'openai-codex',
+        reasoningEffort: 'high',
+        fast: false,
+      ),
+    );
+  }
+
+  @override
+  DesktopGatewayCapabilityState capabilityState(
+    DesktopGatewayCapability capability,
+  ) => activationError == null
+      ? DesktopGatewayCapabilityState.supported
+      : DesktopGatewayCapabilityState.unknown;
+
+  @override
+  Future<DesktopSessionSnapshot> activateSession(
+    String runtimeSessionId, {
+    required String storedSessionId,
+  }) async {
+    activationCalls += 1;
+    final error = activationError;
+    if (error != null) throw error;
+    return DesktopSessionSnapshot(
+      runtimeSessionId: runtimeSessionId,
+      storedSessionId: storedSessionId,
+      created: false,
+      info: const DesktopSessionRuntimeInfo(
+        model: 'openai/gpt-5.5-codex',
+        provider: 'openai-codex',
+        fast: false,
+      ),
+    );
+  }
+
+  @override
+  Future<DesktopActiveSessionList> listActiveSessions({
+    String currentRuntimeSessionId = '',
+  }) async {
+    activeListCalls += 1;
+    return const DesktopActiveSessionList();
+  }
+
+  @override
+  Future<void> disconnectIdle() async {
+    idleDisconnects += 1;
+    connected = false;
+  }
+
+  @override
+  Future<DesktopSessionBinding> resumeSession(
+    String storedSessionId, {
+    String profile = '',
+    List<Map<String, dynamic>> seedMessages = const [],
+    String model = '',
+  }) async {
+    legacyResumeCalls += 1;
+    observedResumeProfiles.add(profile);
+    return const DesktopSessionBinding(
+      runtimeSessionId: 'runtime-configured',
+      storedSessionId: 'stored-configured',
+      created: false,
+      info: DesktopSessionRuntimeInfo(
+        model: 'openai/gpt-5.5-codex',
+        provider: 'openai-codex',
+        reasoningEffort: 'high',
+        fast: false,
+      ),
+    );
+  }
+
+  @override
+  Future<void> submitPrompt(String runtimeSessionId, String text) async {
+    submittedRuntime = runtimeSessionId;
+  }
+
+  @override
+  Future<int?> resolveDurableUserRowId(
+    String runtimeSessionId, {
+    required String sourceText,
+    required int expectedOrdinal,
+  }) async => 73;
+
+  @override
+  Future<DesktopRewindAck> submitDurableRewindPrompt(
+    String runtimeSessionId,
+    String text,
+    int truncateBeforeUserOrdinal, {
+    required int truncateBeforeRowId,
+    List<int> rebindSurvivorRowIds = const [],
+  }) async {
+    submittedRuntime = runtimeSessionId;
+    return const DesktopRewindAck();
+  }
+
+  @override
+  Future<DesktopConfigSetResult> setSessionModel(
+    String runtimeSessionId,
+    DesktopModelSelection selection, {
+    bool confirmExpensiveModel = false,
+  }) async {
+    final error = configError;
+    if (error != null) throw error;
+    modelChanges.add((model: selection, confirmed: confirmExpensiveModel));
+    if (!confirmExpensiveModel) {
+      return const DesktopConfigSetResult(
+        key: DesktopSessionConfigKey.model,
+        value: 'openai/gpt-5.5-codex',
+        confirmRequired: true,
+        confirmMessage: 'This model may be expensive',
+      );
+    }
+    return DesktopConfigSetResult(
+      key: DesktopSessionConfigKey.model,
+      value: selection.modelId,
+      deferred: deferModelChanges,
+    );
+  }
+
+  @override
+  Future<DesktopConfigSetResult> setSessionReasoning(
+    String runtimeSessionId,
+    DesktopReasoningEffort effort,
+  ) async => DesktopConfigSetResult(
+    key: DesktopSessionConfigKey.reasoning,
+    value: effort.wire,
+  );
+
+  @override
+  Future<DesktopConfigSetResult> setSessionFastMode(
+    String runtimeSessionId,
+    DesktopFastMode mode,
+  ) async {
+    final error = configError;
+    if (error != null) throw error;
+    return DesktopConfigSetResult(
+      key: DesktopSessionConfigKey.fast,
+      value: mode.wire,
+    );
+  }
+
+  @override
+  Future<DesktopCompressionResult> compressSession(
+    String runtimeSessionId, {
+    String focusTopic = '',
+  }) async => compressionResult;
+
+  void emitSessionInfo(Map<String, dynamic> info) {
+    _events.add(
+      TuiGatewayEvent(
+        type: 'session.info',
+        sessionId: 'runtime-configured',
+        payload: {'info': info},
+      ),
+    );
+  }
+
+  @override
+  Future<void> steer(String runtimeSessionId, String text) async {}
+
+  @override
+  Future<void> interrupt(String runtimeSessionId) async {}
+
+  @override
+  Future<void> resolveApproval(
+    String runtimeSessionId,
+    String choice, {
+    bool resolveAll = false,
+    String? requestId,
+  }) async {}
+
+  @override
+  Future<void> close() async {
+    if (!_events.isClosed) await _events.close();
+  }
+}
+
+ActiveChat _chat(
+  _ConfiguredCreateGateway gateway, {
+  String? sessionProfile,
+  http.Client? httpClient,
+  String sessionId = 'draft-mobile',
+}) => ActiveChat(
+  compressionRestoreStore: testCompressionRestoreStore(),
+  connection: SavedConnection(
+    id: 'conn-configured-create',
+    label: 'Configured create',
+    host: '127.0.0.1',
+    port: 8642,
+    apiKey: 'test-key',
+    kind: InstanceKind.vps,
+  ),
+  sessionId: sessionId,
+  sessionTitle: 'Draft',
+  notifications: null,
+  onTerminal: () {},
+  api: testApiClient(
+    baseUrl: 'http://127.0.0.1:8642',
+    httpClient:
+        httpClient ??
+        MockClient((_) async => http.Response('unexpected REST', 500)),
+  ),
+  desktopGateway: gateway,
+  allowUnownedDesktopSnapshotForTesting: true,
+  sessionProfile: sessionProfile,
+);
+
+class _MemoryWidgetStore implements HomeWidgetStore {
+  final values = <String, Object?>{};
+
+  @override
+  Future<Object?> read(String key) async => values[key];
+
+  @override
+  Future<void> write(String key, Object? value) async {
+    if (value == null) {
+      values.remove(key);
+    } else {
+      values[key] = value;
+    }
+  }
+
+  @override
+  Future<void> requestUpdate() async {}
+}
+
+/// Chat attached through the service so its events reach the home widget.
+Future<
+  ({
+    ActiveChatService service,
+    ActiveChat chat,
+    HermesHomeWidgetPublisher publisher,
+  })
+>
+_widgetChat(_ConfiguredCreateGateway gateway) async {
+  final publisher = HermesHomeWidgetPublisher(
+    store: _MemoryWidgetStore(),
+    nowMs: () => 2000000000000,
+  );
+  final service = ActiveChatService(
+    compressionRestoreStore: testCompressionRestoreStore(),
+  )..bindHomeWidgetPublisher(publisher, activeConnectionId: 'conn-widget');
+  final chat = service.attach(
+    connection: SavedConnection(
+      id: 'conn-widget',
+      label: 'Widget',
+      host: '127.0.0.1',
+      port: 8642,
+      apiKey: 'test-key',
+      kind: InstanceKind.vps,
+    ),
+    sessionId: 'draft-mobile',
+    sessionTitle: 'Widget model',
+    api: testApiClient(
+      baseUrl: 'http://127.0.0.1:8642',
+      httpClient: MockClient((_) async => http.Response('unexpected', 500)),
+    ),
+    desktopGateway: gateway,
+    storedMessageLoader: (_, _) async => const [],
+    attachDesktopRuntimeOnLoad: false,
+    allowUnownedDesktopSnapshotForTesting: true,
+  );
+  for (var i = 0; i < 5; i++) {
+    await Future<void>.delayed(Duration.zero);
+  }
+  expect(
+    await chat.ensureDesktopRuntime(acquireForExplicitAction: true),
+    isTrue,
+  );
+  await publisher.flush();
+  return (service: service, chat: chat, publisher: publisher);
+}
+
+const _newModel = 'anthropic/claude-opus-4-8';
+
+Future<void> _switchModel(ActiveChat chat) async {
+  final change = await chat.setSessionModel(
+    DesktopModelSelection(modelId: _newModel, providerSlug: 'anthropic'),
+    confirmExpensiveModel: true,
+  );
+  expect(change.status, SessionConfigChangeStatus.accepted);
+}
+
+/// The same precedence the chat header paints (`_activeModelLabel`).
+String? _headerModel(ActiveChat chat) {
+  final displayed = chat
+      .pendingSessionConfigChange(DesktopSessionConfigKey.model)
+      ?.displayValue;
+  return displayed is SessionModelConfigValue
+      ? displayed.modelId
+      : chat.effectiveSessionConfig.model ?? chat.desktopRuntimeInfo.model;
+}
+
+void main() {
+  test(
+    'background nunca cierra destructivamente un runtime enlazado',
+    () async {
+      final gateway = _ConfiguredCreateGateway()..resumeExistingSucceeds = true;
+      final chat = _chat(gateway);
+      addTearDown(chat.dispose);
+
+      expect(
+        await chat.ensureDesktopRuntime(acquireForExplicitAction: true),
+        isTrue,
+      );
+      expect(chat.isStreaming, isFalse);
+
+      await chat.suspendIdleDesktopConnection();
+
+      expect(gateway.activeListCalls, 0);
+      expect(gateway.idleDisconnects, 0);
+      expect(chat.hasDesktopRuntime, isTrue);
+    },
+  );
+
+  test('background tampoco cierra un transporte todavía sin runtime', () async {
+    final gateway = _ConfiguredCreateGateway();
+    final chat = _chat(gateway);
+    addTearDown(chat.dispose);
+
+    await chat.suspendIdleDesktopConnection();
+
+    expect(gateway.activeListCalls, 0);
+    expect(gateway.idleDisconnects, 0);
+    expect(chat.hasDesktopRuntime, isFalse);
+  });
+
+  test('ensure runtime reanuda pero un 4007 nunca crea', () async {
+    final draftGateway = _ConfiguredCreateGateway();
+    final draft = _chat(draftGateway);
+    addTearDown(draft.dispose);
+
+    expect(
+      await draft.ensureDesktopRuntime(acquireForExplicitAction: true),
+      isFalse,
+    );
+    expect(draftGateway.resumeExistingCalls, 1);
+    expect(draftGateway.configuredCreateCalls, 0);
+    expect(draftGateway.legacyCreateCalls, 0);
+
+    final existingGateway = _ConfiguredCreateGateway()
+      ..resumeExistingSucceeds = true;
+    final existing = _chat(existingGateway);
+    addTearDown(existing.dispose);
+
+    expect(
+      await existing.ensureDesktopRuntime(acquireForExplicitAction: true),
+      isTrue,
+    );
+    expect(existingGateway.resumeExistingCalls, 1);
+    expect(existingGateway.configuredCreateCalls, 0);
+    expect(existingGateway.legacyCreateCalls, 0);
+    expect(existing.hasDesktopRuntime, isTrue);
+  });
+
+  test('draft persistido reentra aislado del scope anterior', () async {
+    final gateway = _ConfiguredCreateGateway()..resumeExistingSucceeds = true;
+    final chat = _chat(gateway);
+    addTearDown(chat.dispose);
+
+    expect(
+      await chat.ensureDesktopRuntime(acquireForExplicitAction: true),
+      isTrue,
+    );
+    const key = DesktopSessionConfigKey.model;
+    await chat.setSessionModel(
+      DesktopModelSelection(
+        modelId: 'openai/gpt-5.6-codex',
+        providerSlug: 'openai-codex',
+      ),
+      confirmExpensiveModel: true,
+    );
+    expect(chat.pendingSessionConfigChange(key), isNotNull);
+    gateway.disconnectForTest();
+    expect(
+      await chat.ensureDesktopRuntime(acquireForExplicitAction: true),
+      isTrue,
+    );
+    expect(gateway.activationCalls, 1);
+    expect(gateway.resumeExistingCalls, 1);
+
+    gateway
+      ..disconnectForTest()
+      ..activationError = const TuiGatewayRpcError(
+        'session.activate',
+        'runtime closed',
+        code: 4007,
+      );
+    expect(
+      await chat.ensureDesktopRuntime(acquireForExplicitAction: true),
+      isTrue,
+    );
+    expect(gateway.activationCalls, 2);
+    expect(gateway.resumeExistingCalls, 2);
+    expect(gateway.configuredCreateCalls, 0);
+    expect(gateway.legacyCreateCalls, 0);
+    expect(chat.serverSessionId, 'stored-reentered');
+    expect(chat.pendingSessionConfigChange(key), isNull);
+    expect(chat.effectiveSessionConfig.model, 'openai/gpt-5.5-codex');
+  });
+
+  test('session.info reaplica config en el stored id de reentrada', () async {
+    final gateway = _ConfiguredCreateGateway()..resumeExistingSucceeds = true;
+    final chat = _chat(gateway);
+    addTearDown(chat.dispose);
+
+    expect(
+      await chat.ensureDesktopRuntime(acquireForExplicitAction: true),
+      isTrue,
+    );
+    const key = DesktopSessionConfigKey.fast;
+    await chat.setSessionFastMode(DesktopFastMode.fast);
+    expect(chat.pendingSessionConfigChange(key), isNotNull);
+
+    gateway.emitSessionInfo(const {
+      'stored_session_id': 'stored-from-info',
+      'model': 'openai/gpt-5.7-codex',
+      'provider': 'openai-codex',
+      'fast': false,
+    });
+    await Future<void>.delayed(Duration.zero);
+
+    expect(chat.serverSessionId, 'stored-from-info');
+    expect(chat.storedSessionId, 'stored-from-info');
+    expect(chat.pendingSessionConfigChange(key), isNull);
+    expect(chat.effectiveSessionConfig.model, 'openai/gpt-5.7-codex');
+    expect(chat.effectiveSessionConfig.provider, 'openai-codex');
+    expect(chat.effectiveSessionConfig.fast, isFalse);
+  });
+
+  test('compresión nativa rota el scope al stored id autoritativo', () async {
+    final gateway = _ConfiguredCreateGateway()
+      ..resumeExistingSucceeds = true
+      ..compressionResult = DesktopCompressionResult.fromJson({
+        'status': 'compressed',
+        'removed': 2,
+        'before_messages': 4,
+        'after_messages': 2,
+        'before_tokens': 8000,
+        'after_tokens': 2000,
+        'summary': {'noop': false},
+        'info': {
+          'stored_session_id': 'stored-after-compression',
+          'model': 'openai/gpt-5.7-codex',
+          'provider': 'openai-codex',
+          'fast': false,
+        },
+        'messages': [
+          {'role': 'user', 'content': 'Resumen durable'},
+          {'role': 'assistant', 'content': 'Contexto nuevo'},
+        ],
+      });
+    final chat = _chat(gateway);
+    addTearDown(chat.dispose);
+
+    expect(
+      await chat.ensureDesktopRuntime(acquireForExplicitAction: true),
+      isTrue,
+    );
+    await chat.setSessionFastMode(DesktopFastMode.fast);
+    expect(
+      chat.pendingSessionConfigChange(DesktopSessionConfigKey.fast),
+      isNotNull,
+    );
+
+    final result = await chat.compressDesktopSession();
+
+    expect(result.accepted, DesktopCommandAcceptance.accepted);
+    expect(chat.storedSessionId, 'stored-after-compression');
+    expect(
+      chat.pendingSessionConfigChange(DesktopSessionConfigKey.fast),
+      isNull,
+    );
+    expect(chat.effectiveSessionConfig.model, 'openai/gpt-5.7-codex');
+    expect(chat.effectiveSessionConfig.provider, 'openai-codex');
+    expect(chat.effectiveSessionConfig.fast, isFalse);
+  });
+
+  test(
+    'un pin oficial ausente falla cerrado y nunca crea ni cae a REST',
+    () async {
+      final gateway = _ConfiguredCreateGateway();
+      final chat = _chat(gateway);
+      addTearDown(chat.dispose);
+
+      final accepted = await chat.send(
+        fullText: 'no dupliques el bot chat',
+        model: 'hermes-agent',
+        history: const [],
+        sessionConfig: const DesktopSessionCreateConfig(
+          createIfMissing: false,
+          allowTransportFallback: false,
+        ),
+      );
+
+      expect(accepted, isFalse);
+      expect(gateway.resumeExistingCalls, 1);
+      expect(gateway.configuredCreateCalls, 0);
+      expect(gateway.legacyCreateCalls, 0);
+      expect(gateway.submittedRuntime, isNull);
+    },
+  );
+
+  test('Room create failure before prompt never degrades to REST', () async {
+    final gateway = _ConfiguredCreateGateway()
+      ..configuredCreateError = StateError('TUI create failed');
+    var restCalls = 0;
+    final chat = _chat(
+      gateway,
+      sessionId: 'mob-room-create-failure',
+      httpClient: MockClient((_) async {
+        restCalls++;
+        return http.Response('must not use REST', 500);
+      }),
+    );
+    addTearDown(chat.dispose);
+
+    final accepted = await chat.send(
+      fullText: 'turno manager durable',
+      model: 'hermes-agent',
+      history: const [],
+      sessionConfig: const DesktopSessionCreateConfig(
+        title: '#homelab',
+        createIfMissing: true,
+        allowTransportFallback: false,
+      ),
+    );
+
+    expect(accepted, isFalse);
+    expect(gateway.configuredCreateCalls, 1);
+    expect(gateway.submittedRuntime, isNull);
+    expect(restCalls, 0);
+  });
+
+  test(
+    'primer submit crea una vez con config capturada antes de awaits',
+    () async {
+      final gateway = _ConfiguredCreateGateway();
+      final chat = _chat(gateway, sessionId: 'mob-configured-submit');
+      addTearDown(chat.dispose);
+      final config = DesktopSessionCreateConfig(
+        model: DesktopModelSelection(
+          modelId: 'openai/gpt-5.5-codex',
+          providerSlug: 'openai-codex',
+        ),
+        reasoningEffort: DesktopReasoningEffort.high,
+        fastMode: DesktopFastMode.normal,
+      );
+
+      final accepted = await chat.send(
+        fullText: 'hola',
+        model: 'openai/gpt-5.5-codex',
+        history: const [
+          {'role': 'assistant', 'content': 'seed'},
+        ],
+        profile: 'coding',
+        sessionConfig: config,
+      );
+
+      expect(accepted, isTrue);
+      expect(gateway.resumeExistingCalls, 0);
+      expect(gateway.configuredCreateCalls, 1);
+      expect(gateway.legacyResumeCalls, 0);
+      expect(gateway.legacyCreateCalls, 0);
+      expect(gateway.observedConfig, config);
+      expect(gateway.observedProfile, 'coding');
+      expect(gateway.observedSeed, const [
+        {'role': 'assistant', 'content': 'seed'},
+      ]);
+      expect(gateway.submittedRuntime, 'runtime-configured');
+      expect(chat.storedSessionId, 'stored-configured');
+      expect(chat.desktopRuntimeInfo.model, 'openai/gpt-5.5-codex');
+      expect(chat.desktopRuntimeInfo.fast, isFalse);
+    },
+  );
+
+  test(
+    'rebind conserva el perfil propietario aunque el caller cambie a otro',
+    () async {
+      final gateway = _ConfiguredCreateGateway()..resumeExistingSucceeds = true;
+      final chat = _chat(gateway);
+      addTearDown(chat.dispose);
+
+      await chat.loadMessages(expectedMessageCount: 0, profile: 'profile-a');
+      gateway.observedResumeProfiles.clear();
+
+      final accepted = await chat.send(
+        fullText: 'turno de voz',
+        model: 'hermes-agent',
+        history: const [],
+        profile: 'profile-b',
+        serverSessionId: 'voice-runtime-rotated',
+      );
+
+      expect(accepted, isTrue);
+      expect(chat.sessionProfile, 'profile-a');
+      expect(gateway.observedResumeProfiles, ['profile-a']);
+    },
+  );
+
+  test('rewrite conserva el perfil propietario del binding', () async {
+    final gateway = _ConfiguredCreateGateway();
+    final chat = _chat(gateway, sessionProfile: 'profile-a');
+    addTearDown(chat.dispose);
+    chat.internalMessagesForTesting = [
+      {'role': 'assistant', 'content': 'respuesta anterior'},
+      {'role': 'user', 'content': 'pregunta original', '_desktopRowId': 73},
+    ];
+
+    await chat.rewrite(
+      userOrdinal: 0,
+      text: 'pregunta editada',
+      model: 'hermes-agent',
+      profile: 'profile-b',
+    );
+
+    expect(chat.sessionProfile, 'profile-a');
+    expect(gateway.observedResumeProfiles, ['profile-a']);
+  });
+
+  test('confirmación cara espera session.info antes de ser efectiva', () async {
+    final gateway = _ConfiguredCreateGateway();
+    final chat = _chat(gateway, sessionId: 'mob-expensive-config');
+    addTearDown(chat.dispose);
+    await chat.send(fullText: 'hola', model: 'hermes-agent', history: const []);
+    expect(gateway.resumeExistingCalls, 0);
+    expect(gateway.configuredCreateCalls, 1);
+    final selection = DesktopModelSelection(
+      modelId: 'anthropic/claude-opus-4-8',
+      providerSlug: 'anthropic',
+    );
+
+    final confirmation = await chat.setSessionModel(selection);
+
+    expect(confirmation.status, SessionConfigChangeStatus.confirmRequired);
+    expect(confirmation.confirmMessage, 'This model may be expensive');
+    expect(chat.effectiveSessionConfig.model, 'openai/gpt-5.5-codex');
+    expect(gateway.modelChanges.single.confirmed, isFalse);
+
+    final accepted = await chat.confirmSessionModel(confirmation);
+    expect(accepted.status, SessionConfigChangeStatus.accepted);
+    expect(gateway.modelChanges.last.confirmed, isTrue);
+    expect(chat.effectiveSessionConfig.model, 'openai/gpt-5.5-codex');
+
+    gateway.emitSessionInfo({
+      'model': selection.modelId,
+      'provider': selection.providerSlug,
+      'reasoning_effort': 'high',
+      'fast': false,
+    });
+    await Future<void>.delayed(Duration.zero);
+
+    expect(
+      chat.pendingSessionConfigChange(DesktopSessionConfigKey.model)?.status,
+      SessionConfigChangeStatus.confirmed,
+    );
+    expect(chat.effectiveSessionConfig.model, selection.modelId);
+    expect(chat.effectiveSessionConfig.provider, selection.providerSlug);
+  });
+
+  test('4009 revierte fast y conserva la sesión utilizable', () async {
+    final gateway = _ConfiguredCreateGateway();
+    final chat = _chat(gateway, sessionId: 'mob-fast-config');
+    addTearDown(chat.dispose);
+    await chat.send(fullText: 'hola', model: 'hermes-agent', history: const []);
+    expect(gateway.resumeExistingCalls, 0);
+    expect(gateway.configuredCreateCalls, 1);
+    gateway.configError = const TuiGatewayRpcError(
+      'config.set',
+      'busy',
+      code: 4009,
+    );
+
+    final result = await chat.setSessionFastMode(DesktopFastMode.fast);
+
+    expect(result.status, SessionConfigChangeStatus.rejected);
+    expect(result.failureKind, SessionConfigFailureKind.busy);
+    expect((result.displayValue as SessionFastConfigValue).enabled, isFalse);
+    expect(chat.effectiveSessionConfig.fast, isFalse);
+    expect(chat.hasDesktopRuntime, isTrue);
+  });
+
+  group('home widget follows the session model of the header', () {
+    test('an immediate switch reaches the widget before any turn', () async {
+      final gateway = _ConfiguredCreateGateway()..resumeExistingSucceeds = true;
+      final h = await _widgetChat(gateway);
+      addTearDown(h.service.dispose);
+      expect(h.publisher.latest.model, 'openai/gpt-5.5-codex');
+
+      await _switchModel(h.chat);
+      await h.publisher.flush();
+
+      expect(_headerModel(h.chat), _newModel);
+      expect(h.publisher.latest.model, _newModel);
+      expect(h.publisher.latest.provider, 'anthropic');
+    });
+
+    test('a deferred switch shows the model the header shows', () async {
+      final gateway = _ConfiguredCreateGateway()
+        ..resumeExistingSucceeds = true
+        ..deferModelChanges = true;
+      final h = await _widgetChat(gateway);
+      addTearDown(h.service.dispose);
+
+      await _switchModel(h.chat);
+      await h.publisher.flush();
+
+      final change = h.chat.pendingSessionConfigChange(
+        DesktopSessionConfigKey.model,
+      );
+      expect(change?.deferred, isTrue);
+      expect(h.chat.effectiveSessionConfig.model, 'openai/gpt-5.5-codex');
+      expect(_headerModel(h.chat), _newModel);
+      expect(h.publisher.latest.model, _headerModel(h.chat));
+      // The widget keeps the model/provider pair together, like Desktop's
+      // optimistic paint of a deferred config.set.
+      expect(h.publisher.latest.provider, 'anthropic');
+    });
+
+    test('a late session.info with the old model does not win', () async {
+      final gateway = _ConfiguredCreateGateway()..resumeExistingSucceeds = true;
+      final h = await _widgetChat(gateway);
+      addTearDown(h.service.dispose);
+      await _switchModel(h.chat);
+
+      gateway.emitSessionInfo(const {
+        'model': 'openai/gpt-5.5-codex',
+        'provider': 'openai-codex',
+        'fast': false,
+      });
+      await Future<void>.delayed(Duration.zero);
+      await h.publisher.flush();
+
+      expect(h.chat.desktopRuntimeInfo.model, 'openai/gpt-5.5-codex');
+      expect(_headerModel(h.chat), _newModel);
+      expect(h.publisher.latest.model, _newModel);
+      expect(h.publisher.latest.provider, 'anthropic');
+    });
+
+    test('a rejected switch keeps the previous model on both', () async {
+      final gateway = _ConfiguredCreateGateway()
+        ..resumeExistingSucceeds = true
+        ..configError = const TuiGatewayRpcError(
+          'config.set',
+          'busy',
+          code: 4009,
+        );
+      final h = await _widgetChat(gateway);
+      addTearDown(h.service.dispose);
+
+      final change = await h.chat.setSessionModel(
+        DesktopModelSelection(modelId: _newModel, providerSlug: 'anthropic'),
+        confirmExpensiveModel: true,
+      );
+      await h.publisher.flush();
+
+      expect(change.status, SessionConfigChangeStatus.rejected);
+      expect(_headerModel(h.chat), 'openai/gpt-5.5-codex');
+      expect(h.publisher.latest.model, 'openai/gpt-5.5-codex');
+    });
+  });
+}

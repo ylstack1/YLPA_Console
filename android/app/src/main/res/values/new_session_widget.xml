@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher shortcut, and two strings the Bot Mode widgets still use.
+     The launcher widgets have their own file: launcher_widgets_strings.xml. -->
+<resources>
+    <string name="new_session_shortcut_short_label">New conversation</string>
+    <string name="new_session_shortcut_long_label">Start a new Hermes conversation</string>
+    <string name="hermes_widget_not_configured">Not configured</string>
+    <string name="hermes_widget_setup_action">Set up Hermes</string>
+    <string name="new_session_target_package" translatable="false">dev.xpetalab.hermesconsole</string>
+</resources>

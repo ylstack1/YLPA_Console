@@ -1,0 +1,3638 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:app_links/app_links.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show EventChannel, MethodChannel;
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'core/design/ambient_backdrop.dart';
+import 'core/guide/guide_layer.dart';
+import 'core/widgets/artifact_viewer/code_view_prefs.dart';
+import 'core/widgets/chat_row_boundary.dart';
+import 'core/widgets/floating_chat_header.dart';
+import 'core/widgets/hermes_theme_reveal.dart';
+import 'core/widgets/instance_kind_picker.dart';
+import 'core/widgets/mascot/header_mascot.dart';
+import 'core/widgets/mascot/float/mascot_overlay.dart';
+import 'core/widgets/mascot/float/mascot_route_watch.dart';
+import 'core/widgets/mascot/float/mascot_sources.dart';
+import 'core/widgets/mascot/mascot_sprite.dart';
+import 'core/widgets/mission_profile_avatar.dart';
+import 'core/widgets/profile_face.dart';
+import 'core/models/profile_identity.dart';
+import 'core/characters/bot_character_store.dart';
+import 'core/characters/bot_motion.dart';
+import 'core/characters/character_library.dart';
+import 'core/services/release_log.dart';
+import 'core/services/message_reaction_prefs.dart';
+import 'core/services/pinned_prompt_prefs.dart';
+import 'core/services/release_logging.dart';
+import 'core/services/subagent_group_visibility.dart';
+import 'core/services/motion_prefs.dart';
+import 'core/services/reasoning_disclosure_prefs.dart';
+import 'core/services/retired_prefs.dart';
+import 'core/app_header_title.dart';
+import 'core/companion/data/companion_preferences.dart';
+import 'core/companion/data/companion_repository.dart';
+import 'core/companion/hatch/mock_hatch_provider.dart';
+import 'core/companion/state/companion_controller.dart';
+import 'core/companion/state/companion_presence_controller.dart';
+import 'core/shell/mascot_bridge.dart';
+import 'core/bots/ui/room/room_screen.dart';
+import 'core/screens/companion/companion_playground_screen.dart';
+import 'core/screens/companion/mascotas_screen.dart';
+import 'core/screens/companion/petdex_gallery_screen.dart';
+import 'core/screens/image_viewer_screen.dart';
+import 'core/screens/notification_settings_screen.dart';
+import 'core/screens/qr_scan_screen.dart';
+import 'core/screens/ssh_terminal_screen.dart';
+import 'core/widgets/artifact_viewer/artifact_viewer_screen.dart';
+import 'core/widgets/attachment_card.dart'
+    show
+        GeneratedAudioViewerScreen,
+        GeneratedFileViewerScreen,
+        GeneratedTextViewerScreen;
+import 'core/config/flavor.dart';
+import 'core/models/new_session_launch_action.dart';
+import 'core/models/home_widget_snapshot.dart';
+import 'core/navigation/chat_route.dart';
+import 'core/browser/agent_browser_bridge.dart';
+import 'core/screens/chat_screen.dart';
+import 'core/screens/shared_review_screen.dart';
+import 'core/screens/home_dashboard_screen.dart';
+import 'core/screens/mission_control_screen.dart';
+import 'core/screens/session_list_screen.dart';
+import 'core/screens/runs_screen.dart';
+
+import 'core/screens/tasks_screen.dart';
+import 'core/screens/cron_screen.dart';
+import 'core/services/connection_status.dart';
+import 'core/services/app_error_log.dart';
+import 'core/services/startup_destination.dart';
+import 'core/services/notifications/notification_permission_moment.dart';
+import 'core/services/startup_guard.dart';
+import 'core/services/run_registry.dart';
+import 'core/screens/lock_screen.dart';
+import 'core/screens/instance_edit_screen.dart';
+import 'core/screens/legacy_bridge_notices.dart';
+import 'core/screens/onboarding_screen.dart';
+import 'core/capabilities/catalog_deep_link.dart';
+import 'core/capabilities/catalog_deep_link_screen.dart';
+import 'core/services/pairing_link.dart';
+import 'core/services/pairing_link_delivery_gate.dart';
+import 'core/services/active_chat_service.dart';
+import 'core/services/compression_restore_store.dart';
+import 'core/services/cache_settings.dart';
+import 'core/services/cold_start_store.dart';
+import 'core/services/android_launch_action_inbox.dart';
+import 'core/services/android_share_inbox.dart';
+import 'core/services/app_lock.dart';
+import 'core/services/clipboard_image_source.dart';
+import 'core/services/generated_media_service.dart';
+import 'core/services/media_prefetcher.dart';
+import 'core/services/approval_policy.dart';
+import 'core/services/chat_draft_store.dart';
+import 'core/services/connection_manager.dart';
+import 'core/services/new_session_factory.dart';
+import 'core/services/font_size_service.dart';
+import 'core/home/launcher/launcher_widget_images.dart';
+import 'core/services/home_widget_publisher.dart';
+import 'core/services/notifications/background_listener.dart';
+import 'core/services/notifications/notification_payload_seal.dart';
+import 'core/services/notifications/notification_service.dart';
+import 'core/services/notifications/rich_notifications.dart'
+    show PlatformRichNotifications;
+import 'core/services/performance_trace.dart';
+import 'core/bots/data/gateway_socket_meter.dart';
+import 'core/services/hermes_update_monitor.dart';
+import 'core/services/hermes_update_probes.dart';
+import 'core/services/shared_gateway_pool.dart';
+import 'core/services/new_session_launch_coordinator.dart';
+import 'core/services/profile_pet_service.dart';
+import 'core/services/platform/native_appearance.dart';
+import 'core/services/secure_storage.dart';
+import 'core/services/save_to_device.dart' show SavedDocument;
+import 'core/services/screen_security.dart';
+import 'core/services/session_archive.dart';
+import 'core/services/sftp_transfer_service.dart';
+import 'core/services/ssh_dashboard_tunnel.dart';
+import 'core/services/ssh_manager.dart';
+import 'core/services/ssh_tunnel_connector.dart';
+import 'core/services/ssh_session_service.dart';
+import 'core/services/tui_gateway_client.dart';
+import 'core/services/notifications/live_turn_check.dart'
+    show liveTurnAppLocked;
+import 'core/services/turn_keepalive_controller.dart';
+import 'core/services/turn_keepalive_hold.dart';
+import 'core/services/voice/conversation/gpt_live_voice_conversation_controller.dart';
+import 'core/services/voice/conversation/local_voice_conversation_controller.dart';
+import 'core/services/voice/conversation/voice_conversation_coordinator.dart';
+import 'core/services/voice/live/flutter_webrtc_transport.dart';
+import 'core/services/voice/live/live_audio_environment.dart';
+import 'core/services/voice/live/voice_chat_mode_store.dart';
+import 'core/services/voice/live/voice_live_api.dart';
+import 'core/services/voice/read_aloud_session.dart';
+import 'core/services/voice/voice_phase.dart';
+import 'core/services/voice/voice_latency_trace.dart';
+import 'core/services/voice/voice_lang.dart';
+import 'core/services/voice/voice_service.dart';
+import 'core/services/voice/voice_settings.dart';
+import 'core/theme/active_theme_appearance.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/component_profile.dart';
+import 'core/theme/glass_look.dart';
+import 'core/theme/hermes_style.dart';
+import 'core/theme/look_feel.dart';
+import 'core/theme/theme_profile_adapter.dart';
+import 'core/theme/scroll_behavior.dart';
+import 'core/theme/theme_profile_store.dart';
+import 'core/widgets/attachment_source_sheet.dart';
+import 'core/widgets/chat/embeds/embed_consent_store.dart';
+import 'core/widgets/frosted_backdrop.dart';
+import 'core/widgets/hermes_notice.dart';
+import 'core/widgets/hermes_premium_ui.dart';
+import 'core/widgets/save_to_device_feedback.dart'
+    show showSavedDocumentActions;
+import 'core/widgets/startup_handoff.dart';
+import 'core/services/notifications/ui_notification_actions.dart';
+import 'l10n/app_localizations.dart';
+import 'core/feedback/feedback_policy.dart';
+import 'core/feedback/haptics.dart';
+
+/// Observador global de rutas. Lo usa [ChatScreen] (vía RouteAware) para saber
+/// cuándo su pantalla es la visible en pila y fijar/limpiar
+/// [NotificationService.visibleSessionId]. Así la app sabe qué chat estás
+/// mirando y no duplica notificaciones del sistema con la UI inline (Regla 1/6).
+final RouteObserver<PageRoute<dynamic>> hermesRouteObserver =
+    RouteObserver<PageRoute<dynamic>>();
+
+@visibleForTesting
+final class AppNavigationRequest {
+  const AppNavigationRequest._(
+    this.navigator,
+    this.intent,
+    this.generation,
+    this.routeRevision,
+    this.route,
+  );
+
+  final NavigatorState navigator;
+  final String intent;
+  final int generation;
+  final int routeRevision;
+  final Route<dynamic>? route;
+}
+
+/// Fences app-level navigation that resolves a destination asynchronously.
+///
+/// A request may commit only if no newer app intent began and the exact route
+/// visible when it began is still current. Normal user navigation invalidates
+/// stale work through the observer without preventing the user action itself.
+@visibleForTesting
+final class AppNavigationIntentFence extends NavigatorObserver {
+  int _generation = 0;
+  int _routeRevision = 0;
+  Route<dynamic>? _topRoute;
+
+  AppNavigationRequest begin(
+    NavigatorState navigator, {
+    required String intent,
+  }) => AppNavigationRequest._(
+    navigator,
+    intent,
+    ++_generation,
+    _routeRevision,
+    _topRoute,
+  );
+
+  bool canCommit(
+    AppNavigationRequest request,
+    NavigatorState navigator, {
+    required String intent,
+  }) =>
+      navigator.mounted &&
+      identical(request.navigator, navigator) &&
+      request.intent == intent &&
+      request.generation == _generation &&
+      request.routeRevision == _routeRevision &&
+      identical(request.route, _topRoute);
+
+  bool canCommitAfterRouteTransition(
+    AppNavigationRequest request,
+    NavigatorState navigator, {
+    required String intent,
+  }) =>
+      navigator.mounted &&
+      identical(request.navigator, navigator) &&
+      request.intent == intent &&
+      request.generation == _generation &&
+      request.routeRevision + 1 == _routeRevision &&
+      !identical(request.route, _topRoute);
+
+  void _changed(Route<dynamic>? topRoute) {
+    _topRoute = topRoute;
+    _routeRevision += 1;
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _changed(route);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _changed(previousRoute);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    _changed(newRoute);
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (identical(route, _topRoute)) _changed(previousRoute);
+  }
+}
+
+@visibleForTesting
+bool shouldReplaceInAppNotice(
+  NotificationKind? current,
+  NotificationKind incoming,
+) =>
+    current != NotificationKind.approval ||
+    incoming == NotificationKind.approval;
+
+@visibleForTesting
+Duration? inAppNoticeAutoDismissDelay(NotificationKind kind) =>
+    kind == NotificationKind.approval ? null : const Duration(seconds: 7);
+
+@visibleForTesting
+MissionControlOpenTarget? missionControlTargetForNotification(
+  NotificationOpen open,
+) => switch (open.surface) {
+  NotificationChatSurface.bot => MissionControlOpenTarget.bot(
+    sessionId: open.sessionId,
+    profile: open.profile?.trim() ?? '',
+  ),
+  NotificationChatSurface.room => MissionControlOpenTarget.room(
+    sessionId: open.sessionId,
+    roomId: open.roomId?.trim() ?? '',
+    profile: open.profile?.trim(),
+  ),
+  NotificationChatSurface.normal => null,
+};
+
+MissionControlOpenTarget? missionControlTargetForSession(Session session) {
+  final source = session.source.trim().toLowerCase();
+  if (!const {
+    'mobile-bot',
+    'bot-mode',
+    'bot-mode-local',
+    'bot-mode-canonical',
+  }.contains(source)) {
+    return null;
+  }
+  return MissionControlOpenTarget.bot(
+    sessionId: session.id,
+    profile: Session.profileOwner(session.profile),
+  );
+}
+
+@visibleForTesting
+Future<T?> pushNotificationOwnerRoute<T>(
+  NavigatorState navigator,
+  Route<T> route,
+) => navigator.pushAndRemoveUntil(route, (candidate) => candidate.isFirst);
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // H8: en release, ninguna línea de log lleva URLs, IPs ni tokens.
+  installReleaseLogRedaction();
+  silenceDebugPrintInRelease(); // M5
+  AppErrorLog.install();
+  installChatRowErrorWidget();
+  PerformanceTrace.qa.start();
+  if (kVoiceRuntimeEnabled) {
+    FlutterForegroundTask.initCommunicationPort();
+  }
+  // Any throw while preparing the app (corrupt or unreadable secure storage,
+  // Keystore unavailable before first unlock) shows a recoverable screen
+  // instead of leaving the native splash up forever. Nothing is wiped.
+  await runGuardedStartup(bootstrap: bootstrapHermesApp, run: runApp);
+}
+
+/// Everything awaited before the first frame. Independent storage reads run
+/// concurrently; the resulting state is the same as reading them in order.
+@visibleForTesting
+Future<Widget> bootstrapHermesApp() async {
+  final prefs = await SharedPreferences.getInstance();
+  // Rich-embed consent is per device; until it loads every type reads as off.
+  await EmbedConsentStore.load(prefs);
+  await MessageReactionPrefs.load(prefs);
+  await CodeViewPrefs.load(prefs);
+  await PinnedPromptPrefs.load(prefs);
+  await SubagentGroupVisibility.load(prefs);
+  await ReasoningDisclosurePrefs.load(prefs);
+  await MotionPrefs.load(prefs);
+  await GlassLookPrefs.load(prefs);
+  await HermesStylePrefs.load(prefs);
+  await BotMotionPrefs.load(prefs);
+  await HapticPrefs.load(prefs);
+  await BotCharacterStore.load(prefs);
+  await BotCharacterLibrary.load(prefs);
+  await clearRetiredPrefs(prefs);
+  // desktop_preview read/act are answered by the in-app browser (consent
+  // first, on screen only); without it they keep the 'no handler' answer.
+  TuiGatewayClient.previewRequestBridge = AgentBrowserBridge.instance;
+  final themeProfileStore = ThemeProfileStore(prefs);
+  final cancelledTurnStore = CancelledTurnTombstoneStore.secure();
+  final compressionRestoreStore = CompressionRestoreStore();
+  final coldStartStore = ColdStartStore(settings: CacheSettings(prefs));
+  ActiveChatService? coldStartOwner;
+  // The tombstone store and the connection list touch disjoint keys; the
+  // store is only consulted by ConnectionManager when a connection is
+  // deleted, which cannot happen during create().
+  final themeLoad = themeProfileStore.load();
+  // Stop tombstones are optional at startup: an unreadable or corrupt blob is
+  // left untouched (the store never rewrites what it could not parse) and
+  // chats simply run without restored tombstones this session.
+  final tombstonesLoad = tryStartupStep(cancelledTurnStore.initialize);
+  final connManagerLoad = ConnectionManager.create(
+    prefs,
+    clearCancelledTurns: (connectionId) async {
+      var removed = 0;
+      Object? firstError;
+      StackTrace? firstStack;
+      try {
+        removed += await cancelledTurnStore.removeConnection(connectionId);
+      } catch (error, stackTrace) {
+        firstError = error;
+        firstStack = stackTrace;
+      }
+      await compressionRestoreStore.clearConnection(connectionId);
+      // cs1215: the connection's cached tails and remembered route go too.
+      await (coldStartOwner?.forgetColdStartConnection(connectionId) ??
+          coldStartStore.forgetScope(connectionId).catchError((_) {}));
+      if (firstError != null) {
+        Error.throwWithStackTrace(firstError, firstStack!);
+      }
+      return removed;
+    },
+  );
+  await Future.wait<void>([themeLoad, tombstonesLoad, connManagerLoad]);
+  final initialThemeProfiles = await themeLoad;
+  final tombstonesReady = await tombstonesLoad;
+  final connManager = await connManagerLoad;
+  await Future.wait<void>([
+    // Arranque en frío: si el usuario fijó una instancia predeterminada, la
+    // app abre con ella (sembrándola como activa). El cambio de instancia en
+    // caliente se sigue respetando durante la sesión.
+    connManager.applyDefaultOnLaunch(),
+    // FLAG_SECURE must be in place before any content is visible.
+    ScreenSecurityService(prefs).apply(),
+  ]);
+  final appLock = AppLockService(prefs);
+  // Clipboard images are never probed or read while the app is locked.
+  ClipboardImageSource.appLocked = appLock.locked;
+  // Media prefetch never fetches or decodes while the app is locked; the
+  // cache root is resolved now so reopened chats read media synchronously.
+  MediaPrefetcher.appLocked = appLock.locked;
+  // The header mascot produces no frames while the app is locked.
+  MascotSprite.appLocked = appLock.locked;
+  // The drawer's profile faces read no custom avatar while locked.
+  ProfileFace.appLocked = appLock.locked;
+  unawaited(GeneratedMediaService.warmCacheRoot());
+  final approvalPolicy = ApprovalPolicyService(prefs);
+  final fontSize = FontSizeService(prefs);
+  final sshManager = SshManager(SecureStorage(), connManager);
+  // The Dashboard tunnels follow the active connection and the foreground;
+  // nothing stays open while the app is in the background.
+  final sshTunnels = SshDashboardTunnels(
+    clientFactory: sshTunnelClientFactory(sshManager),
+  );
+  SshTunnelConnector.current = SshTunnelConnector(
+    tunnels: sshTunnels,
+    manager: sshManager,
+    connections: connManager,
+  )..start();
+  final notifications = NotificationService(prefs);
+  NotificationPayloadSeal.ensure(prefs);
+  // A chat read on another device (or opened here) retracts this phone's
+  // notification on the next session list read the app already makes; never
+  // while App Lock is locked.
+  SessionArchive.listReadObserver = notifications.enableChatReadSync(
+    locked: appLock.locked,
+  );
+  final sftpTransfers = SftpTransferService(sshManager, notifications)
+    // After the first frame, never before runApp: the clean up of share
+    // copies and of 9708's downloads folder waits for nothing of the start.
+    ..cleanUpAfter(WidgetsBinding.instance.waitUntilFirstFrameRasterized);
+  final sshSessions = SshSessionService(sshManager);
+  final activeChats = ActiveChatService(
+    notifications: notifications,
+    policy: approvalPolicy,
+    prefs: prefs,
+    cancelledTurnStore: tombstonesReady ? cancelledTurnStore : null,
+    compressionRestoreStore: compressionRestoreStore,
+    connectionCredentialsRevision: connManager.connectionsRevision,
+    coldStartStore: coldStartStore,
+  );
+  coldStartOwner = activeChats;
+  // Decrypting the last chats' tails overlaps the first frames; nothing
+  // waits here.
+  // With App Lock on, nothing private is decrypted before unlock: the shell
+  // starts the restore when the lock opens (HermesAppState).
+  if (!appLock.locked.value) unawaited(activeChats.coldStartTailsReady);
+  await Future.wait<void>([
+    activeChats.globalActivity.initialize(),
+    // The first frame paints the native splash mark (StartupHandoff) and,
+    // with the lock open, Home's recents: both are ready before runApp.
+    StartupHandoff.precacheMark(),
+    if (!appLock.locked.value) primeHomeRecents(connManager, coldStartStore),
+  ]);
+  return HermesApp(
+    connManager: connManager,
+    appLock: appLock,
+    approvalPolicy: approvalPolicy,
+    fontSize: fontSize,
+    sshManager: sshManager,
+    sftpTransfers: sftpTransfers,
+    sshSessions: sshSessions,
+    notifications: notifications,
+    activeChats: activeChats,
+    themeProfileStore: themeProfileStore,
+    initialThemeProfiles: initialThemeProfiles,
+  );
+}
+
+/// Decrypts the recents snapshot of the connection Home opens on, so its
+/// first frame paints them (see `ColdStartStore.peekRecents`). Bounded and
+/// never throws: a slow Keystore only means Home reads them a frame later.
+/// Callers skip it while App Lock is locked.
+@visibleForTesting
+Future<void> primeHomeRecents(
+  ConnectionManager connManager,
+  ColdStartStore store, {
+  Duration budget = const Duration(milliseconds: 300),
+}) async {
+  final connections = connManager.getConnections();
+  final lastId = connManager.prefs.getString(ConnectionManager.lastConnKey);
+  final active =
+      connections.where((c) => c.id == lastId).firstOrNull ??
+      connections.firstOrNull;
+  if (active == null) return;
+  try {
+    await store
+        .loadRecents(
+          connectionId: active.id,
+          profile: connManager.activeProfileFor(active.id),
+        )
+        .timeout(budget);
+  } catch (_) {
+    // Home falls back to its own asynchronous read.
+  }
+}
+
+/// Una opción del selector de estilo de fuente. `family` es null para la fuente
+/// del sistema (Roboto en Android); el resto son fuentes empaquetadas localmente
+/// (ver `pubspec.yaml` y `assets/fonts/`). No se descarga nada en runtime.
+class AppFontOption {
+  const AppFontOption(this.id, this.label, this.family);
+
+  final String id;
+  final String label;
+
+  /// Familia declarada en pubspec, o null = fuente del sistema.
+  final String? family;
+}
+
+/// Catálogo de fuentes disponibles y persistencia de la elegida.
+class AppFonts {
+  AppFonts._();
+
+  /// Clave en SharedPreferences. Valor por defecto: [defaultId].
+  static const String prefKey = 'font_family';
+  static const String defaultId = 'system';
+  static const String systemFamily = 'Roboto';
+
+  /// Catálogo local curado y redistribuible bajo SIL OFL 1.1. Todas viajan
+  /// dentro del APK; el selector nunca descarga fuentes ni contacta a terceros.
+  static const List<AppFontOption> all = [
+    AppFontOption('system', 'System', null),
+    AppFontOption('inter', 'Inter', 'Inter'),
+    AppFontOption('montserrat', 'Montserrat', 'Montserrat'),
+    AppFontOption('nunito', 'Nunito', 'Nunito'),
+    AppFontOption('jetbrains', 'JetBrains Mono', 'JetBrainsMono'),
+  ];
+
+  /// Mantiene la preferencia visual de instalaciones que guardaron una familia
+  /// Fontshare antes de que el catálogo pasara a usar solo fuentes OFL.
+  static const Map<String, String> legacyIds = {
+    'satoshi': 'inter',
+    'general-sans': 'inter',
+    'switzer': 'inter',
+    'supreme': 'montserrat',
+    'cabinet': 'montserrat',
+    'clash': 'montserrat',
+    'chillax': 'nunito',
+    'sentient': 'montserrat',
+    'zodiak': 'montserrat',
+  };
+
+  /// Un id retirado se migra a su equivalente OFL; basura desconocida cae a
+  /// `system` sin crash y sin tocar el resto de preferencias.
+  static AppFontOption byId(String? id) {
+    final canonicalId = legacyIds[id] ?? id;
+    return all.firstWhere(
+      (font) => font.id == canonicalId,
+      orElse: () => all.first,
+    );
+  }
+
+  /// Devuelve siempre una familia concreta. Los presets traen su propia fuente,
+  /// así que dejar `null` conservaría la del tema en vez de usar la del sistema.
+  static String resolvedFamily(AppFontOption option) =>
+      option.family ?? systemFamily;
+
+  /// Aplica la fuente a todo el tema, incluida la AppBar. Algunos presets fijan
+  /// ahí su familia de forma explícita y cambiar solo `textTheme` dejaba partes
+  /// de la interfaz con la tipografía anterior.
+  static ThemeData applyToTheme(ThemeData theme, AppFontOption option) {
+    final family = resolvedFamily(option);
+    return theme.copyWith(
+      textTheme: theme.textTheme.apply(fontFamily: family),
+      primaryTextTheme: theme.primaryTextTheme.apply(fontFamily: family),
+      appBarTheme: theme.appBarTheme.copyWith(
+        titleTextStyle: theme.appBarTheme.titleTextStyle?.copyWith(
+          fontFamily: family,
+        ),
+        toolbarTextStyle: theme.appBarTheme.toolbarTextStyle?.copyWith(
+          fontFamily: family,
+        ),
+      ),
+    );
+  }
+}
+
+/// Una opción del selector de idioma. `locale` es null para "seguir el idioma
+/// del sistema"; el resto fijan un idioma concreto soportado por la app.
+class AppLocaleOption {
+  const AppLocaleOption(this.id, this.label, this.locale);
+
+  final String id;
+  final String label;
+
+  /// Locale forzado, o null = idioma del sistema.
+  final Locale? locale;
+}
+
+/// Catálogo de idiomas disponibles y persistencia del elegido. Mismo patrón que
+/// [AppFonts]. Por defecto sigue el idioma del sistema; los textos traducidos
+/// viven en `lib/l10n/*.arb` y se migran de forma incremental.
+class AppLocales {
+  AppLocales._();
+
+  /// Clave en SharedPreferences. Valor por defecto: [defaultId].
+  static const String prefKey = 'app_locale';
+  static const String defaultId = 'system';
+
+  static const List<AppLocaleOption> all = [
+    AppLocaleOption('system', 'Sistema', null),
+    AppLocaleOption('es', 'Español', Locale('es')),
+    AppLocaleOption('en', 'English', Locale('en')),
+    AppLocaleOption('zh', '中文', Locale('zh')),
+    AppLocaleOption('pt', 'Português (Brasil)', Locale('pt')),
+    AppLocaleOption('de', 'Deutsch', Locale('de')),
+    AppLocaleOption('fr', 'Français', Locale('fr')),
+    AppLocaleOption('ja', '日本語', Locale('ja')),
+    AppLocaleOption('it', 'Italiano', Locale('it')),
+    AppLocaleOption('ko', '한국어', Locale('ko')),
+  ];
+
+  static AppLocaleOption byId(String? id) =>
+      all.firstWhere((o) => o.id == id, orElse: () => all.first);
+
+  /// Resolve manual and system choices against the generated catalog list.
+  static Locale resolve(Locale? locale, Iterable<Locale> supported) {
+    if (locale != null) {
+      for (final candidate in supported) {
+        if (candidate == locale) return candidate;
+      }
+      if (locale.scriptCode != null) {
+        for (final candidate in supported) {
+          if (candidate.languageCode == locale.languageCode &&
+              candidate.scriptCode == locale.scriptCode) {
+            return candidate;
+          }
+        }
+      }
+      for (final candidate in supported) {
+        if (candidate.languageCode == locale.languageCode) return candidate;
+      }
+    }
+    return const Locale('en');
+  }
+}
+
+@visibleForTesting
+/// Default-network events from MainActivity: `null`/`'available'` when a
+/// network becomes the default, `'lost'` when it goes away.
+///
+/// Android fires `onAvailable` in bursts (several per second on Wi-Fi
+/// re-association), so availability is debounced into one probe per owner.
+/// A loss only marks sockets stale: the platform has no route yet, so a
+/// reconnect would just fail and feed the backoff.
+final class NetworkAvailabilityRecoveryListener {
+  NetworkAvailabilityRecoveryListener({
+    required Stream<dynamic> events,
+    required this.onAvailable,
+    VoidCallback? onLost,
+    this.isForeground,
+  }) {
+    _subscription = events.listen((event) {
+      if (event == 'lost') {
+        _pending?.cancel();
+        _pending = null;
+        _deferredAvailable = false;
+        onLost?.call();
+        return;
+      }
+      _pending?.cancel();
+      _pending = Timer(debounce, () {
+        _pending = null;
+        if (isForeground?.call() ?? true) {
+          _deferredAvailable = false;
+          onAvailable();
+        } else {
+          _deferredAvailable = true;
+        }
+      });
+    }, onError: (_) {});
+  }
+
+  static const debounce = Duration(seconds: 2);
+
+  final VoidCallback onAvailable;
+  final bool Function()? isForeground;
+  bool _deferredAvailable = false;
+  late final StreamSubscription<dynamic> _subscription;
+  Timer? _pending;
+
+  void resume() {
+    if (!_deferredAvailable || !(isForeground?.call() ?? true)) return;
+    _deferredAvailable = false;
+    onAvailable();
+  }
+
+  Future<void> dispose() {
+    _pending?.cancel();
+    _pending = null;
+    _deferredAvailable = false;
+    return _subscription.cancel();
+  }
+}
+
+class HermesApp extends StatefulWidget {
+  final ConnectionManager connManager;
+  final AppLockService appLock;
+  final ApprovalPolicyService approvalPolicy;
+  final FontSizeService fontSize;
+  final SshManager sshManager;
+  final SftpTransferService sftpTransfers;
+  final SshSessionService sshSessions;
+  final NotificationService notifications;
+  final ActiveChatService activeChats;
+  final ThemeProfileStore? themeProfileStore;
+  final ThemeProfileStoreSnapshot? initialThemeProfiles;
+  @visibleForTesting
+  final Future<Session?> Function(
+    SavedConnection connection,
+    String sessionId,
+    String profile,
+  )?
+  externalSessionLookupForTesting;
+  @visibleForTesting
+  final Widget Function(SavedConnection connection, RunRecord record)?
+  runDetailBuilderForTesting;
+  @visibleForTesting
+  final Future<void>? missionControlBarrierForTesting;
+  const HermesApp({
+    required this.connManager,
+    required this.appLock,
+    required this.approvalPolicy,
+    required this.fontSize,
+    required this.sshManager,
+    required this.sftpTransfers,
+    required this.sshSessions,
+    required this.notifications,
+    required this.activeChats,
+    this.themeProfileStore,
+    this.initialThemeProfiles,
+    this.externalSessionLookupForTesting,
+    this.runDetailBuilderForTesting,
+    this.missionControlBarrierForTesting,
+    super.key,
+  });
+
+  @override
+  State<HermesApp> createState() => HermesAppState();
+
+  /// Id del tema activo. Lee la clave `theme_mode` (compatible con las claves
+  /// antiguas dark/oled/teal/light, que se mapean a los nuevos ids).
+  static String getThemeId(SharedPreferences prefs) {
+    final active = prefs.getString(ThemeProfileStore.activeProfileKey);
+    // A removed theme maps to its survivor here too, so the first frame
+    // already paints it (no flash of the default before the store loads).
+    if (active != null && active.isNotEmpty) {
+      return AppTheme.migrateStoredThemeId(active);
+    }
+    return AppTheme.themeIdFromLegacy(prefs.getString('theme_mode'));
+  }
+
+  static Future<void> setThemeId(SharedPreferences prefs, String id) async {
+    await prefs.setString('theme_mode', id);
+  }
+
+  /// Id de la fuente activa (`system`, `inter`, …). Por defecto, la del sistema.
+  static String getFontId(SharedPreferences prefs) {
+    return AppFonts.byId(prefs.getString(AppFonts.prefKey)).id;
+  }
+
+  static Future<void> setFontId(SharedPreferences prefs, String id) async {
+    await prefs.setString(AppFonts.prefKey, id);
+  }
+
+  /// Persisted selector ID; defaults to following the system language.
+  static String getLocaleId(SharedPreferences prefs) {
+    return prefs.getString(AppLocales.prefKey) ?? AppLocales.defaultId;
+  }
+
+  static Future<void> setLocaleId(SharedPreferences prefs, String id) async {
+    await prefs.setString(AppLocales.prefKey, id);
+  }
+}
+
+class HermesAppState extends State<HermesApp> with WidgetsBindingObserver {
+  late final ValueNotifier<String> themeId;
+  late final ThemeProfileStore themeProfileStore;
+  late final ValueNotifier<ThemeProfileStoreSnapshot> themeProfiles;
+
+  /// Look & Feel choices (appearance, accent, backgrounds) and whether they
+  /// or a theme of the catalogue («Más temas») are in force.
+  late final LookFeelPrefs lookFeel;
+
+  /// Vigilante de sesiones SSH ociosas mientras la app está en background
+  /// (U-11, spec 028). Se arma al pasar a paused y se cancela al volver.
+  Timer? _sshIdleTimer;
+
+  /// Closes lingering (unleased) pooled gateway sockets after the app has
+  /// been in the background for a while; leased ones stay with their owner.
+  Timer? _gatewayIdleTimer;
+  static const _gatewayIdleGrace = chatTransportBackgroundGrace;
+
+  late final ExternalDataSyncDemandGate _externalDataSyncDemandGate;
+  static const MethodChannel _externalDataSyncControl = MethodChannel(
+    'hermes/foreground_external_data_sync',
+  );
+  static const EventChannel _networkAvailabilityEvents = EventChannel(
+    'hermes/network_availability',
+  );
+  NetworkAvailabilityRecoveryListener? _networkAvailabilityListener;
+
+  Timer? _deferredNotificationInitTimer;
+  NotificationPermissionMoment? _notificationPermissionMoment;
+
+  // La selección phone/server ocurre antes de que el controller publique
+  // `active`. Serializar ese preflight evita que dos ChatScreen solapadas
+  // configuren rutas distintas y que la primera capture la ruta de la segunda.
+  Future<void> _voiceEntryTail = Future<void>.value();
+
+  /// Id de la fuente activa (estilo de fuente de Ajustes). Reactivo: cambiarlo
+  /// reconstruye el [ThemeData] sin reiniciar la app. Acceso desde descendientes
+  /// vía `context.findAncestorStateOfType<HermesAppState>()?.fontId`.
+  late final ValueNotifier<String> fontId;
+
+  /// Id del idioma activo (selector de Ajustes). Reactivo: cambiarlo reconstruye
+  /// el [MaterialApp] con el nuevo `locale` sin reiniciar la app.
+  late final ValueNotifier<String> localeId;
+
+  /// Navigator raíz: el gate de App Lock presenta la pantalla de bloqueo como
+  /// ruta sobre este Navigator (no en un Overlay casero).
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final AppNavigationIntentFence _appNavigationFence =
+      AppNavigationIntentFence();
+
+  // Deep link hermes://pair (abrir la app ya rellena desde un enlace tocado).
+  // La suscripción mantiene viva la instancia de AppLinks mientras escucha.
+  StreamSubscription<Uri>? _linkSub;
+  final PairingLinkDeliveryGate _pairingLinkDeliveryGate =
+      PairingLinkDeliveryGate();
+  bool _pairingLinkRetryScheduled = false;
+  // hermes://plugin|skill/install: held until unlocked, onboarded and
+  // connected; opens a confirmation, never an install.
+  final CatalogDeepLinkInbox _catalogLinks = CatalogDeepLinkInbox();
+
+  // Share Sheet Android. La bandeja cifra el contenido hasta convertirlo en un
+  // borrador local; nunca lo envía automáticamente al agente.
+  final AndroidShareInbox _shareInbox = AndroidShareInbox();
+  StreamSubscription<AndroidSharedContent>? _shareSub;
+  bool _openingSharedContent = false;
+  bool _shareWaitingNoticeShown = false;
+
+  // Shortcut y widget “Nueva conversación”. Ambos entran por el mismo contrato
+  // nativo y quedan en memoria hasta superar primer frame, onboarding y
+  // App Lock.
+  final AndroidLaunchActionInbox _newSessionLaunchInbox =
+      AndroidLaunchActionInbox();
+  StreamSubscription<NewSessionLaunchAction>? _newSessionLaunchSub;
+  late final NewSessionLaunchCoordinator _newSessionLaunchCoordinator;
+
+  /// Única salida Flutter hacia el widget Glance. Las pantallas publican
+  /// cambios semánticos sobre este snapshot; ninguna escribe preferencias
+  /// nativas directamente.
+  final HermesHomeWidgetPublisher homeWidgetPublisher =
+      HermesHomeWidgetPublisher();
+  late final HomeWidgetDeletedSessionGuard _homeWidgetDeletedSessions =
+      HomeWidgetDeletedSessionGuard(
+        homeWidgetPublisher,
+        widget.connManager.prefs,
+      );
+
+  /// Para mostrar el banner discreto in-app (Regla 2) desde fuera del árbol de
+  /// una pantalla concreta (lo dispara un evento de otro chat).
+  final GlobalKey<ScaffoldMessengerState> _messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+
+  /// Suscripción a los avisos in-app del NotificationService.
+  StreamSubscription<InAppNotice>? _inAppSub;
+
+  /// Un único aviso flotante a la vez. Sustituye al MaterialBanner pegado al
+  /// borde superior y deja la pantalla actual visible y operable.
+  HermesNoticeHandle? _inAppNotice;
+  NotificationKind? _inAppNoticeKind;
+  int _inAppNoticeSerial = 0;
+
+  /// Estado previo de "hay chats activos" (para detectar transiciones de ánimo).
+  bool _presenceRunning = false;
+
+  // Cola serial de cambios del único foreground service de voz. Evita carreras
+  // start/update/downgrade si llegan varios tokens o acciones seguidas.
+  Future<void> _voiceForegroundTail = Future<void>.value();
+  ForegroundAudioOwner _foregroundAudioOwner = ForegroundAudioOwner.dataSync;
+  bool _voiceChatOpenRequested = false;
+  bool _voiceChatRouteOpen = false;
+
+  /// Acceso para pantallas descendientes (mismo patrón que el tema):
+  /// `context.findAncestorStateOfType<HermesAppState>()?.appLock`.
+  AppLockService get appLock => widget.appLock;
+
+  /// Política de aprobaciones (modos / YOLO / read-only), compartida por chat,
+  /// runs y la tarjeta de aprobación. Acceso vía
+  /// `context.findAncestorStateOfType<HermesAppState>()?.approvalPolicy`.
+  ApprovalPolicyService get approvalPolicy => widget.approvalPolicy;
+
+  /// Escala global de texto (ajuste de tamaño de fuente de Ajustes). Aplicada en
+  /// `MaterialApp.builder` vía `MediaQuery.textScaler`. Acceso vía
+  /// `context.findAncestorStateOfType<HermesAppState>()?.fontSize`.
+  FontSizeService get fontSize => widget.fontSize;
+
+  /// Gestor SSH (terminal/SFTP) centralizado por instancia. Acceso vía
+  /// `context.findAncestorStateOfType<HermesAppState>()?.sshManager`.
+  SshManager get sshManager => widget.sshManager;
+
+  /// Transferencias SFTP en segundo plano. Acceso vía
+  /// `context.findAncestorStateOfType<HermesAppState>()?.sftpTransfers`.
+  SftpTransferService get sftpTransfers => widget.sftpTransfers;
+
+  /// Sesiones SSH/terminal persistentes. Acceso vía
+  /// `context.findAncestorStateOfType<HermesAppState>()?.sshSessions`.
+  SshSessionService get sshSessions => widget.sshSessions;
+
+  /// Gestor de instancias/conexiones (incluye el estado de perfil activo).
+  /// Acceso vía `context.findAncestorStateOfType<HermesAppState>()?.connManager`.
+  ConnectionManager get connManager => widget.connManager;
+
+  Future<void> updateHomeWidget(
+    HermesHomeWidgetSnapshot Function(HermesHomeWidgetSnapshot current)
+    transform, {
+    bool restamp = true,
+  }) async {
+    try {
+      await homeWidgetPublisher.update(transform, restamp: restamp);
+    } catch (error) {
+      debugPrint(
+        '[home-widget] publicación no disponible (${error.runtimeType})',
+      );
+    }
+  }
+
+  /// Servicio de voz (dictado STT + lectura TTS). Acceso vía
+  /// `context.findAncestorStateOfType<HermesAppState>()?.voice`.
+  late final VoiceService voice = VoiceService(
+    widget.connManager.prefs,
+    SecureStorage(),
+    // El harness físico debe demostrar audio APK-only aunque el QA conserve
+    // una preferencia histórica de STT servidor. La copia no se guarda.
+    initialSettings: kVoiceQaHarnessEnabled
+        ? VoiceSettings.load(widget.connManager.prefs).copyWith(
+            sttEngine: SttEngineKind.sherpaLive,
+            ttsEngine: TtsEngineKind.onnx,
+          )
+        : null,
+  );
+
+  /// Único controlador público de conversación. Vive aquí (no en la pantalla)
+  /// para sobrevivir a la navegación y usa exclusivamente el ActiveChat visible,
+  /// STT/TTS de la APK y el submit/queue normal del chat.
+  /// Acceso vía `context.findAncestorStateOfType<HermesAppState>()?.voiceConvo`.
+  ///
+  /// Gate `kVoiceModeEnabled` (spec 027): el inicializador `late final` es
+  /// perezosos, así que el servicio NO se instancia mientras nadie lo lea.
+  /// Todos los accesos de esta clase están condicionados al gate; los de la
+  /// pantalla de chat también. Con el gate en false, nunca llega a existir.
+  late final VoiceConversationCoordinator voiceConvo =
+      VoiceConversationCoordinator(
+        chained: LocalVoiceConversationController(
+          voice,
+          audioEvents: platformLiveAudioEvents,
+        ),
+        liveFactory: () => GptLiveVoiceConversationController(
+          apiFactory: (chat) =>
+              DashboardVoiceLiveApi(DashboardClient.lazy(chat.connection)),
+          transportFactory: FlutterWebRtcTransport.new,
+          audioEvents: platformLiveAudioEvents,
+          languageCode: () => effectiveVoiceLang(widget.connManager.prefs),
+          // With the lock-screen opt-in an open GPT-Live session survives the
+          // screen turning off, but only under the microphone foreground
+          // service, which was started while the app was in front, and only
+          // while the chat it belongs to still exists behind the lock screen.
+          continueWhenHidden: () => liveVoiceMayContinueHidden(
+            continueWhenLocked: voice.continueVoiceWhenLocked,
+            microphoneServiceHeld:
+                _foregroundAudioOwner == ForegroundAudioOwner.voiceConversation,
+            viewAttached: _appLifecycle != AppLifecycleState.detached,
+          ),
+          stopPhrases: () => voice.stopPhrases.value,
+        ),
+        // The server's `voice.voice_chat_mode` decides, per connection and
+        // profile; the same preferences back the Voice settings screen.
+        modes: VoiceChatModeStore(widget.connManager.prefs),
+        apiFactory: (chat) =>
+            DashboardVoiceLiveApi(DashboardClient.lazy(chat.connection)),
+        languageCode: () => effectiveVoiceLang(widget.connManager.prefs),
+        visibleSession: widget.notifications.visibleSession,
+        profileWatch: (chat) => (
+          changes: widget.connManager.activeProfileRevisionFor(
+            chat.connection.id,
+          ),
+          current: () =>
+              widget.connManager.activeProfileFor(chat.connection.id),
+        ),
+        // GPT-Live never starts unless the app is on screen. `inactive` is
+        // still on screen (a system dialog, the notification shade).
+        appVisible: () =>
+            _appLifecycle == AppLifecycleState.resumed ||
+            _appLifecycle == AppLifecycleState.inactive,
+      );
+
+  AppLifecycleState _appLifecycle =
+      WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
+
+  /// Notificaciones locales del agente (aprobaciones, ejecuciones, respuestas).
+  /// Acceso vía `context.findAncestorStateOfType<HermesAppState>()?.notifications`.
+  NotificationService get notifications => widget.notifications;
+
+  /// Chats con streaming activo que sobreviven a la navegación (la respuesta del
+  /// agente sigue aunque salgas de la pantalla del chat). Acceso vía
+  /// `context.findAncestorStateOfType<HermesAppState>()?.activeChats`.
+  ActiveChatService get activeChats => widget.activeChats;
+
+  Future<T> serializeVoiceEntry<T>(Future<T> Function() action) async {
+    final previous = _voiceEntryTail;
+    final release = Completer<void>();
+    _voiceEntryTail = release.future;
+    await previous;
+    try {
+      return await action();
+    } finally {
+      release.complete();
+    }
+  }
+
+  /// Galería de mascotas cosméticas "Companion" (capa visual; no afecta a voz,
+  /// runtime ni gateway). Acceso vía
+  /// `context.findAncestorStateOfType<HermesAppState>()?.companion`.
+  late final CompanionController companion = CompanionController(
+    CompanionRepository(importedRootProvider: _companionImportRoot),
+    CompanionPreferences(widget.connManager.prefs),
+    publishProfileIdentity: true,
+    // Proveedor de "Hatch" v1: generador local **offline** (avatar procedural,
+    // sin red, sin cuentas). El proveedor de la conexión Hermes (gated por
+    // probe/opt-in) se conectará cuando el gateway exponga generación de
+    // imágenes; mientras tanto, esto mantiene la feature local y privada.
+    hatchProvider: const MockHatchProvider(),
+  );
+
+  /// The app's own pet. Mascotas and the floating overlay share only this
+  /// device preference; profile identity remains on `companion`/the server.
+  late final CompanionController appCompanion = CompanionController(
+    CompanionRepository(importedRootProvider: _companionImportRoot),
+    CompanionPreferences(widget.connManager.prefs),
+    appPet: true,
+    hatchProvider: const MockHatchProvider(),
+  );
+
+  /// Cliente `pet.*` de la instancia activa para la mascota por perfil (uno
+  /// por conexión; se cierra al cambiar de instancia o al destruir el estado).
+  TuiGatewayClient? _companionPetGateway;
+  SharedGatewayLease? _companionPetLease;
+  ProfilePetService? _companionPetSvc;
+  String? _companionPetGatewayConnId;
+
+  /// Ámbito (conexión, perfil) actual de la mascota, o `null` si no hay
+  /// instancia activa (→ comportamiento local global legado). El perfil se lee
+  /// siempre fresco del store: el notifier `activeProfile` solo refleja el
+  /// último [ConnectionManager.setActiveProfile] y no viaja con el cambio de
+  /// conexión.
+  CompanionScope? _companionScope() {
+    final connId = widget.connManager.activeConnectionId.value;
+    if (connId == null || connId.isEmpty) return null;
+    return CompanionScope(connId, widget.connManager.activeProfileFor(connId));
+  }
+
+  /// Servicio `pet.*` de la instancia [connId]. En solo lectura se mantienen
+  /// `pet.info` y `pet.changed` para poder materializar la identidad remota,
+  /// pero la propia frontera bloquea `pet.select` y `pet.disable`.
+  ProfilePetService? _companionPetService(String connId) {
+    SavedConnection? active;
+    for (final connection in widget.connManager.getConnections()) {
+      if (connection.id == connId) {
+        active = connection;
+        break;
+      }
+    }
+    if (active == null) return null;
+    if (_companionPetGatewayConnId != connId) {
+      _companionPetLease?.release();
+      final lease = SharedGatewayPool.instance.acquire(active);
+      _companionPetLease = lease;
+      _companionPetGateway = lease.client;
+      _companionPetGatewayConnId = connId;
+      _companionPetSvc = ProfilePetService(
+        _companionPetGateway!,
+        allowWrites: !active.readOnly,
+      );
+    }
+    return _companionPetSvc;
+  }
+
+  MissionProfileAvatarCache? _companionAvatarCache;
+
+  /// Fotos de perfil de [connId] para la cara que sustituye a la mascota.
+  /// Reutiliza la conexión del servicio `pet.*` de esa instancia.
+  MissionProfileAvatarCache? _companionAvatars(String connId) {
+    if (_companionPetService(connId) == null) return null;
+    final gateway = _companionPetGateway;
+    if (gateway == null) return null;
+    final cached = _companionAvatarCache;
+    if (cached != null && cached.connectionId == connId) return cached;
+    return _companionAvatarCache = MissionProfileAvatarCache(
+      connectionId: connId,
+      loader: gateway.profileAvatar,
+    );
+  }
+
+  /// Presencia ambiental del Companion (feature 006): ánimo central compartido
+  /// por Home/Mascotas, dirigido por los eventos de chat (`ActiveChatService`) y
+  /// el ciclo de la app. No toca voz/runtime/gateway. Acceso vía
+  /// `context.findAncestorStateOfType<HermesAppState>()?.companionPresence`.
+  late final CompanionPresenceController companionPresence =
+      CompanionPresenceController();
+
+  /// Reacciona a la actividad de chat: si hay runs activos → "pensando"; al
+  /// vaciarse → respuesta completada (éxito → idle). Observa `activeIds` sin
+  /// tocar el runtime/voz.
+  void _onActiveChatsChanged() {
+    final running = activeChats.activeIds.value.isNotEmpty;
+    if (running == _presenceRunning) return;
+    _presenceRunning = running;
+    companionPresence.onEvent(
+      running ? PresenceEvent.messageSent : PresenceEvent.responseCompleted,
+    );
+  }
+
+  /// Compensa una adquisición física que terminó después de que Exit retirase
+  /// la lease lógica. `startForVoice()` ya pudo publicar los tipos microphone y
+  /// mediaPlayback aunque el owner Dart siguiese en dataSync, por lo que el
+  /// downgrade no puede depender de [_foregroundAudioOwner].
+  Future<void> _compensateStaleVoiceForegroundAcquisition() async {
+    _foregroundAudioOwner = ForegroundAudioOwner.dataSync;
+    await BackgroundListener.downgradeFromVoice();
+    await widget.activeChats.maybeReleaseForeground();
+    completeVoiceLeaseTrace(
+      VoiceLatencyTrace.current.currentTurn,
+      releaseConfirmed: false,
+    );
+  }
+
+  Future<void> _queueVoiceForegroundSync() {
+    _voiceForegroundTail = _voiceForegroundTail.then((_) async {
+      if (!mounted) return;
+      final voiceActive = kVoiceRuntimeEnabled && voiceConvo.active;
+      widget.notifications.activeVoiceSessionId = voiceActive
+          ? voiceConvo.sessionId
+          : null;
+      final readSnapshot = voice.readAloud.value;
+      final readPaused = readSnapshot.phase == ReadAloudPhase.paused;
+      final desired = resolveForegroundAudioOwner(
+        voiceConversationNeedsForeground:
+            kVoiceRuntimeEnabled &&
+            voiceRuntimeNeedsForeground(
+              active: voiceConvo.audioLeaseRequired,
+              continueWhenLocked: voice.continueVoiceWhenLocked,
+            ),
+        readAloudNeedsForeground: _readAloudNeedsForeground,
+      );
+
+      switch (desired) {
+        case ForegroundAudioOwner.voiceConversation:
+          if (_foregroundAudioOwner != desired) {
+            final started = await BackgroundListener.startForVoice();
+            if (!started) return;
+            if (!mounted || !voiceConvo.audioLeaseRequired) {
+              await _compensateStaleVoiceForegroundAcquisition();
+              return;
+            }
+            _foregroundAudioOwner = desired;
+          }
+          if (!mounted || !voiceConvo.audioLeaseRequired) return;
+          await BackgroundListener.updateVoiceNotification(
+            state: voiceConvo.phase == VoicePhase.waitingPermission
+                ? VoiceNotificationState.waitingPermission
+                : voiceConvo.userPaused
+                ? VoiceNotificationState.paused
+                : VoiceNotificationState.active,
+          );
+        case ForegroundAudioOwner.readAloud:
+          if (_foregroundAudioOwner != desired) {
+            final started = await BackgroundListener.startForReadAloud(
+              paused: readPaused,
+            );
+            if (!started || !mounted) return;
+            _foregroundAudioOwner = desired;
+          } else {
+            await BackgroundListener.updateReadAloudNotification(
+              paused: readPaused,
+            );
+          }
+        case ForegroundAudioOwner.dataSync:
+          final previous = _foregroundAudioOwner;
+          _foregroundAudioOwner = desired;
+          if (previous == ForegroundAudioOwner.voiceConversation) {
+            await BackgroundListener.downgradeFromVoice();
+          } else if (previous == ForegroundAudioOwner.readAloud) {
+            await BackgroundListener.downgradeFromReadAloud();
+          }
+          // La degradacion retira los tipos de audio, pero puede dejar un FGS
+          // dataSync recien creado. Pasa siempre por el arbitro compartido: el
+          // conserva chats, SSH/SFTP y el opt-in de notificaciones, y detiene
+          // el servicio cuando Voz o ReadAloud eran su ultimo propietario.
+          await widget.activeChats.maybeReleaseForeground();
+          completeVoiceLeaseTrace(
+            VoiceLatencyTrace.current.currentTurn,
+            // flutter_foreground_task no devuelve el conjunto de tipos activo
+            // tras downgrade; no se puede afirmar un ACK de liberación.
+            releaseConfirmed: false,
+          );
+      }
+    }, onError: (_) {});
+    return _voiceForegroundTail;
+  }
+
+  Future<bool> _prepareReadAloudPlayback() async {
+    await _queueVoiceForegroundSync();
+    if (!mounted) return false;
+    if (_foregroundAudioOwner == ForegroundAudioOwner.readAloud ||
+        _foregroundAudioOwner == ForegroundAudioOwner.voiceConversation) {
+      return true;
+    }
+    // En foreground el audio sigue siendo seguro aunque Android rechazara el
+    // FGS; en background fallamos cerrado para no reproducir una pista muda.
+    return _appLifecycle == AppLifecycleState.resumed;
+  }
+
+  void _onVoiceRuntimeChanged() {
+    voice.setVoiceConversationActive(voiceConvo.active);
+    voice.setVoiceConversationAudioLeaseActive(voiceConvo.audioLeaseRequired);
+    _queueVoiceForegroundSync();
+    if (_voiceChatOpenRequested) {
+      unawaited(_openVoiceOwnerChatIfReady());
+    }
+  }
+
+  void _onVoiceConsentChanged() {
+    _queueVoiceForegroundSync();
+  }
+
+  void _onReadAloudRuntimeChanged() {
+    _queueVoiceForegroundSync();
+  }
+
+  bool get _readAloudNeedsForeground {
+    final snapshot = voice.readAloud.value;
+    return snapshot.isActive || snapshot.phase == ReadAloudPhase.paused;
+  }
+
+  void _onVoicePrivacyGateChanged() {
+    if (!kVoiceRuntimeEnabled) return;
+    if (widget.appLock.locked.value) {
+      unawaited(voiceConvo.suspendForPrivacy());
+    } else if (_appLifecycle == AppLifecycleState.resumed) {
+      voiceConvo.onAppResumed(appUnlocked: true);
+      unawaited(voiceConvo.resumeFullDuplexCaptureIfNeeded());
+      unawaited(_openVoiceOwnerChatIfReady());
+    }
+  }
+
+  Future<void> _openVoiceOwnerChatIfReady() async {
+    if (!_voiceChatOpenRequested ||
+        _voiceChatRouteOpen ||
+        !mounted ||
+        _appLifecycle != AppLifecycleState.resumed ||
+        !_firstFrameShown ||
+        _showOnboarding ||
+        widget.appLock.locked.value) {
+      return;
+    }
+    final owner = voiceConvo.ownerChat;
+    if (owner == null) {
+      _voiceChatOpenRequested = false;
+      return;
+    }
+    final visible = widget.notifications.visibleSessionId;
+    if (visible != null &&
+        <String?>{
+          owner.sessionId,
+          owner.serverSessionId,
+          owner.logicalSessionId,
+          owner.storedSessionId,
+        }.contains(visible)) {
+      _voiceChatOpenRequested = false;
+      voiceConvo.resumeOverlay();
+      return;
+    }
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null || !navigator.mounted) return;
+    final model =
+        widget.connManager.prefs.getString('selected_model') ?? 'hermes-agent';
+    final session = Session(
+      id: owner.sessionId,
+      title: owner.sessionTitle,
+      model: model,
+      source: 'mobile',
+      messageCount: owner.messages.length,
+      isActive: owner.isStreaming,
+      preview: '',
+      startedAt: 0,
+      lineageRootId: owner.logicalSessionId,
+      profile: owner.sessionProfile,
+    );
+    _voiceChatOpenRequested = false;
+    _voiceChatRouteOpen = true;
+    voiceConvo.resumeOverlay();
+    try {
+      await openChatFromHomeNavigator<void>(
+        navigator,
+        builder: (_) =>
+            ChatScreen(connection: owner.connection, session: session),
+      );
+    } finally {
+      _voiceChatRouteOpen = false;
+    }
+  }
+
+  Future<void> _resumeVoiceFromNotification() async {
+    if (!voiceConvo.active || widget.appLock.locked.value) return;
+    await voiceConvo.resumeFullDuplexCaptureIfNeeded();
+    if (widget.appLock.locked.value) return;
+    await voiceConvo.resumeFromSystemControl();
+  }
+
+  void _onVoiceTaskData(Object data) {
+    if (BackgroundListener.foregroundStopRequestedFromData(data)) {
+      unawaited(_handleForegroundStopRequest());
+      return;
+    }
+    // Spec 080: Cron/Kanban completion while the app is open → in-app notice.
+    final automationNotice = BackgroundListener.automationNoticeFromData(data);
+    if (automationNotice != null) {
+      _showInAppNotice(automationNotice);
+      return;
+    }
+    final readAction = BackgroundListener.readAloudActionFromData(data);
+    if (readAction != null) {
+      switch (readAction) {
+        case ReadAloudNotificationAction.pause:
+          unawaited(voice.pauseReadAloudFromSystemControl());
+        case ReadAloudNotificationAction.resume:
+          unawaited(voice.resumeReadAloudFromSystemControl());
+        case ReadAloudNotificationAction.end:
+          unawaited(voice.stopAndDiscardReadAloud());
+      }
+      _queueVoiceForegroundSync();
+      return;
+    }
+    if (!kVoiceRuntimeEnabled) return;
+    final action = BackgroundListener.voiceSessionActionFromData(data);
+    if (action == null) return;
+    switch (action) {
+      case VoiceSessionAction.open:
+        _voiceChatOpenRequested = true;
+        unawaited(_openVoiceOwnerChatIfReady());
+        return;
+      case VoiceSessionAction.pause:
+        if (!voiceConvo.active) return;
+        unawaited(voiceConvo.pauseFromSystemControl());
+        break;
+      case VoiceSessionAction.continueSession:
+        if (!voiceConvo.active) return;
+        unawaited(_resumeVoiceFromNotification());
+        break;
+      case VoiceSessionAction.end:
+        if (voiceConvo.active) voiceConvo.exit();
+        break;
+    }
+    _queueVoiceForegroundSync();
+  }
+
+  Future<void> _handleForegroundStopRequest() async {
+    await BackgroundListener.stopAutomation();
+    await _stopExternalDataSyncOwners();
+  }
+
+  /// Directorio del sandbox donde se guardan las mascotas importadas por el
+  /// usuario (`<appSupport>/companions/`). Solo almacenamiento local de la app.
+  static Future<Directory> _companionImportRoot() async {
+    final base = await getApplicationSupportDirectory();
+    return Directory('${base.path}/companions');
+  }
+
+  HomeWidgetTheme _homeWidgetTheme(ThemeProfileStoreSnapshot profiles) =>
+      _activeBrightness(profiles) == Brightness.light
+      ? HomeWidgetTheme.light
+      : HomeWidgetTheme.dark;
+
+  /// Brightness of what is really painted: Look & Feel's when it is in
+  /// force, else the preset's or custom theme's (see
+  /// [activeThemeBrightness]). The native day/night setting and the home
+  /// widget read this, so neither can disagree with the app.
+  Brightness _activeBrightness(ThemeProfileStoreSnapshot profiles) {
+    final platform =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    final look = lookFeel.settings;
+    if (look.derived) return look.resolveBrightness(platform);
+    return activeThemeBrightness(profiles, platformBrightness: platform);
+  }
+
+  /// Whether the app swaps theme by itself when the system does.
+  bool get _followsSystem {
+    final look = lookFeel.settings;
+    return look.derived
+        ? look.appearance == LookAppearance.system
+        : followSystemThemeIds(themeProfiles.value) != null;
+  }
+
+  /// The colours really painted: Look & Feel's when in force, else the
+  /// custom profile's or the preset's (with "Auto", the system's side). The
+  /// launcher widgets are drawn in them.
+  HermesThemeColors _activeThemeColors() {
+    final profiles = themeProfiles.value;
+    final look = lookFeel.settings;
+    final platform =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    if (look.derived) {
+      return LookFeel.colors(look, look.resolveBrightness(platform));
+    }
+    final custom = profiles.customById(profiles.activeProfileId);
+    if (custom != null) return ThemeProfileAdapter.colorsFromProfile(custom);
+    final auto = followSystemThemeIds(profiles);
+    final id = auto == null
+        ? AppTheme.migrateStoredThemeId(profiles.activeProfileId)
+        : platform == Brightness.light
+        ? auto.light
+        : auto.dark;
+    return AppTheme.presetById(id).colors;
+  }
+
+  Locale _activeLocale() => AppLocales.resolve(
+    AppLocales.byId(localeId.value).locale ??
+        WidgetsBinding.instance.platformDispatcher.locale,
+    Strings.supportedLocales,
+  );
+
+  /// The launcher widgets are pictures the app draws in its theme: this
+  /// tells their publisher where to read the theme, font, language and
+  /// text size from, and asks for a drawing whenever one of them changes.
+  void _configureLauncherWidgetImages() {
+    final dispatcher = WidgetsBinding.instance.platformDispatcher;
+    LauncherWidgetImagePublisher.instance.configure(
+      LauncherWidgetImageEnvironment(
+        colors: _activeThemeColors,
+        fontFamily: () => AppFonts.resolvedFamily(AppFonts.byId(fontId.value)),
+        locale: _activeLocale,
+        textScale: () => dispatcher.textScaleFactor,
+        devicePixelRatio: () => dispatcher.views.isEmpty
+            ? 2.0
+            : dispatcher.views.first.devicePixelRatio,
+        use24h: () => dispatcher.alwaysUse24HourFormat,
+        themeId: () => themeId.value,
+        appLockEnabled: () =>
+            widget.connManager.prefs.getBool('app_lock_enabled') == true,
+      ),
+    );
+    LauncherWidgetImagePublisher.instance.attachPlatformChannel();
+  }
+
+  void _redrawLauncherWidgets() {
+    LauncherWidgetImagePublisher.instance.request();
+  }
+
+  void _onLookFeelChanged() {
+    unawaited(_syncNativeAppearance(themeProfiles.value));
+    _redrawLauncherWidgets();
+    unawaited(
+      updateHomeWidget(
+        (current) =>
+            current.copyWith(theme: _homeWidgetTheme(themeProfiles.value)),
+      ),
+    );
+  }
+
+  /// Menu actions of the floating mascot: a new chat and the Mascotas
+  /// screen.
+  MascotOverlayActions _mascotActions() => MascotOverlayActions(
+    onTalk: () {
+      final connection = _activeHomeWidgetConnection();
+      final nav = _navigatorKey.currentState;
+      if (connection == null || nav == null) return;
+      final session = Session(
+        id: generateSessionId(),
+        title: Strings.of(nav.context).drawerNewChat,
+        model: 'hermes-agent',
+        source: 'mobile',
+        messageCount: 0,
+        isActive: true,
+        preview: '',
+        startedAt: DateTime.now().millisecondsSinceEpoch / 1000,
+      );
+      openChatFromHomeNavigator<void>(
+        nav,
+        builder: (_) => ChatScreen(connection: connection, session: session),
+      );
+    },
+    onChange: () => _navigatorKey.currentState?.push(
+      MaterialPageRoute<void>(builder: (_) => const MascotasScreen()),
+    ),
+  );
+
+  /// What the floating mascot is told: the attached chats, the notices the
+  /// app already shows, the active profile's pet.
+  late final MascotBridge _mascot = MascotBridge(
+    companion: appCompanion,
+    presence: companionPresence,
+    activeChats: activeChats,
+    connManager: widget.connManager,
+    notifications: widget.notifications,
+    homeWidget: homeWidgetPublisher,
+    context: () => _navigatorKey.currentContext,
+    open: (target) => unawaited(_openSessionFromNotification(target)),
+    openNotificationSettings: () => _navigatorKey.currentState?.push(
+      MaterialPageRoute<void>(
+        builder: (_) => const NotificationSettingsScreen(),
+      ),
+    ),
+  );
+
+  /// Pages the floating mascot stays out of: chats and rooms (their pet
+  /// stands on the island), full-screen viewers and tools, onboarding, and
+  /// the screens that already show the pet large.
+  static bool _mascotQuietPage(Widget page) =>
+      page is ChatScreen ||
+      page is RoomScreen ||
+      page is OnboardingScreen ||
+      page is ImageViewerScreen ||
+      page is ArtifactViewerScreen ||
+      page is GeneratedTextViewerScreen ||
+      page is GeneratedAudioViewerScreen ||
+      page is GeneratedFileViewerScreen ||
+      page is QrScanScreen ||
+      page is SshTerminalScreen ||
+      page is MascotasScreen ||
+      page is PetdexGalleryScreen ||
+      page is CompanionPlaygroundScreen;
+
+  SavedConnection? _activeHomeWidgetConnection() {
+    final connections = widget.connManager.getConnections();
+    if (connections.isEmpty) return null;
+    final activeId =
+        widget.connManager.activeConnectionId.value ??
+        widget.connManager.prefs.getString(ConnectionManager.lastConnKey);
+    for (final connection in connections) {
+      if (connection.id == activeId) return connection;
+    }
+    return connections.length == 1 ? connections.single : null;
+  }
+
+  Future<void> _publishHomeWidgetBase() {
+    final connections = widget.connManager.getConnections();
+    final active = _activeHomeWidgetConnection();
+    return updateHomeWidget(
+      (current) => mergeHomeWidgetBaseSnapshot(
+        current: current,
+        configured: connections.isNotEmpty,
+        instanceId: active?.id,
+        instanceLabel: active?.label,
+        connectionState: connections.isEmpty
+            ? HomeWidgetConnectionState.unconfigured
+            : active == null
+            ? HomeWidgetConnectionState.noInstance
+            : HomeWidgetConnectionState.connecting,
+        agentState: active == null
+            ? HomeWidgetAgentState.disconnected
+            : HomeWidgetAgentState.idle,
+        theme: _homeWidgetTheme(themeProfiles.value),
+      ),
+    );
+  }
+
+  void _onHomeWidgetConnectionChanged() {
+    unawaited(_syncHomeWidgetConnection());
+  }
+
+  Future<void> _syncHomeWidgetConnection() async {
+    final connectionId = _activeHomeWidgetConnection()?.id;
+    unawaited(_homeWidgetDeletedSessions.follow(connectionId));
+    await widget.activeChats.setHomeWidgetActiveConnection(connectionId);
+    await _publishHomeWidgetBase();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.activeChats.bindHomeWidgetPublisher(
+      homeWidgetPublisher,
+      activeConnectionId: _activeHomeWidgetConnection()?.id,
+    );
+    _configureLauncherWidgetImages();
+    // A confirmed delete on any screen leaves the widget too.
+    unawaited(
+      _homeWidgetDeletedSessions.follow(_activeHomeWidgetConnection()?.id),
+    );
+    // Carga (no bloqueante) de las mascotas locales y la preferencia guardada.
+    // La selección es por perfil: se re-resuelve al cambiar de instancia o de
+    // perfil, cruzando con `pet.info` del gateway cuando éste soporta `pet.*`.
+    companion.bindProfileScope(
+      resolveScope: _companionScope,
+      resolvePetService: _companionPetService,
+      resolveAvatarCache: _companionAvatars,
+      changes: Listenable.merge([
+        widget.connManager.activeConnectionId,
+        widget.connManager.activeProfile,
+      ]),
+    );
+    ProfileIdentities.instance.connectionId = () =>
+        widget.connManager.activeConnectionId.value;
+    ProfileIdentities.instance.cacheReader = (connection, profile) async {
+      if (appLock.locked.value) return (known: false, pet: null);
+      return companion.cachedIdentityFor(connection, profile);
+    };
+    ProfileIdentities.instance.loader = (connection, profile) async {
+      if (appLock.locked.value) return (known: false, pet: null);
+      return companion.loadIdentityFor(connection, profile);
+    };
+    final profilePetReady = companion.init();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(() async {
+        await profilePetReady;
+        if (!mounted) return;
+        await appCompanion.initAppFromProfile(companion);
+      }());
+    });
+    MascotRouteWatch.instance.quietPage = _mascotQuietPage;
+    _mascot.start();
+    themeProfileStore =
+        widget.themeProfileStore ?? ThemeProfileStore(widget.connManager.prefs);
+    final initialThemes =
+        widget.initialThemeProfiles ??
+        ThemeProfileStoreSnapshot(
+          customProfiles: const [],
+          activeProfileId: HermesApp.getThemeId(widget.connManager.prefs),
+          activeComponentProfileId: ComponentProfiles.minimal.id,
+        );
+    themeProfiles = ValueNotifier(initialThemes);
+    themeId = ValueNotifier(initialThemes.activeProfileId);
+    lookFeel = LookFeelPrefs(widget.connManager.prefs)
+      ..addListener(_onLookFeelChanged);
+    unawaited(_syncNativeAppearance(initialThemes));
+    if (widget.initialThemeProfiles == null) {
+      unawaited(refreshThemeProfiles(force: true));
+    }
+    fontId = ValueNotifier(HermesApp.getFontId(widget.connManager.prefs));
+    localeId = ValueNotifier(HermesApp.getLocaleId(widget.connManager.prefs));
+    loadHeaderTitle(widget.connManager.prefs);
+    _showOnboarding =
+        widget.connManager.prefs.getBool('onboarding_done') != true;
+    _newSessionLaunchCoordinator = NewSessionLaunchCoordinator(
+      connections: widget.connManager.getConnections,
+      activeConnectionId: () => widget.connManager.activeConnectionId.value,
+      defaultConnectionId: () => widget.connManager.defaultConnectionId,
+      onboardingComplete: () => !_showOnboarding,
+      unlocked: () => !widget.appLock.locked.value,
+      navigatorReady: () =>
+          _firstFrameShown && _navigatorKey.currentState?.mounted == true,
+      newChatTitle: () =>
+          Strings.of(_navigatorKey.currentContext!).drawerNewChat,
+      selectConnection: _selectNewSessionConnection,
+      navigate: _openNewSessionDraft,
+      openApp: _openWidgetApp,
+      openSetup: _openWidgetSetup,
+      openSession: _openWidgetSession,
+    );
+    widget.connManager.activeConnectionId.addListener(
+      _onHomeWidgetConnectionChanged,
+    );
+    unawaited(_publishHomeWidgetBase());
+    unawaited(FrostedBackdropPolicy.refresh());
+    // A cold start that opens locked builds nothing of Home (no private
+    // store read) until the lock opens.
+    _homeHeldByLock = widget.appLock.locked.value;
+    widget.appLock.locked.addListener(_releaseHomeOnUnlock);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onFirstFrame());
+    WidgetsBinding.instance.addObserver(this);
+    if (Platform.isAndroid) {
+      _networkAvailabilityListener = NetworkAvailabilityRecoveryListener(
+        events: _networkAvailabilityEvents.receiveBroadcastStream(),
+        isForeground: () => _appLifecycle == AppLifecycleState.resumed,
+        onAvailable: () {
+          if (_appLifecycle != AppLifecycleState.resumed) return;
+          GatewaySocketMeter.instance.recordNetworkAvailable();
+          ConnectionStatusRegistry.instance.setNetworkLost(false);
+          widget.activeChats.requestImmediateTransportRecovery(
+            networkChanged: true,
+          );
+          // Pooled observers (Home, library, rooms, pet) are probed too, so a
+          // half-open socket from the old network fails now, not in 45 s.
+          unawaited(SharedGatewayPool.instance.probeAll(networkChanged: true));
+        },
+        onLost: () {
+          GatewaySocketMeter.instance.recordNetworkLost();
+          ConnectionStatusRegistry.instance.setNetworkLost(true);
+        },
+      );
+    }
+    // `didHaveMemoryPressure` no lleva nivel y también se dispara al pasar a
+    // background: MainActivity reenvía onTrimMemory con su nivel para que la
+    // voz solo evacúe modelos pesados ante presión real del sistema.
+    const MethodChannel('hermes/memory').setMethodCallHandler((call) async {
+      if (call.method == 'trimMemory') {
+        final level = (call.arguments as Map?)?['level'];
+        unawaited(voice.onTrimMemory(level is int ? level : -1));
+      }
+      return null;
+    });
+    // Al pulsar una notificación del agente, navega a la sesión correcta.
+    widget.notifications.onOpenSession = _openSessionFromNotification;
+    // Approve / Deny / Stop / Reply tapped on rich notifications or Bot Mode
+    // widgets (spec 070): same server calls as the in-app controls.
+    if (Platform.isAndroid) {
+      // The background check of live rows asks this engine, which owns them.
+      PlatformRichNotifications.liveTurnCheck = (attempt, elapsed, inTray) =>
+          widget.notifications.checkLiveTurnsInBackground(
+            attempt: attempt,
+            elapsed: elapsed,
+            inTray: inTray,
+          );
+      _uiNotificationActionHandler = UiNotificationActionHandler(
+        connManager: widget.connManager,
+        activeChats: activeChats,
+        prefs: widget.connManager.prefs,
+      )..start();
+    }
+    // Regla 2: avisos discretos de eventos en OTRO chat con la app delante.
+    _inAppSub = widget.notifications.inAppNotices.listen(_showInAppNotice);
+    // Presencia (006): saluda al abrir y reacciona a la actividad de chat.
+    companionPresence.onEvent(PresenceEvent.appOpened);
+    activeChats.activeIds.addListener(_onActiveChatsChanged);
+    // Crear canales toca el hilo principal nativo durante cientos de ms en
+    // algunos Android. Se difiere para no congelar los primeros frames (la
+    // transición de entrada y el primer pintado de Home).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _deferredNotificationInitTimer = Timer(
+        const Duration(milliseconds: 1400),
+        () {
+          widget.notifications.init().then((_) {
+            if (!mounted) return;
+            _notificationPermissionMoment?.check();
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => unawaited(widget.notifications.retryPendingOpen()),
+            );
+          });
+        },
+      );
+    });
+    // Re-arranca la escucha en 2º plano si el usuario la dejó activada.
+    BackgroundListener.ensureInitialized();
+    unawaited(
+      BackgroundCronWatch.syncConnections(widget.connManager.getConnections()),
+    );
+    widget.connManager.connectionsRevision.addListener(
+      _syncBackgroundCronConnections,
+    );
+    unawaited(BackgroundListener.setUiForeground(true));
+    BackgroundListener.restoreIfEnabled(widget.connManager.prefs);
+    voice.prepareReadAloudPlayback = _prepareReadAloudPlayback;
+    voice.readAloud.addListener(_onReadAloudRuntimeChanged);
+    FlutterForegroundTask.addTaskDataCallback(_onVoiceTaskData);
+    // Deep link hermes://pair → abrir el alta de instancia ya rellena.
+    _initDeepLinks();
+    // Notifications are asked for once there is a Hermes to hear from,
+    // never on opening the app.
+    _notificationPermissionMoment = NotificationPermissionMoment(
+      connManager: widget.connManager,
+      request: widget.notifications.requestPermissionWhenUseful,
+      quiet: () => _showOnboarding,
+    );
+    // Updating from a bridge-era install: one silent probe, one calm notice.
+    unawaited(
+      LegacyBridgeNotices.start(
+        connManager: widget.connManager,
+        navigator: () => _navigatorKey.currentState,
+        quiet: () => _showOnboarding || widget.appLock.locked.value,
+      ),
+    );
+    // ACTION_SEND/ACTION_SEND_MULTIPLE → borrador revisable en un chat nuevo.
+    widget.connManager.activeConnectionId.addListener(_retryPendingShare);
+    unawaited(_initShareInbox());
+    widget.appLock.locked.addListener(_retryPendingShare);
+    widget.connManager.activeConnectionId.addListener(
+      _retryPendingNewSessionLaunch,
+    );
+    widget.appLock.locked.addListener(_retryPendingNewSessionLaunch);
+    widget.appLock.locked.addListener(_onAppLockNoticeGateChanged);
+    widget.appLock.locked.addListener(_restoreColdStartTailsAfterUnlock);
+    // A finished server update restarted the gateway: re-dial its sockets
+    // (Desktop `reconnectGateway()` after a backend update).
+    HermesUpdateSession.reconnectGateway = (connectionId) {
+      widget.activeChats.requestTransportRecoveryForConnection(connectionId);
+      unawaited(SharedGatewayPool.instance.probeConnection(connectionId));
+    };
+    widget.appLock.locked.addListener(_resumeHermesUpdates);
+    _resumeHermesUpdates();
+    widget.appLock.locked.addListener(_openCatalogLinks);
+    widget.connManager.activeConnectionId.addListener(_openCatalogLinks);
+    unawaited(_initNewSessionLaunchInbox());
+    // Cableado del modo conversación. Con el kill-switch de compilación no se
+    // instancia ningún orquestador; STT/TTS del chat siguen independientes.
+    if (kVoiceRuntimeEnabled) {
+      voiceConvo.addListener(_onVoiceRuntimeChanged);
+      voice.voiceConsent.addListener(_onVoiceConsentChanged);
+      voice.speaking.addListener(_onVoicePrivacyGateChanged);
+      widget.appLock.locked.addListener(_onVoicePrivacyGateChanged);
+    }
+    // Mantener vivo el proceso mientras: (a) la voz sigue hablando (solo con el
+    // modo voz habilitado; el cortocircuito evita instanciar el servicio), o
+    // (b) hay transferencias SFTP en curso. Así una descarga/subida no se corta
+    // al salir.
+    widget.activeChats.keepAliveWhile = () =>
+        (kVoiceRuntimeEnabled &&
+            voiceRuntimeNeedsForeground(
+              active: voiceConvo.audioLeaseRequired,
+              continueWhenLocked: voice.continueVoiceWhenLocked,
+            )) ||
+        _readAloudNeedsForeground ||
+        widget.sftpTransfers.hasActive ||
+        widget.sshSessions.hasActive;
+    _initTurnKeepAlive();
+    // SFTP y las sesiones de terminal levantan el foreground service al empezar y
+    // delegan su parada en la coordinación central (que respeta voz/runs/el otro).
+    _externalDataSyncDemandGate = ExternalDataSyncDemandGate(
+      _applyExternalDataSyncDemand,
+    );
+    widget.sftpTransfers.onNeedForeground = _syncExternalDataSyncDemand;
+    widget.sftpTransfers.onMaybeRelease = _syncExternalDataSyncDemand;
+    widget.sshSessions.onNeedForeground = _syncExternalDataSyncDemand;
+    widget.sshSessions.onMaybeRelease = _syncExternalDataSyncDemand;
+    _externalDataSyncControl.setMethodCallHandler((call) async {
+      if (call.method == 'stopRequested') {
+        final released = await _stopExternalDataSyncOwners();
+        if (!released) {
+          throw StateError('external dataSync release was not confirmed');
+        }
+      }
+      return null;
+    });
+    unawaited(_consumePendingExternalDataSyncStop());
+    _syncExternalDataSyncDemand();
+  }
+
+  void _armGatewayIdleTimer() {
+    _gatewayIdleTimer ??= Timer(_gatewayIdleGrace, _onGatewayIdleGrace);
+  }
+
+  void _onGatewayIdleGrace() {
+    _gatewayIdleTimer = null;
+    if (TurnKeepAliveHold.held) {
+      // A running turn holds the process (turn keep-alive): the next round
+      // decides again. Only sockets with nothing live on them are retired
+      // below (refs <= 0, or canPark says the chat socket is at rest), so
+      // the turn's own sockets stay.
+      _armGatewayIdleTimer();
+    }
+    if (_appLifecycle != AppLifecycleState.resumed) {
+      SharedGatewayPool.instance.disconnectIdle();
+      // co1215: released chats' parked sockets follow the same rule.
+      widget.activeChats.closeWarmGateways();
+      // The leased sockets with nothing live on them (Home's and the
+      // list's observers, a chat socket whose chats are all at rest)
+      // are parked too, not left to die on the server while the app is
+      // cached: the return is then a quiet connect, not a loss. Voice
+      // keeps its own sockets; ActiveChat owns chat transport parking.
+      if (!(kVoiceRuntimeEnabled && voiceConvo.active)) {
+        SharedGatewayPool.instance.parkIdleLeased(
+          canPark: ({required connectionId, required chatLane, profile}) =>
+              !chatLane ||
+              widget.activeChats.chatSocketIdle(
+                connectionId,
+                profile ?? '',
+              ),
+        );
+      }
+    }
+  }
+
+  /// Turn-bounded keep-alive (Desktop «while working»): see
+  /// [TurnKeepAliveController]. Android only; the controller decides when.
+  TurnKeepAliveController? _turnKeepAlive;
+
+  void _initTurnKeepAlive() {
+    if (!Platform.isAndroid) return;
+    final chats = widget.activeChats;
+    final notifications = widget.notifications;
+    final prefs = widget.connManager.prefs;
+    final controller = TurnKeepAliveController(
+      platform: MethodChannelTurnKeepAlivePlatform(),
+      working: () => anyChatTurnWorking(chats),
+      transportUp: () => workingChatsConnected(chats),
+      allTransportUp: () => allWorkingChatsConnected(chats),
+      enabled: () => notifications.keepAliveWhileWorking,
+      // Same rule as the background check: with App Lock nothing runs.
+      appLocked: () =>
+          liveTurnAppLocked(prefs) || widget.appLock.locked.value,
+      notificationsAllowed: notifications.permissionGranted,
+      copy: notifications.keepAliveNoticeCopy,
+      onReleasedMidTurn: notifications.restartLiveTurnCheck,
+    );
+    _turnKeepAlive = controller;
+    chats.liveStatusRevision.addListener(controller.reevaluate);
+    chats.activeIds.addListener(controller.reevaluate);
+    ConnectionStatusRegistry.instance.changes.addListener(
+      controller.reevaluate,
+    );
+    widget.appLock.locked.addListener(controller.reevaluate);
+    notifications.onKeepAliveChanged = controller.reevaluate;
+  }
+
+  void _disposeTurnKeepAlive() {
+    final controller = _turnKeepAlive;
+    if (controller == null) return;
+    _turnKeepAlive = null;
+    widget.activeChats.liveStatusRevision.removeListener(controller.reevaluate);
+    widget.activeChats.activeIds.removeListener(controller.reevaluate);
+    ConnectionStatusRegistry.instance.changes.removeListener(
+      controller.reevaluate,
+    );
+    widget.appLock.locked.removeListener(controller.reevaluate);
+    widget.notifications.onKeepAliveChanged = null;
+    controller.dispose();
+  }
+
+  @override
+  void didHaveMemoryPressure() {
+    super.didHaveMemoryPressure();
+    // Los atlas de mascotas y previews generados pueden ser grandes una vez
+    // decodificados. Android ya nos está pidiendo memoria: soltar entradas no
+    // visibles permite recuperarla sin tocar el chat ni el estado del agente.
+    final imageCache = PaintingBinding.instance.imageCache;
+    imageCache.clear();
+    imageCache.clearLiveImages();
+    // co1215: parked sockets of released chats are only a reopen shortcut.
+    widget.activeChats.closeWarmGateways();
+    // La voz NO reacciona aquí: esta señal binaria también llega al pasar a
+    // background y evacuaba Sherpa/Whisper/ONNX en cada ida (recarga de
+    // varios segundos por turno). La evacuación la decide `onTrimMemory` con
+    // el nivel real de ComponentCallbacks2 (canal hermes/memory).
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appLifecycle = state;
+    _turnKeepAlive?.lifecycleChanged(state);
+    // Battery saver can change while the app is in the background.
+    if (state == AppLifecycleState.resumed) {
+      unawaited(FrostedBackdropPolicy.refresh());
+      // Widgets placed or resized meanwhile get their pictures now.
+      _redrawLauncherWidgets();
+    }
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      unawaited(widget.activeChats.globalActivity.flushJournal());
+      // Not news: keep the snapshot's own time so the launcher does not
+      // show a finished turn as fresh for another freshness window.
+      unawaited(updateHomeWidget((snapshot) => snapshot, restamp: false));
+      // cs1215: Android may kill the process from here; keep what is on
+      // screen for the next cold start (encrypted, bounded).
+      widget.activeChats.persistColdStartTails();
+    }
+    if (kVoiceRuntimeEnabled) {
+      if (state == AppLifecycleState.resumed) {
+        if (!widget.appLock.locked.value) {
+          unawaited(voiceConvo.resumeFullDuplexCaptureIfNeeded());
+        }
+      } else {
+        unawaited(voiceConvo.suspendFullDuplexForAppBackground());
+      }
+    }
+    // Solo molestamos con notificaciones cuando la app no está en primer plano.
+    widget.notifications.appInForeground = state == AppLifecycleState.resumed;
+    unawaited(
+      BackgroundListener.setUiForeground(state == AppLifecycleState.resumed),
+    );
+    // Al volver de 2º plano, reconcilia cualquier chat cuyo SSE pudiera haberse
+    // cortado mientras la app estaba suspendida (red de seguridad: con el
+    // foreground service activo normalmente no hace falta, pero si el SO mató el
+    // isolate igualmente, re-sincronizamos los mensajes desde el servidor).
+    GatewayReconnectBackoff.backgroundCadence =
+        state != AppLifecycleState.resumed;
+    if (state == AppLifecycleState.resumed) {
+      _networkAvailabilityListener?.resume();
+      _gatewayIdleTimer?.cancel();
+      _gatewayIdleTimer = null;
+      _sshIdleTimer?.cancel();
+      _sshIdleTimer = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (widget.notifications.initialized) {
+          unawaited(widget.notifications.recoverPlatformOpen());
+        }
+      });
+      // Back in the foreground is a wake, as a validated network is: the
+      // sockets parked while idle redial quietly, the live ones are probed
+      // (one may have died, unclosed, while the app was frozen; the chats'
+      // own probe shares the flight), and the backoff ladder built in the
+      // background (up to 60 s) is forgotten once per holdoff so nobody
+      // waits it out in the foreground.
+      unawaited(SharedGatewayPool.instance.wakeAfterResume());
+      widget.activeChats.requestImmediateTransportRecovery();
+      widget.activeChats.reconcileAfterResume();
+      _resumeHermesUpdates();
+      // Volver a primer plano no deshace una pausa explícita; el usuario puede
+      // continuar con el orbe o desde la notificación.
+      if (kVoiceRuntimeEnabled) {
+        voiceConvo.onAppResumed(appUnlocked: !widget.appLock.locked.value);
+      }
+      unawaited(_openVoiceOwnerChatIfReady());
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      _armGatewayIdleTimer();
+      // ActiveChat parks its chat transport after the shared background grace
+      // and reconciles durable completion on resume. Repeated
+      // hidden/paused/detached edges share that same park; while the app is
+      // away, alerts come from the opt-in background listening.
+      // Sin opt-in de pantalla bloqueada, pausa y silencia micro+TTS. Con opt-in
+      // no se toca el bucle: ya está protegido por el FGS iniciado en foreground.
+      // GPT-Live follows the same opt-in for a session that is already open
+      // and holds that service; in every other case the coordinator still
+      // asks for it to stop (`requiresForegroundVisibility`).
+      if (kVoiceRuntimeEnabled &&
+          voiceConvo.active &&
+          (voiceConvo.requiresForegroundVisibility ||
+              !voice.continueVoiceWhenLocked)) {
+        unawaited(voiceConvo.onAppBackgrounded());
+      }
+      // U-11 (spec 028): una shell SSH parada en el prompt mantiene vivos el
+      // FGS (keepAliveWhile) y los keepalive de red indefinidamente. Mientras
+      // el FGS nos deje correr, vigila cada 2 min y cierra las sesiones sin
+      // tráfico >10 min; al cerrar la última, la coordinación existente
+      // (onMaybeRelease) apaga el servicio. Un comando largo que produce
+      // salida refresca lastActivityAt y no se corta.
+      _sshIdleTimer ??= Timer.periodic(const Duration(minutes: 2), (_) {
+        widget.sshSessions.closeIdle(const Duration(minutes: 10));
+      });
+    }
+  }
+
+  void _syncBackgroundCronConnections() {
+    unawaited(
+      BackgroundCronWatch.syncConnections(widget.connManager.getConnections()),
+    );
+  }
+
+  void _syncExternalDataSyncDemand() {
+    unawaited(
+      _externalDataSyncDemandGate.reconcile(
+        sftpActive: widget.sftpTransfers.hasActive,
+        sshActive: widget.sshSessions.hasActive,
+      ),
+    );
+  }
+
+  Future<bool> _applyExternalDataSyncDemand(bool required) async {
+    final applied = await BackgroundListener.setExternalDataSyncRequired(
+      required,
+    );
+    if (!required) await widget.activeChats.maybeReleaseForeground();
+    return applied;
+  }
+
+  Future<void> _consumePendingExternalDataSyncStop() async {
+    try {
+      final pending =
+          await _externalDataSyncControl.invokeMethod<bool>(
+            'takePendingStopRequested',
+          ) ==
+          true;
+      if (pending) {
+        final released = await _stopExternalDataSyncOwners();
+        if (released) await _acknowledgeExternalDataSyncStop();
+      }
+    } catch (_) {
+      // Canal ausente fuera de Android o durante teardown: no hay acción nativa.
+    }
+  }
+
+  Future<bool> _stopExternalDataSyncOwners() async {
+    widget.sftpTransfers.cancelAll();
+    widget.sshSessions.closeAll();
+    return await _externalDataSyncDemandGate.confirmReleased();
+  }
+
+  Future<void> _acknowledgeExternalDataSyncStop() async {
+    try {
+      await _externalDataSyncControl.invokeMethod<void>(
+        'acknowledgeStopRequested',
+      );
+    } catch (_) {
+      // Sin ACK la orden nativa permanece durable y se reintenta al arrancar.
+    }
+  }
+
+  /// Abre el chat de la sesión indicada por una notificación pulsada. Resuelve
+  /// la instancia por id; construye una [Session] mínima (ChatScreen recarga los
+  /// mensajes reales del servidor por id). No hace nada si la instancia ya no
+  /// existe o el Navigator aún no está montado.
+  /// Tarjeta flotante para un evento en OTRO chat (Regla 2).
+  ///
+  /// Tocar abre el destino y deslizar horizontalmente solo oculta la tarjeta:
+  /// una aprobación pendiente nunca se interpreta como aprobada o denegada.
+  /// No usa notificación del sistema; solo aparece con la app delante.
+  void _showInAppNotice(InAppNotice notice) {
+    // The floating mascot keeps what happened elsewhere until it is seen.
+    _mascot.onNotice(notice);
+    // Presencia (006): un aviso de aprobación pone la mascota en "esperando
+    // permiso" (waiting). Se hace antes del early-return del banner para que la
+    // mascota reaccione aunque no haya messenger montado. La resolución (vuelta
+    // a thinking/idle/success) la dirige el fin del run vía `activeIds` en
+    // `_onActiveChatsChanged`. Capa puramente aditiva: no toca runtime ni voz.
+    if (notice.kind == NotificationKind.approval) {
+      companionPresence.onEvent(PresenceEvent.approvalNeeded);
+    }
+    if (!_firstFrameShown || _showOnboarding || widget.appLock.locked.value) {
+      return;
+    }
+    // Una respuesta o run informativo nunca desplaza una aprobacion que aun
+    // necesita al usuario. Otra aprobacion mas reciente si puede actualizarla.
+    if (!shouldReplaceInAppNotice(_inAppNoticeKind, notice.kind)) {
+      return;
+    }
+    final ctx = _messengerKey.currentContext ?? _navigatorKey.currentContext;
+    final notices = HermesNotice.ofNavigator(_navigatorKey.currentState);
+    if (ctx == null || notices == null) return;
+    final s = Strings.of(ctx);
+    final colors = Theme.of(ctx).hermes;
+    final (IconData icon, Color tint) = switch (notice.kind) {
+      NotificationKind.approval => (
+        Icons.verified_user_outlined,
+        colors.warning,
+      ),
+      NotificationKind.reply => (Icons.check_circle_outline, colors.success),
+      NotificationKind.run => (Icons.task_alt, colors.accent),
+      NotificationKind.localAgent => (Icons.devices_outlined, colors.accent),
+      NotificationKind.goal => (Icons.flag_outlined, colors.warning),
+      _ => (Icons.notifications_none, colors.accent),
+    };
+    void open() {
+      unawaited(() async {
+        final outcome = await _openSessionFromNotification(notice.open);
+        if (outcome == NavigationDeliveryOutcome.delivered) {
+          _dismissInAppNotice();
+        }
+      }());
+    }
+
+    // Un solo aviso a la vez: el evento más reciente manda. Comparte el carril
+    // superior con el resto de avisos transitorios (`HermesNotice`), de modo
+    // que nunca se solapan entre sí.
+    _dismissInAppNotice();
+    final dismissDelay = inAppNoticeAutoDismissDelay(notice.kind);
+    _inAppNoticeKind = notice.kind;
+    final serial = ++_inAppNoticeSerial;
+    _inAppNotice = notices.show(
+      noticeKey: ValueKey(
+        'in-app-notice-${notice.kind.name}-${notice.open.sessionId}',
+      ),
+      id: 'in-app-notice-${notice.kind.name}-${notice.open.sessionId}',
+      icon: icon,
+      tint: tint,
+      title: notice.title,
+      message: notice.body,
+      // El propietario cierra el aviso solo si la navegacion se entrego.
+      action: HermesNoticeAction(
+        label: s.inAppGo,
+        onPressed: open,
+        closesNotice: false,
+      ),
+      onTap: open,
+      showDismiss: true,
+      dismissLabel: s.inAppDismiss,
+      priority: HermesNoticePriority.high,
+      // Una aprobacion requiere una decision explicita. Deslizar solo la oculta;
+      // nunca desaparece sola mientras siga pendiente.
+      sticky: dismissDelay == null,
+      duration: dismissDelay,
+      onClosed: () {
+        // Solo si sigue siendo el aviso vigente (uno nuevo ya pudo sustituirlo).
+        if (serial == _inAppNoticeSerial) _inAppNoticeKind = null;
+      },
+    );
+  }
+
+  void _dismissInAppNotice() {
+    final handle = _inAppNotice;
+    _inAppNotice = null;
+    _inAppNoticeKind = null;
+    handle?.dismiss();
+  }
+
+  UiNotificationActionHandler? _uiNotificationActionHandler;
+
+  void _onAppLockNoticeGateChanged() {
+    if (widget.appLock.locked.value) {
+      _dismissInAppNotice();
+      return;
+    }
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null || !navigator.mounted) return;
+    const intent = 'notification:post-unlock';
+    final handoff = _appNavigationFence.begin(navigator, intent: intent);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !_appNavigationFence.canCommitAfterRouteTransition(
+            handoff,
+            navigator,
+            intent: intent,
+          )) {
+        return;
+      }
+      unawaited(widget.notifications.retryPendingOpen());
+    });
+  }
+
+  final Set<String> _hydratingNotificationRuns = <String>{};
+
+  String _sessionProfileOwner(SavedConnection connection, {String? owner}) =>
+      Session.profileOwner(
+        owner,
+        fallback: widget.connManager.activeProfileFor(connection.id),
+      );
+
+  @visibleForTesting
+  Future<NavigationDeliveryOutcome> debugOpenNotification(
+    NotificationOpen open,
+  ) => _openSessionFromNotification(open);
+
+  @visibleForTesting
+  void debugInvalidateNavigation() {
+    final navigator = _navigatorKey.currentState;
+    if (navigator != null) {
+      _appNavigationFence.begin(navigator, intent: 'test:invalidate');
+    }
+  }
+
+  Future<NavigationDeliveryOutcome> _openSessionFromNotification(
+    NotificationOpen open,
+  ) async {
+    SavedConnection? conn;
+    for (final c in widget.connManager.getConnections()) {
+      if (c.id == open.connId) {
+        conn = c;
+        break;
+      }
+    }
+    final connection = conn;
+    final nav = _navigatorKey.currentState;
+    if (connection == null || nav == null) {
+      return NavigationDeliveryOutcome.deferred;
+    }
+    if (widget.appLock.locked.value) {
+      return NavigationDeliveryOutcome.deferred;
+    }
+
+    // Si la notificación es de una ejecución (runId presente), navegar a
+    // RunDetailScreen; si el run ya expiró, fallback a TaskCenterScreen.
+    final runId = open.runId;
+    if (runId != null &&
+        runId.isNotEmpty &&
+        !await _isChatOwnedRun(connection, open, runId)) {
+      final profile = open.profile?.trim().toLowerCase();
+      if (profile == null || profile.isEmpty) {
+        return NavigationDeliveryOutcome.deferred;
+      }
+      final intent =
+          'run-detail:${connection.id}:$profile:$runId:${open.requestId ?? ''}';
+      final request = _appNavigationFence.begin(nav, intent: intent);
+      final hydrationKey =
+          '${connection.id}\u0000$profile\u0000$runId\u0000${open.requestId ?? ''}';
+      if (_hydratingNotificationRuns.add(hydrationKey)) {
+        unawaited(() async {
+          try {
+            for (var attempt = 0; mounted && attempt < 20; attempt++) {
+              if (!_appNavigationFence.canCommit(
+                request,
+                nav,
+                intent: intent,
+              )) {
+                return;
+              }
+              if (widget.appLock.locked.value) {
+                await Future<void>.delayed(const Duration(milliseconds: 250));
+                continue;
+              }
+              final opened = await _openRunDetailFromNotification(
+                nav,
+                connection,
+                runId,
+                profile: profile,
+                requestId: open.requestId,
+                navigationRequest: request,
+                navigationIntent: intent,
+                onApprovalReady: open.requestId == null
+                    ? null
+                    : () => _completeApprovalOpenWhenUnlocked(open),
+              );
+              if (opened) {
+                if (open.requestId == null) {
+                  widget.notifications.completePendingOpen(open);
+                }
+                return;
+              }
+              await Future<void>.delayed(const Duration(milliseconds: 250));
+            }
+          } finally {
+            _hydratingNotificationRuns.remove(hydrationKey);
+          }
+        }());
+      }
+      return NavigationDeliveryOutcome.deferred;
+    }
+
+    _appNavigationFence.begin(nav, intent: 'notification:${open.toPayload()}');
+
+    final taskId = open.taskId;
+    if (taskId != null && taskId.isNotEmpty) {
+      nav.push(
+        MaterialPageRoute(
+          builder: (_) => TasksScreen(
+            connection: connection,
+            initialBoard: open.boardId,
+            initialTaskId: taskId,
+          ),
+        ),
+      );
+      await WidgetsBinding.instance.endOfFrame;
+      return NavigationDeliveryOutcome.delivered;
+    }
+
+    // A finished SFTP download, written where the user chose: Abrir,
+    // Compartir and Guardar otra copia… of that document.
+    final download = open.downloadUri;
+    if (download != null && download.isNotEmpty) {
+      final menuContext = nav.overlay?.context ?? nav.context;
+      // Read after awaits: the navigator may be gone by now. Then nothing
+      // was shown, and the notification stays to be delivered.
+      if (!menuContext.mounted) return NavigationDeliveryOutcome.deferred;
+      unawaited(
+        showSavedDocumentActions(
+          menuContext,
+          SavedDocument(uri: download, name: open.downloadName ?? '', bytes: 0),
+        ),
+      );
+      await WidgetsBinding.instance.endOfFrame;
+      return NavigationDeliveryOutcome.delivered;
+    }
+
+    final ownedTarget = missionControlTargetForNotification(open);
+    if (ownedTarget != null) {
+      return _openMissionControlFromNotification(nav, connection, ownedTarget);
+    }
+
+    // A cron completion with no session yet carries only its job: open that
+    // job's detail. CronScreen falls back to its list if the job is gone.
+    final jobId = open.jobId?.trim();
+    if (open.sessionId.isEmpty && jobId != null && jobId.isNotEmpty) {
+      nav.push(
+        MaterialPageRoute(
+          builder: (_) => CronScreen(
+            connection: connection,
+            connManager: widget.connManager,
+            initialJobId: jobId,
+            profileOverride: open.profile?.trim(),
+          ),
+        ),
+      );
+      await WidgetsBinding.instance.endOfFrame;
+      return NavigationDeliveryOutcome.delivered;
+    }
+
+    // Sin runId: comportamiento anterior — abrir la sesión de chat.
+    if (open.sessionId.isEmpty) return NavigationDeliveryOutcome.deferred;
+    final liveOwner = activeChats
+        .of(open.connId, open.sessionId, profile: open.profile)
+        ?.sessionProfile;
+    final owner = open.profile ?? liveOwner;
+    if (owner == null || owner.trim().isEmpty) {
+      // Los payloads legacy no llevaban perfil. Resolver la fila autoritativa
+      // antes de reconstruir evita abrirla contra el perfil global actual.
+      return _openWidgetSession(connection, open.sessionId);
+    }
+    final profile = _sessionProfileOwner(connection, owner: owner);
+    final session = Session(
+      id: open.sessionId,
+      title: open.title ?? '',
+      model: '',
+      source: '',
+      messageCount: 0,
+      isActive: true,
+      preview: '',
+      startedAt: 0,
+      profile: profile,
+      isDefaultProfile: profile == 'default',
+    );
+    openChatFromHomeNavigator<void>(
+      nav,
+      builder: (_) => ChatScreen(connection: connection, session: session),
+    );
+    await WidgetsBinding.instance.endOfFrame;
+    return NavigationDeliveryOutcome.delivered;
+  }
+
+  /// A run whose owner is a conversation (chat runtime or Desktop runtime
+  /// session) is never registered in Task Center, so waiting for its run
+  /// record would retain the tap forever. Its conversation is the content:
+  /// the approval card and the result live there.
+  Future<bool> _isChatOwnedRun(
+    SavedConnection connection,
+    NotificationOpen open,
+    String runId,
+  ) async {
+    if (open.sessionId.isEmpty) return false;
+    final profile = open.profile?.trim().toLowerCase();
+    try {
+      final registry = await RunRegistry.load(
+        widget.connManager.prefs,
+        connection.id,
+      );
+      return !registry.records.any(
+        (r) =>
+            r.runId == runId &&
+            (profile == null || profile.isEmpty || r.profile == profile),
+      );
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<NavigationDeliveryOutcome> _openMissionControlFromNotification(
+    NavigatorState nav,
+    SavedConnection connection,
+    MissionControlOpenTarget target,
+  ) async {
+    final intent =
+        'mission-control:${connection.id}:${target.sessionId}:${target.profile}';
+    final request = _appNavigationFence.begin(nav, intent: intent);
+    if (widget.connManager.activeConnectionId.value != connection.id) {
+      await widget.connManager.setActiveConnection(connection.id);
+    }
+    await widget.missionControlBarrierForTesting;
+    if (!_appNavigationFence.canCommit(request, nav, intent: intent)) {
+      return NavigationDeliveryOutcome.deferred;
+    }
+    // Reuse a live Mission Control (and do nothing when the target is already
+    // on screen) instead of stacking a second copy of it or of the room.
+    if (MissionControlScreen.openInExisting(nav, connection.id, target)) {
+      await WidgetsBinding.instance.endOfFrame;
+      return NavigationDeliveryOutcome.delivered;
+    }
+    // Mission Control appears without its own slide: the room/Bot Chat it
+    // opens on its first frame is the single visible transition.
+    unawaited(
+      pushNotificationOwnerRoute<void>(
+        nav,
+        MissionControlOwnerRoute<void>(
+          builder: (_) => MissionControlScreen(
+            connection: connection,
+            connManager: widget.connManager,
+            activeChats: activeChats,
+            initialOpenTarget: target,
+          ),
+        ),
+      ),
+    );
+    await WidgetsBinding.instance.endOfFrame;
+    return NavigationDeliveryOutcome.delivered;
+  }
+
+  /// Si la notificación lleva un runId, navega a RunDetailScreen de ese run.
+  /// Fallback a TaskCenterScreen si el run ya expiró o no está en el registry.
+  Future<bool> _openRunDetailFromNotification(
+    NavigatorState nav,
+    SavedConnection conn,
+    String runId, {
+    required String profile,
+    String? requestId,
+    required AppNavigationRequest navigationRequest,
+    required String navigationIntent,
+    VoidCallback? onApprovalReady,
+  }) async {
+    try {
+      final registry = await RunRegistry.load(
+        widget.connManager.prefs,
+        conn.id,
+      );
+      if (!_appNavigationFence.canCommit(
+        navigationRequest,
+        nav,
+        intent: navigationIntent,
+      )) {
+        return false; // navigator puede haberse desmontado durante await
+      }
+      final record = registry.records
+          .where((r) => r.runId == runId && r.profile == profile)
+          .firstOrNull;
+      if (record != null) {
+        if (widget.appLock.locked.value) return false;
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) =>
+                widget.runDetailBuilderForTesting?.call(conn, record) ??
+                RunDetailScreen(
+                  connection: conn,
+                  record: record,
+                  initialApprovalId: requestId,
+                  onInitialApprovalReady: onApprovalReady,
+                ),
+          ),
+        );
+        return true;
+      }
+    } catch (e) {
+      debugPrint('main: no se pudo abrir el run exacto: $e');
+    }
+    return false;
+  }
+
+  Future<void> _completeApprovalOpenWhenUnlocked(NotificationOpen open) async {
+    while (mounted && widget.appLock.locked.value) {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+    if (!mounted) return;
+    widget.notifications.completePendingOpen(open);
+  }
+
+  /// Onboarding de primera ejecución (se muestra una sola vez).
+  late bool _showOnboarding;
+
+  /// The first frame is on screen: the native splash has left and the
+  /// root Navigator exists. Launch actions wait for it (plus onboarding and
+  /// App Lock) instead of for an intro screen.
+  bool _firstFrameShown = false;
+
+  /// A cold start that opened locked: Home is not built (nothing private is
+  /// read or painted) until the first unlock.
+  bool _homeHeldByLock = false;
+
+  void _releaseHomeOnUnlock() {
+    if (!mounted || !_homeHeldByLock || widget.appLock.locked.value) return;
+    widget.appLock.locked.removeListener(_releaseHomeOnUnlock);
+    setState(() => _homeHeldByLock = false);
+  }
+
+  /// Runs once, right after the first frame: what used to wait for the
+  /// end of the intro now runs as soon as the app is on screen.
+  void _onFirstFrame() {
+    if (!mounted || _firstFrameShown) return;
+    _firstFrameShown = true;
+    _retryPendingNewSessionLaunch();
+    _openCatalogLinks();
+    unawaited(_openVoiceOwnerChatIfReady());
+    unawaited(_startupDestinationRun = _openConfiguredStartupDestination());
+  }
+
+  Future<void>? _startupDestinationRun;
+
+  /// The startup-destination pass (remembered route included), so tests
+  /// can assert that a wait it parked (App Lock) really ends.
+  @visibleForTesting
+  Future<void>? get debugStartupDestinationRun => _startupDestinationRun;
+
+  /// Aplica la pantalla de arranque elegida por el usuario (issue #47).
+  ///
+  /// Se ejecuta una sola vez, tras el primer frame de un arranque en frío.
+  /// Cede el paso a cualquier navegación ya en curso —notificación, enlace de
+  /// emparejamiento, chat de voz—: quien llega por una notificación espera ir
+  /// a ESE destino, no al suyo por defecto.
+  Future<void> _openConfiguredStartupDestination() async {
+    if (_startupDestinationApplied) return;
+    _startupDestinationApplied = true;
+
+    final nav = _navigatorKey.currentState;
+    if (nav == null) return;
+    // The App Lock route may already cover Home; it is not a destination.
+    if (nav.canPop() && !widget.appLock.locked.value) return;
+    // Without an intro in front, this runs on the first frame, before the
+    // deferred notification init has read the launch intent. A tap on a
+    // notification, widget or shortcut that started the app wins over the
+    // remembered route and the configured destination.
+    if (await _externalLaunchPending()) return;
+    // An entry already delivered in the meantime is on the stack.
+    if (!mounted || (nav.canPop() && !widget.appLock.locked.value)) return;
+    if (await _reopenRememberedRoute(nav)) return;
+    if (!mounted || nav.canPop()) return;
+
+    // The preference is read first and the fence only opens when there is a
+    // destination to push: this pass now runs on the first frame, and
+    // opening a fence invalidates any navigation already in flight (a
+    // notification tapped a moment after launch). Anything that navigated
+    // or arrived during the read wins.
+    final destination = await StartupDestinationStore.load();
+    if (!mounted || destination == StartupDestination.home) return;
+    if (nav.canPop() ||
+        widget.notifications.hasPendingOpen ||
+        _newSessionLaunchCoordinator.hasPending) {
+      return;
+    }
+    const intent = 'startup-destination';
+    final request = _appNavigationFence.begin(nav, intent: intent);
+    if (!_appNavigationFence.canCommit(request, nav, intent: intent)) return;
+
+    final connections = widget.connManager.getConnections();
+    if (connections.isEmpty) return;
+    final activeId = widget.connManager.activeConnectionId.value;
+    final connection = connections.firstWhere(
+      (c) => c.id == activeId,
+      orElse: () => connections.first,
+    );
+
+    unawaited(
+      nav.push(
+        MaterialPageRoute<void>(
+          builder: (_) => MissionControlScreen(
+            connection: connection,
+            connManager: widget.connManager,
+            activeChats: activeChats,
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _startupDestinationApplied = false;
+
+  /// Completes once the native launch-action inbox answered (or failed),
+  /// so the startup pass knows whether a widget/shortcut started the app.
+  final Completer<void> _launchInboxRead = Completer<void>();
+  Timer? _externalLaunchTimer;
+  VoidCallback? _releaseExternalLaunchWait;
+
+  void _completeLaunchInboxRead() {
+    if (!_launchInboxRead.isCompleted) _launchInboxRead.complete();
+  }
+
+  /// Whether the process was started (or is already being driven) by an
+  /// external entry: a notification tap, a widget or a shortcut. Bounded:
+  /// a silent platform side never holds the startup pass.
+  Future<bool> _externalLaunchPending() async {
+    final settled = Completer<List<Object?>>();
+    void settle(List<Object?> results) {
+      if (!settled.isCompleted) settled.complete(results);
+    }
+
+    // A plain Timer, cancelled on dispose, so a silent platform side never
+    // leaves anything running behind the shell.
+    _externalLaunchTimer = Timer(
+      const Duration(milliseconds: 600),
+      () => settle(const []),
+    );
+    _releaseExternalLaunchWait = () => settle(const []);
+    unawaited(
+      Future.wait<Object?>([
+        _launchInboxRead.future,
+        widget.notifications.launchedFromNotification(),
+      ]).then(settle),
+    );
+    final results = await settled.future;
+    _externalLaunchTimer?.cancel();
+    _externalLaunchTimer = null;
+    _releaseExternalLaunchWait = null;
+    if (!mounted) return true;
+    final notification = results.length == 2 && results[1] == true;
+    return notification ||
+        widget.notifications.hasPendingOpen ||
+        _newSessionLaunchCoordinator.hasPending;
+  }
+
+  /// Removes the remembered-route unlock listener while it is waiting.
+  VoidCallback? _releaseColdStartUnlockWait;
+
+  /// A server update persisted before Android killed the app keeps being
+  /// followed on cold start and on return to foreground; not before App
+  /// Lock opens.
+  void _resumeHermesUpdates() {
+    if (widget.appLock.locked.value) return;
+    unawaited(
+      resumePersistedHermesUpdates(widget.connManager.getConnections()),
+    );
+  }
+
+  /// App Lock policy: cold-start tails are decrypted only after unlock. The
+  /// restore runs once per process (`coldStartTailsReady` is memoized), so
+  /// later unlocks do nothing.
+  void _restoreColdStartTailsAfterUnlock() {
+    if (widget.appLock.locked.value) return;
+    unawaited(
+      widget.activeChats.coldStartTailsReady.catchError((Object _) => 0),
+    );
+  }
+
+  /// cs1215: like Desktop's remembered route, a cold start reopens the
+  /// surface the user was on for the active connection. A notification,
+  /// shortcut or deep link already in flight wins; App Lock defers it until
+  /// unlock; a deleted session falls back to Home (see ChatScreen).
+  Future<bool> _reopenRememberedRoute(NavigatorState nav) async {
+    final store = widget.activeChats.coldStartStore;
+    final connectionId = widget.connManager.activeConnectionId.value;
+    if (store == null || connectionId == null) return false;
+    SavedConnection? connection;
+    for (final candidate in widget.connManager.getConnections()) {
+      if (candidate.id == connectionId) connection = candidate;
+    }
+    if (connection == null) return false;
+    const intent = 'cold-start-route';
+    final request = _appNavigationFence.begin(nav, intent: intent);
+    ColdStartRoute? route;
+    try {
+      // Identifiers only; no transcript content is read here.
+      route = await store.routeFor(connection.id);
+      // The first frame of the chat paints its cached tail. Under App Lock
+      // the tails stay encrypted until unlock (see below).
+      if (!widget.appLock.locked.value) {
+        await widget.activeChats.coldStartTailsReady;
+      }
+    } catch (error) {
+      debugPrint('main: cold-start route unavailable (${error.runtimeType})');
+      return false;
+    }
+    if (route == null || !mounted) return false;
+    // An explicit «open Bot Mode on start» keeps winning over a remembered
+    // normal chat; a remembered Bot Mode surface refines it.
+    if (route.kind == ColdStartRouteKind.chat &&
+        await StartupDestinationStore.load() == StartupDestination.bots) {
+      return false;
+    }
+    if (!mounted) return false;
+    bool externalEntryPending() =>
+        widget.notifications.hasPendingOpen ||
+        _newSessionLaunchCoordinator.hasPending;
+    if (externalEntryPending()) return true;
+    if (!widget.appLock.locked.value &&
+        !_appNavigationFence.canCommit(request, nav, intent: intent)) {
+      return true;
+    }
+    if (widget.appLock.locked.value) {
+      // Nothing of the chat is built before unlock. Any navigation in the
+      // meantime (a notification delivered on unlock) wins. Unlocking itself
+      // begins the post-unlock notification handoff, so the fence generation
+      // cannot tell; a pushed route or a pending open can.
+      while (mounted && widget.appLock.locked.value) {
+        final unlocked = Completer<void>();
+        void onChange() {
+          if (!widget.appLock.locked.value && !unlocked.isCompleted) {
+            unlocked.complete();
+          }
+        }
+
+        final lock = widget.appLock.locked;
+        lock.addListener(onChange);
+        // dispose() runs this if the shell unmounts while still locked: the
+        // listener goes and the wait ends (`mounted` is then false).
+        _releaseColdStartUnlockWait = () {
+          lock.removeListener(onChange);
+          if (!unlocked.isCompleted) unlocked.complete();
+        };
+        onChange();
+        await unlocked.future;
+        _releaseColdStartUnlockWait?.call();
+        _releaseColdStartUnlockWait = null;
+      }
+      if (!mounted) return true;
+      // Decrypted only now that the lock is open; the chat's first frame
+      // still paints the cached tail.
+      try {
+        await widget.activeChats.coldStartTailsReady;
+      } catch (error) {
+        debugPrint('main: cold-start tails unavailable (${error.runtimeType})');
+      }
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted || nav.canPop() || externalEntryPending()) {
+        return true;
+      }
+    }
+    final target = connection;
+    switch (route.kind) {
+      case ColdStartRouteKind.chat:
+        final profile = _sessionProfileOwner(target, owner: route.profile);
+        final session = Session(
+          id: route.sessionId,
+          title: '',
+          model: '',
+          source: route.source,
+          // A remembered chat always had a durable transcript.
+          messageCount: 1,
+          isActive: false,
+          preview: '',
+          startedAt: 0,
+          profile: profile,
+          isDefaultProfile: profile == 'default',
+        );
+        unawaited(
+          openChatFromHomeNavigator<void>(
+            nav,
+            builder: (_) => ChatScreen(
+              connection: target,
+              session: session,
+              restoredFromColdStart: true,
+            ),
+          ),
+        );
+      case ColdStartRouteKind.bot:
+        await _openMissionControlFromNotification(
+          nav,
+          target,
+          MissionControlOpenTarget.bot(
+            sessionId: route.sessionId,
+            profile: route.profile,
+          ),
+        );
+      case ColdStartRouteKind.room:
+        await _openMissionControlFromNotification(
+          nav,
+          target,
+          MissionControlOpenTarget.room(
+            sessionId: route.sessionId,
+            roomId: route.roomId,
+            profile: route.profile,
+          ),
+        );
+      case ColdStartRouteKind.missionControl:
+        unawaited(
+          nav.push(
+            MaterialPageRoute<void>(
+              builder: (_) => MissionControlScreen(
+                connection: target,
+                connManager: widget.connManager,
+                activeChats: activeChats,
+              ),
+            ),
+          ),
+        );
+    }
+    return true;
+  }
+
+  Future<void> _finishOnboarding() async {
+    if (widget.connManager.getConnections().isEmpty) return;
+    await widget.connManager.prefs.setBool('onboarding_done', true);
+    if (mounted) {
+      setState(() => _showOnboarding = false);
+      _retryPendingNewSessionLaunch();
+      unawaited(_openVoiceOwnerChatIfReady());
+    }
+  }
+
+  Future<void> _initNewSessionLaunchInbox() async {
+    _newSessionLaunchSub = _newSessionLaunchInbox.events.listen(
+      (action) => unawaited(_newSessionLaunchCoordinator.enqueue(action)),
+    );
+    try {
+      final initial = await _newSessionLaunchInbox.initialize();
+      if (initial != null) {
+        // enqueue() queues synchronously; the startup pass can see it now.
+        final queued = _newSessionLaunchCoordinator.enqueue(initial);
+        _completeLaunchInboxRead();
+        await queued;
+      }
+    } catch (error) {
+      debugPrint(
+        'main: acceso Nueva conversación no disponible '
+        '(${error.runtimeType})',
+      );
+    } finally {
+      _completeLaunchInboxRead();
+    }
+  }
+
+  void _retryPendingNewSessionLaunch() {
+    if (!mounted || !_newSessionLaunchCoordinator.hasPending) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_newSessionLaunchCoordinator.retry());
+    });
+  }
+
+  Future<SavedConnection?> _selectNewSessionConnection(
+    List<SavedConnection> candidates,
+  ) async {
+    final context = _navigatorKey.currentContext;
+    if (context == null || candidates.isEmpty) return null;
+    if (candidates.length == 1) return candidates.single;
+    return showHermesFloatingSurface<SavedConnection>(
+      context: context,
+      surfaceKey: const ValueKey('new-session-instance-surface'),
+      maxWidth: 480,
+      builder: (surfaceContext) => ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 10),
+            child: Text(
+              Strings.of(surfaceContext).drawerInstances,
+              style: Theme.of(surfaceContext).textTheme.titleMedium,
+            ),
+          ),
+          for (final connection in candidates)
+            ListTile(
+              leading: Icon(instanceKindIcon(connection.kind)),
+              title: Text(connection.label),
+              onTap: () => Navigator.of(surfaceContext).pop(connection),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<NavigationDeliveryOutcome> _openNewSessionDraft(
+    SavedConnection connection,
+    Session draft,
+    NewSessionLaunchTarget target,
+  ) async {
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null || !navigator.mounted) {
+      throw StateError('root navigator unavailable');
+    }
+    final intent = 'new-session:${connection.id}:${draft.id}:${target.name}';
+    final request = _appNavigationFence.begin(navigator, intent: intent);
+    if (widget.connManager.activeConnectionId.value != connection.id) {
+      await widget.connManager.setActiveConnection(connection.id);
+    }
+    if (!_appNavigationFence.canCommit(request, navigator, intent: intent)) {
+      return NavigationDeliveryOutcome.deferred;
+    }
+    final ownedDraft = draft.copyWith(
+      profile: _sessionProfileOwner(connection, owner: draft.profile),
+    );
+    unawaited(
+      openChatFromHomeNavigator<void>(
+        navigator,
+        builder: (_) => ChatScreen(
+          connection: connection,
+          session: ownedDraft,
+          requestComposerFocus: target == NewSessionLaunchTarget.composer,
+          initialAttachmentSource: switch (target) {
+            NewSessionLaunchTarget.camera => AttachmentSourceChoice.camera,
+            NewSessionLaunchTarget.gallery => AttachmentSourceChoice.photos,
+            _ => null,
+          },
+          initialVoiceMode: target == NewSessionLaunchTarget.voice,
+        ),
+      ),
+    );
+    await WidgetsBinding.instance.endOfFrame;
+    return NavigationDeliveryOutcome.delivered;
+  }
+
+  Future<void> _openWidgetApp() async {
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null || !navigator.mounted) {
+      throw StateError('root navigator unavailable');
+    }
+    _appNavigationFence.begin(navigator, intent: 'widget:open-app');
+    navigator.popUntil((route) => route.isFirst);
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
+  Future<void> _openWidgetSetup() async {
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null || !navigator.mounted) {
+      throw StateError('root navigator unavailable');
+    }
+    _appNavigationFence.begin(navigator, intent: 'widget:open-setup');
+    if (_showOnboarding) {
+      navigator.popUntil((route) => route.isFirst);
+    } else {
+      unawaited(
+        navigator.push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => InstanceEditScreen(connManager: widget.connManager),
+          ),
+        ),
+      );
+    }
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
+  @visibleForTesting
+  Future<NavigationDeliveryOutcome> debugOpenWidgetSession(
+    SavedConnection connection,
+    String sessionId,
+  ) => _openWidgetSession(connection, sessionId);
+
+  Future<NavigationDeliveryOutcome> _openWidgetSession(
+    SavedConnection connection,
+    String sessionId,
+  ) async {
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null || !navigator.mounted) {
+      throw StateError('root navigator unavailable');
+    }
+    final intent = 'widget:open-session:${connection.id}:$sessionId';
+    final request = _appNavigationFence.begin(navigator, intent: intent);
+    if (widget.connManager.activeConnectionId.value != connection.id) {
+      await widget.connManager.setActiveConnection(connection.id);
+    }
+    if (!_appNavigationFence.canCommit(request, navigator, intent: intent)) {
+      return NavigationDeliveryOutcome.deferred;
+    }
+    Session? session;
+    final profile = widget.connManager.activeProfileFor(connection.id);
+    final lookup = widget.externalSessionLookupForTesting;
+    if (lookup != null) {
+      session = await lookup(connection, sessionId, profile);
+    } else {
+      final client = ApiClient.forConnection(connection);
+      try {
+        session = await client.getSession(sessionId, profile: profile);
+      } catch (_) {
+        // El widget conserva el último estado conocido. Si esa sesión ya no
+        // existe, abrir la biblioteca es más útil y seguro que crear un chat
+        // fantasma con el identificador obsoleto.
+      } finally {
+        client.close();
+      }
+    }
+    if (!_appNavigationFence.canCommit(request, navigator, intent: intent)) {
+      return NavigationDeliveryOutcome.deferred;
+    }
+    final target = session;
+    if (target == null) {
+      unawaited(
+        navigator.push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => SessionListScreen(
+              connection: connection,
+              connManager: widget.connManager,
+            ),
+          ),
+        ),
+      );
+    } else {
+      final ownedTarget = missionControlTargetForSession(target);
+      if (ownedTarget != null) {
+        return _openMissionControlFromNotification(
+          navigator,
+          connection,
+          ownedTarget,
+        );
+      } else {
+        unawaited(
+          openChatFromHomeNavigator<void>(
+            navigator,
+            builder: (_) => ChatScreen(connection: connection, session: target),
+          ),
+        );
+      }
+    }
+    await WidgetsBinding.instance.endOfFrame;
+    return NavigationDeliveryOutcome.delivered;
+  }
+
+  /// [followSystem] is the "Auto" segment: the family follows the system.
+  ///
+  /// Choosing a theme of the catalogue puts it in force over Look & Feel
+  /// (which keeps its own choices for «Volver al Look & Feel»).
+  Future<void> setThemeId(String id, {bool followSystem = false}) async {
+    await themeProfileStore.activate(id, followSystem: followSystem);
+    await lookFeel.useList();
+    await refreshThemeProfiles();
+  }
+
+  Future<void> _syncNativeAppearance(ThemeProfileStoreSnapshot snapshot) =>
+      NativeAppearance.sync(_activeBrightness(snapshot));
+
+  @override
+  void didChangePlatformBrightness() {
+    super.didChangePlatformBrightness();
+    // With "Auto" the app swaps theme on its own (MaterialApp.darkTheme);
+    // the native day/night setting and the home widget follow here.
+    final snapshot = themeProfiles.value;
+    if (!_followsSystem) return;
+    unawaited(_syncNativeAppearance(snapshot));
+    _redrawLauncherWidgets();
+    unawaited(
+      updateHomeWidget(
+        (current) => current.copyWith(theme: _homeWidgetTheme(snapshot)),
+      ),
+    );
+  }
+
+  Future<ThemeProfileStoreSnapshot> refreshThemeProfiles({
+    bool force = false,
+  }) async {
+    final snapshot = await themeProfileStore.load(force: force);
+    if (!mounted) return snapshot;
+    themeProfiles.value = snapshot;
+    themeId.value = snapshot.activeProfileId;
+    unawaited(_syncNativeAppearance(snapshot));
+    _redrawLauncherWidgets();
+    unawaited(
+      updateHomeWidget(
+        (current) => current.copyWith(theme: _homeWidgetTheme(snapshot)),
+      ),
+    );
+    return snapshot;
+  }
+
+  Future<void> setFontId(String id) async {
+    await HermesApp.setFontId(widget.connManager.prefs, id);
+    fontId.value = id;
+    _redrawLauncherWidgets();
+  }
+
+  @override
+  void didChangeTextScaleFactor() {
+    super.didChangeTextScaleFactor();
+    // The pictures are typeset at the system's text size.
+    _redrawLauncherWidgets();
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    super.didChangeLocales(locales);
+    _redrawLauncherWidgets();
+  }
+
+  Future<void> setLocaleId(String id) async {
+    await HermesApp.setLocaleId(widget.connManager.prefs, id);
+    localeId.value = id;
+    _redrawLauncherWidgets();
+  }
+
+  /// Inicializa la escucha de deep links `hermes://pair` (enlace de emparejado).
+  /// Cubre el arranque en frío (getInitialLink) y la app ya abierta (stream).
+  Future<void> _initDeepLinks() async {
+    try {
+      final links = AppLinks();
+      final initial = await links.getInitialLink();
+      if (initial != null) _handlePairingUri(initial);
+      _linkSub = links.uriLinkStream.listen(_handlePairingUri, onError: (_) {});
+    } catch (e) {
+      // Sin deep links disponibles: el resto del onboarding sigue funcionando.
+      debugPrint('main: _initDeepLinks falló (sin deep links disponibles): $e');
+    }
+  }
+
+  /// Si la URI es un enlace de emparejado válido, abre el alta de instancia ya
+  /// precargada (reutiliza InstanceEditScreen.initialLink). Si no, la ignora.
+  void _handlePairingUri(Uri uri) {
+    switch (_catalogLinks.offer(uri)) {
+      case CatalogOfferResult.notCatalog:
+        break;
+      case CatalogOfferResult.queued:
+      case CatalogOfferResult.duplicate:
+      case CatalogOfferResult.overflow:
+        _openCatalogLinks();
+        return;
+    }
+    final link = PairingLink.tryParse(uri.toString());
+    if (link == null) return;
+    final nav = _navigatorKey.currentState;
+    if (nav == null) {
+      _pairingLinkDeliveryGate.defer(uri);
+      _scheduleDeferredPairingLink();
+      return;
+    }
+    if (!_pairingLinkDeliveryGate.shouldHandle(uri)) return;
+    nav.push(
+      MaterialPageRoute(
+        builder: (_) => _showOnboarding
+            ? OnboardingScreen(
+                connManager: widget.connManager,
+                initialLink: link,
+                onDone: () {
+                  unawaited(_finishOnboarding());
+                  nav.popUntil((r) => r.isFirst);
+                },
+              )
+            : InstanceEditScreen(
+                connManager: widget.connManager,
+                initialLink: link,
+                fromDeepLink: true,
+              ),
+      ),
+    );
+    if (_pairingLinkDeliveryGate.hasDeferred) {
+      _scheduleDeferredPairingLink();
+    }
+  }
+
+  void _openCatalogLinks() {
+    final nav = _navigatorKey.currentState;
+    final active = _activeHomeWidgetConnection();
+    final locked = widget.appLock.locked.value;
+    final onboarding = !_firstFrameShown || _showOnboarding;
+    final connected = nav != null && active != null;
+    // A refused link is reported once the app can show it, never lost.
+    reportCatalogOverflow(
+      _catalogLinks,
+      navigator: nav,
+      locked: locked,
+      onboarding: onboarding,
+      connected: connected,
+    );
+    final action = _catalogLinks.take(
+      locked: locked,
+      onboarding: onboarding,
+      connected: connected,
+    );
+    if (action == null || nav == null || active == null) return;
+    // The next held link opens once this one is shown or replaced.
+    unawaited(
+      openCatalogDeepLink(
+        navigator: nav,
+        connManager: widget.connManager,
+        connection: active,
+        action: action,
+      ).whenComplete(() {
+        if (mounted) _openCatalogLinks();
+      }),
+    );
+  }
+
+  void _scheduleDeferredPairingLink() {
+    if (_pairingLinkRetryScheduled || !mounted) return;
+    _pairingLinkRetryScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pairingLinkRetryScheduled = false;
+      if (!mounted) return;
+      final pending = _pairingLinkDeliveryGate.takeDeferredIf(
+        _navigatorKey.currentState != null,
+      );
+      if (pending == null) {
+        if (_pairingLinkDeliveryGate.hasDeferred) {
+          _scheduleDeferredPairingLink();
+        }
+        return;
+      }
+      _handlePairingUri(pending);
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  Future<void> _initShareInbox() async {
+    _shareSub = _shareInbox.events.listen((_) => _retryPendingShare());
+    try {
+      await _shareInbox.initialize();
+      _retryPendingShare();
+    } catch (error) {
+      debugPrint('main: Share Sheet no disponible (${error.runtimeType})');
+    }
+  }
+
+  void _retryPendingShare() {
+    if (!mounted || _openingSharedContent) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_openPendingSharedContent());
+    });
+  }
+
+  Future<void> _openPendingSharedContent() async {
+    if (!mounted || _openingSharedContent) return;
+    final content = await _shareInbox.peek();
+    if (content == null || !mounted) return;
+    // Locked: the review would go over the lock route and show the share
+    // and the saved instances. It stays in the inbox until the unlock.
+    if (widget.appLock.locked.value) return;
+    final nav = _navigatorKey.currentState;
+    if (nav == null) return;
+
+    final connections = widget.connManager.getConnections();
+    if (connections.isEmpty) {
+      if (!_shareWaitingNoticeShown) {
+        _shareWaitingNoticeShown = true;
+        AppFeedback.ofNavigator(nav)?.notify(
+          FeedbackKind.error,
+          Strings.of(nav.context).shareNeedsInstance,
+          warning: true,
+        );
+      }
+      return;
+    }
+
+    var connection = connections.first;
+    final activeId = widget.connManager.activeConnectionId.value;
+    for (final candidate in connections) {
+      if (candidate.id == activeId) {
+        connection = candidate;
+        break;
+      }
+    }
+
+    _openingSharedContent = true;
+    try {
+      if (content.text.trim().isEmpty && content.attachments.isEmpty) {
+        await _shareInbox.acknowledge(content.id);
+        if (mounted) {
+          AppFeedback.ofNavigator(nav)?.notify(
+            FeedbackKind.error,
+            Strings.of(nav.context).shareFilesRejected,
+            warning: true,
+          );
+        }
+        return;
+      }
+
+      // The user sees what arrived before it becomes a draft: can drop
+      // items and pick the instance. Backing out discards the share.
+      final review = await nav.push<SharedReviewResult>(
+        MaterialPageRoute(
+          builder: (_) => SharedReviewScreen(
+            content: content,
+            connections: connections,
+            initialConnectionId: connection.id,
+          ),
+        ),
+      );
+      if (review == null) {
+        await _shareInbox.acknowledge(content.id);
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _retryPendingShare(),
+        );
+        return;
+      }
+      final reviewed = review.content;
+      connection = review.connection;
+
+      final sessionId = generateSessionId();
+      await ChatDraftStore(
+        widget.connManager.prefs,
+      ).save(connection.id, sessionId, reviewed.text, reviewed.attachments);
+      await _shareInbox.acknowledge(reviewed.id);
+      if (!mounted) return;
+
+      final textTitle = Session.titleFromText(reviewed.text);
+      final attachmentTitle = reviewed.attachments.isEmpty
+          ? ''
+          : reviewed.attachments.first.name.trim();
+      final title = textTitle.isNotEmpty
+          ? textTitle
+          : attachmentTitle.isNotEmpty
+          ? attachmentTitle
+          : Strings.of(nav.context).drawerNewChat;
+      final now = DateTime.now().millisecondsSinceEpoch / 1000;
+      final session = Session(
+        id: sessionId,
+        title: title,
+        model: 'hermes-agent',
+        source: 'android-share',
+        messageCount: 0,
+        isActive: false,
+        preview: reviewed.text,
+        startedAt: now,
+        updatedAt: now,
+        hasLocalDraft: true,
+        profile: _sessionProfileOwner(connection),
+      );
+      _shareWaitingNoticeShown = false;
+      if (reviewed.rejectedAttachments > 0) {
+        AppFeedback.ofNavigator(nav)?.notify(
+          FeedbackKind.error,
+          Strings.of(nav.context).shareSomeFilesRejected,
+          warning: true,
+        );
+      }
+      unawaited(
+        openChatFromHomeNavigator<void>(
+          nav,
+          builder: (_) => ChatScreen(connection: connection, session: session),
+        ).then((_) => _retryPendingShare()),
+      );
+    } catch (_) {
+      if (mounted) {
+        AppFeedback.ofNavigator(
+          nav,
+        )?.notify(FeedbackKind.error, Strings.of(nav.context).shareOpenFailed);
+      }
+    } finally {
+      _openingSharedContent = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_networkAvailabilityListener?.dispose());
+    widget.appLock.locked.removeListener(_releaseHomeOnUnlock);
+    _uiNotificationActionHandler?.dispose();
+    widget.appLock.releaseDisclosure();
+    _externalLaunchTimer?.cancel();
+    _releaseExternalLaunchWait?.call();
+    _deferredNotificationInitTimer?.cancel();
+    _notificationPermissionMoment?.dispose();
+
+    _sshIdleTimer?.cancel();
+    _gatewayIdleTimer?.cancel();
+    _disposeTurnKeepAlive();
+    _externalDataSyncControl.setMethodCallHandler(null);
+    _linkSub?.cancel();
+    widget.appLock.locked.removeListener(_openCatalogLinks);
+    widget.connManager.activeConnectionId.removeListener(_openCatalogLinks);
+    widget.connManager.activeConnectionId.removeListener(_retryPendingShare);
+    widget.appLock.locked.removeListener(_retryPendingShare);
+    widget.connManager.connectionsRevision.removeListener(
+      _syncBackgroundCronConnections,
+    );
+    _shareSub?.cancel();
+    unawaited(_shareInbox.dispose());
+    widget.connManager.activeConnectionId.removeListener(
+      _retryPendingNewSessionLaunch,
+    );
+    widget.connManager.activeConnectionId.removeListener(
+      _onHomeWidgetConnectionChanged,
+    );
+    _homeWidgetDeletedSessions.dispose();
+    LauncherWidgetImagePublisher.instance.configure(null);
+    widget.appLock.locked.removeListener(_retryPendingNewSessionLaunch);
+    widget.appLock.locked.removeListener(_onAppLockNoticeGateChanged);
+    widget.appLock.locked.removeListener(_restoreColdStartTailsAfterUnlock);
+    widget.appLock.locked.removeListener(_resumeHermesUpdates);
+    _releaseColdStartUnlockWait?.call();
+    _releaseColdStartUnlockWait = null;
+    _newSessionLaunchSub?.cancel();
+    unawaited(_newSessionLaunchInbox.dispose());
+    _inAppSub?.cancel();
+    _dismissInAppNotice();
+    activeChats.activeIds.removeListener(_onActiveChatsChanged);
+    _mascot.dispose();
+    companion.dispose();
+    appCompanion.dispose();
+    ProfileIdentities.instance.detach();
+    _companionPetLease?.release();
+    _companionPetLease = null;
+    companionPresence.dispose();
+    themeId.dispose();
+    themeProfiles.dispose();
+    lookFeel
+      ..removeListener(_onLookFeelChanged)
+      ..dispose();
+    fontId.dispose();
+    localeId.dispose();
+    voice.prepareReadAloudPlayback = null;
+    voice.readAloud.removeListener(_onReadAloudRuntimeChanged);
+    FlutterForegroundTask.removeTaskDataCallback(_onVoiceTaskData);
+    // Gateado (spec 027): con el modo voz apagado el controlador nunca se
+    // instanció (late final perezoso); leerlo aquí lo crearía solo para
+    // destruirlos. `voice` (dictado/lectura) se libera siempre.
+    if (kVoiceRuntimeEnabled) {
+      voice.speaking.removeListener(_onVoicePrivacyGateChanged);
+      widget.appLock.locked.removeListener(_onVoicePrivacyGateChanged);
+      voiceConvo.removeListener(_onVoiceRuntimeChanged);
+      voice.voiceConsent.removeListener(_onVoiceConsentChanged);
+      widget.notifications.activeVoiceSessionId = null;
+      voiceConvo.dispose();
+    }
+    voice.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    // The glass level and the style re-derive the theme (the button gradient,
+    // the capitals); the backdrop and the surfaces listen on their own.
+    listenable: Listenable.merge([
+      GlassLookPrefs.shared,
+      HermesStylePrefs.shared,
+      lookFeel,
+    ]),
+    builder: (context, _) => _buildApp(context),
+  );
+
+  Widget _buildApp(BuildContext context) {
+    return ValueListenableBuilder<ThemeProfileStoreSnapshot>(
+      valueListenable: themeProfiles,
+      builder: (context, profiles, _) {
+        final id = profiles.activeProfileId;
+        final custom = profiles.customById(id);
+        final component = ComponentProfiles.minimal;
+        // "Auto": the family's light variant is the theme and its dark
+        // variant the darkTheme, so Material follows the system itself.
+        final auto = followSystemThemeIds(profiles);
+        // Look & Feel in force: its derived theme (and, with «Sistema», the
+        // dark one for Material to swap to). Otherwise the catalogue.
+        final look = lookFeel.settings.derived
+            ? LookFeel.materialThemes(
+                lookFeel.settings,
+                componentProfile: component,
+              )
+            : null;
+        final activeTheme = look != null
+            ? look.theme
+            : auto != null
+            ? AppTheme.fromId(auto.light, componentProfile: component)
+            : custom == null
+            ? AppTheme.fromId(id, componentProfile: component)
+            : AppTheme.fromProfile(custom, componentProfile: component);
+        final darkTheme = look != null
+            ? look.darkTheme
+            : auto == null
+            ? null
+            : AppTheme.fromId(auto.dark, componentProfile: component);
+        final style = HermesStylePrefs.shared.style;
+        return ValueListenableBuilder<String>(
+          valueListenable: fontId,
+          builder: (context, font, _) => ValueListenableBuilder<String>(
+            valueListenable: localeId,
+            builder: (context, locId, _) => MaterialApp(
+              title: 'Console',
+              debugShowCheckedModeBanner: false,
+              // Scroll con inercia (coasting) en toda la app: un flick sigue
+              // rodando y frena solo, en vez del frenazo seco de Material.
+              scrollBehavior: const MomentumScrollBehavior(),
+              locale: AppLocales.byId(locId).locale,
+              localizationsDelegates: Strings.localizationsDelegates,
+              supportedLocales: Strings.supportedLocales,
+              localeResolutionCallback: AppLocales.resolve,
+              theme: hermesAmbientTheme(
+                applyHermesStyle(
+                  AppFonts.applyToTheme(activeTheme, AppFonts.byId(font)),
+                  style,
+                ),
+              ),
+              darkTheme: darkTheme == null
+                  ? null
+                  : hermesAmbientTheme(
+                      applyHermesStyle(
+                        AppFonts.applyToTheme(darkTheme, AppFonts.byId(font)),
+                        style,
+                      ),
+                    ),
+              // Transición suave al cambiar de tema (sensación premium).
+              // The theme change is the circle reveal (HermesThemeRevealHost),
+              // always on: the theme itself must switch at once under it.
+              themeAnimationDuration: Duration.zero,
+              themeAnimationCurve: Curves.easeInOutCubic,
+              navigatorKey: _navigatorKey,
+              scaffoldMessengerKey: _messengerKey,
+              navigatorObservers: [
+                hermesRouteObserver,
+                _appNavigationFence,
+                // Chats, viewers, dialogs and sheets hide the floating
+                // mascot.
+                MascotRouteWatch.instance,
+              ],
+              // El gate orquesta una ruta de bloqueo sobre el Navigator raíz: cubre
+              // también las rutas empujadas, sin Overlay casero.
+              builder: (context, navChild) => ListenableBuilder(
+                // Escala global de texto: reconstruye el MediaQuery raíz al cambiar
+                // el nivel, sin reiniciar la app. Envuelve también el AppLockGate
+                // para que la pantalla de bloqueo respete el tamaño elegido.
+                listenable: widget.fontSize,
+                builder: (context, _) => MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                    // Composición, no reemplazo: si el usuario activó texto
+                    // grande en Ajustes del sistema (accesibilidad), esa
+                    // preferencia debe notarse aunque no toque el selector de
+                    // tamaño interno de la app. Multiplicar el factor del
+                    // sistema por el nuestro respeta ambos ajustes a la vez
+                    // (auditoría 2026-07-02, hallazgo C5b).
+                    textScaler: TextScaler.linear(
+                      MediaQuery.of(context).textScaler.scale(1.0) *
+                          widget.fontSize.scale,
+                    ),
+                  ),
+                  child: WithForegroundTask(
+                    // Soft hand-off from the native splash: same background
+                    // and mark on the first frame, then the app (or the lock
+                    // screen) fades in. It starts with that frame and never
+                    // waits for data.
+                    child: StartupHandoff(
+                      background: NativeAppearance.splashBackground(
+                        activeTheme.brightness,
+                      ),
+                      child: AppLockGate(
+                        lock: widget.appLock,
+                        navigatorKey: _navigatorKey,
+                        // Guided tours point at the real widgets of whatever
+                        // the navigator shows; never over the lock screen.
+                        child: GuideLayer(
+                          locked: widget.appLock.locked,
+                          // Every floating chat header draws its mascot with
+                          // the sprite engine.
+                          child: HeaderMascotScope(
+                            builder: buildHeaderMascot,
+                            // The active profile's pet, outside chats,
+                            // while "Presencia" is "En toda la app".
+                            child: MascotOverlayHost(
+                              pet: _mascot.pet,
+                              sources: _mascot.sources,
+                              actions: _mascotActions(),
+                              suspended: _showOnboarding || _homeHeldByLock,
+                              // Pages are transparent over the ambient light:
+                              // this one sits behind the whole navigator, so
+                              // a route that brings none of its own (the
+                              // lock, onboarding) is never a hole.
+                              child: HermesThemeRevealHost(
+                                child: GlassLookScope(
+                                  prefs: GlassLookPrefs.shared,
+                                  child: HermesStyleScope(
+                                    prefs: HermesStylePrefs.shared,
+                                    child: HermesAmbientBackdrop(
+                                      child: BotMotionScope(
+                                        child: HermesTapHaptics(
+                                          child: navChild!,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              home: _showOnboarding
+                  ? OnboardingScreen(
+                      connManager: widget.connManager,
+                      onDone: _finishOnboarding,
+                    )
+                  : _homeHeldByLock
+                  ? const _LockedStartCover()
+                  : HomeDashboardScreen(connManager: widget.connManager),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// What sits under the App Lock screen on a cold start that opened locked:
+/// the theme background only. Home is built after the first unlock.
+class _LockedStartCover extends StatelessWidget {
+  const _LockedStartCover();
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    key: const ValueKey('startup-locked-cover'),
+    color: Theme.of(context).hermes.background,
+    child: const SizedBox.expand(),
+  );
+}

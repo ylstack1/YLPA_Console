@@ -1,0 +1,1225 @@
+import 'connection_request.dart';
+import '../utils/assistant_content.dart';
+import 'agent_task_list.dart';
+import 'transcript_privacy_state.dart';
+
+/// Typed, defensive projection of the Hermes Agent 0.19 Desktop session
+/// lifecycle responses.
+///
+/// These values can contain conversation text and paths. They are deliberately
+/// kept in memory and must never be written to diagnostic logs.
+class DesktopSessionSnapshot {
+  final String runtimeSessionId;
+  final String storedSessionId;
+  final DesktopStoredSessionIdProvenance storedSessionIdProvenance;
+  final bool created;
+  final String? lineageRootId;
+  final bool identityAliasesConsistent;
+  final bool storedSessionIdentityExplicit;
+  final List<DesktopSessionMessage> messages;
+  final bool messagesProvided;
+  final bool messagesFullyParsed;
+  final int? messageCount;
+
+  /// `session.resume` con `defer_history:true` (Hermes Agent 0.20): el ack es
+  /// inmediato, llega con `messages:[]` y el historial se hidrata en segundo
+  /// plano (eventos `session.resume_progress`). Servidores antiguos omiten el
+  /// campo → false.
+  final bool hydrating;
+  final DesktopInflightTurn? inflight;
+  final DesktopQueuedTurn? queued;
+  final bool running;
+  final String? status;
+  final DateTime? startedAt;
+  final DateTime? turnStartedAt;
+  final DesktopSessionRuntimeInfo info;
+  final Map<String, dynamic> raw;
+  final Map<String, dynamic>? pendingClarify;
+  final bool pendingClarifyProvided;
+  final Map<String, dynamic>? pendingApproval;
+  final bool pendingApprovalProvided;
+
+  /// `pending_connection`: the connector prompt still waiting on this
+  /// session, so a client that missed `connection.request` restores the card
+  /// with the server's deadline. Null when absent, null or unusable.
+  final ConnectionRequest? pendingConnection;
+  final bool pendingConnectionProvided;
+
+  /// `open_requests`: server→client requests (clarify, approval, sudo, …)
+  /// still waiting on this session. Hermes only sends each request frame once,
+  /// so a client that was offline or not yet attached when it was written
+  /// learns about it here (`tui_gateway/server_requests.py::open_requests`).
+  /// Each entry is the request frame `{id, method, params}`.
+  final List<Map<String, dynamic>> openRequests;
+
+  /// `todo_state` del gateway: la lista de tareas del agente para esta sesión
+  /// (también la reconstruye desde el historial durable cuando no hay agente
+  /// vivo). `null` si no la trae o no es utilizable.
+  final AgentTaskList? todoState;
+
+  const DesktopSessionSnapshot({
+    required this.runtimeSessionId,
+    required this.storedSessionId,
+    this.storedSessionIdProvenance =
+        DesktopStoredSessionIdProvenance.requestedFallback,
+    required this.created,
+    this.lineageRootId,
+    this.identityAliasesConsistent = true,
+    this.storedSessionIdentityExplicit = true,
+    this.messages = const [],
+    this.messagesProvided = false,
+    this.messagesFullyParsed = true,
+    this.messageCount,
+    this.hydrating = false,
+    this.inflight,
+    this.queued,
+    this.running = false,
+    this.status,
+    this.startedAt,
+    this.turnStartedAt,
+    this.info = const DesktopSessionRuntimeInfo(),
+    this.raw = const {},
+    this.pendingClarify,
+    this.pendingClarifyProvided = false,
+    this.pendingApproval,
+    this.pendingApprovalProvided = false,
+    this.pendingConnection,
+    this.pendingConnectionProvided = false,
+    this.openRequests = const [],
+    this.todoState,
+  });
+
+  DesktopSessionSnapshot withoutPersistedMessages() => DesktopSessionSnapshot(
+    runtimeSessionId: runtimeSessionId,
+    storedSessionId: storedSessionId,
+    storedSessionIdProvenance: storedSessionIdProvenance,
+    created: created,
+    lineageRootId: lineageRootId,
+    identityAliasesConsistent: identityAliasesConsistent,
+    storedSessionIdentityExplicit: storedSessionIdentityExplicit,
+    messagesProvided: false,
+    messagesFullyParsed: messagesFullyParsed,
+    messageCount: messageCount,
+    hydrating: hydrating,
+    inflight: inflight,
+    queued: queued,
+    running: running,
+    status: status,
+    startedAt: startedAt,
+    turnStartedAt: turnStartedAt,
+    info: info,
+    pendingClarify: pendingClarify,
+    pendingClarifyProvided: pendingClarifyProvided,
+    pendingApproval: pendingApproval,
+    pendingApprovalProvided: pendingApprovalProvided,
+    pendingConnection: pendingConnection,
+    pendingConnectionProvided: pendingConnectionProvided,
+    openRequests: openRequests,
+    todoState: todoState,
+    raw: raw,
+  );
+
+  factory DesktopSessionSnapshot.fromJson(
+    Map<String, dynamic> json, {
+    required String requestedStoredSessionId,
+    required bool created,
+    required String method,
+  }) {
+    final runtimeSessionId = _exactNonEmptyIdentity(json['session_id']);
+    if (runtimeSessionId == null) {
+      throw FormatException('$method omitted a valid runtime session id');
+    }
+
+    // `resumed` is a session id in the 0.19 contract, but older/newer servers
+    // may use it as a boolean status flag. Identity fields are intentionally
+    // strict: a bool/number must never become the persisted strings "true" or
+    // "42" through an incidental toString().
+    var identityAliasesConsistent = true;
+    String? readStoredAlias(String key, {bool booleanStatusAllowed = false}) {
+      if (!json.containsKey(key)) return null;
+      final value = json[key];
+      if (booleanStatusAllowed && value is bool) return null;
+      if (value is String && (value.isEmpty || value != value.trim())) {
+        throw FormatException('$method contains an invalid $key identity');
+      }
+      if (value is! String) {
+        identityAliasesConsistent = false;
+        return null;
+      }
+      return value;
+    }
+
+    final explicitStoredSessionId = readStoredAlias('stored_session_id');
+    final explicitSessionKey = readStoredAlias('session_key');
+    final explicitResumed = readStoredAlias(
+      'resumed',
+      booleanStatusAllowed: true,
+    );
+    final explicitAliases = <String>{
+      ?explicitStoredSessionId,
+      ?explicitSessionKey,
+      ?explicitResumed,
+    };
+    if (explicitAliases.length > 1) identityAliasesConsistent = false;
+    final storedSessionId =
+        explicitStoredSessionId ??
+        explicitSessionKey ??
+        explicitResumed ??
+        _exactNonEmptyIdentity(requestedStoredSessionId);
+    if (storedSessionId == null) {
+      throw FormatException('$method omitted a valid stored session id');
+    }
+
+    final infoJson = _stringKeyedMap(json['info']);
+    final infoStoredSessionId = infoJson == null
+        ? null
+        : _exactNonEmptyIdentity(infoJson['stored_session_id']);
+    if (infoJson?.containsKey('stored_session_id') == true &&
+        (infoStoredSessionId == null ||
+            infoStoredSessionId != storedSessionId)) {
+      identityAliasesConsistent = false;
+    }
+    final infoRuntimeSessionId = infoJson == null
+        ? null
+        : _exactNonEmptyIdentity(infoJson['session_id']);
+    if (infoJson?.containsKey('session_id') == true &&
+        (infoRuntimeSessionId == null ||
+            infoRuntimeSessionId != runtimeSessionId)) {
+      identityAliasesConsistent = false;
+    }
+
+    String? lineageRootId;
+    void collectLineageAliases(Map<String, dynamic>? source) {
+      if (source == null) return;
+      for (final key in const <String>[
+        '_lineage_root_id',
+        'lineage_root_id',
+        'lineage_root',
+      ]) {
+        if (!source.containsKey(key)) continue;
+        final value = source[key];
+        if (value is! String || value.isEmpty || value != value.trim()) {
+          identityAliasesConsistent = false;
+          continue;
+        }
+        if (lineageRootId != null && lineageRootId != value) {
+          identityAliasesConsistent = false;
+        }
+        lineageRootId ??= value;
+      }
+    }
+
+    collectLineageAliases(json);
+    collectLineageAliases(infoJson);
+
+    final rawMessages = json['messages'];
+    final messages = <DesktopSessionMessage>[];
+    var messagesFullyParsed = true;
+    if (rawMessages is List) {
+      for (var index = 0; index < rawMessages.length; index++) {
+        final parsed = DesktopSessionMessage.tryParse(
+          rawMessages[index],
+          serverOrdinal: index,
+        );
+        if (parsed == null) {
+          messagesFullyParsed = false;
+        } else {
+          messages.add(parsed);
+          if (!parsed.identityAliasesConsistent) {
+            messagesFullyParsed = false;
+          }
+        }
+      }
+    }
+
+    return DesktopSessionSnapshot(
+      runtimeSessionId: runtimeSessionId,
+      storedSessionId: storedSessionId,
+      storedSessionIdProvenance: explicitStoredSessionId != null
+          ? DesktopStoredSessionIdProvenance.storedSessionId
+          : explicitSessionKey != null
+          ? DesktopStoredSessionIdProvenance.sessionKey
+          : explicitResumed != null
+          ? DesktopStoredSessionIdProvenance.resumed
+          : DesktopStoredSessionIdProvenance.requestedFallback,
+      created: created,
+      lineageRootId: lineageRootId,
+      identityAliasesConsistent: identityAliasesConsistent,
+      storedSessionIdentityExplicit:
+          explicitStoredSessionId != null ||
+          explicitSessionKey != null ||
+          explicitResumed != null,
+      messages: List.unmodifiable(messages),
+      messagesProvided: rawMessages is List && json['messages_omitted'] != true,
+      messagesFullyParsed: messagesFullyParsed,
+      messageCount: _nonNegativeInt(json['message_count']),
+      hydrating: json['hydrating'] == true,
+      inflight: DesktopInflightTurn.tryParse(json['inflight']),
+      queued: DesktopQueuedTurn.tryParse(json['queued']),
+      running: json['running'] is bool && json['running'] == true,
+      status: _nonEmptyString(json['status']),
+      startedAt: _epochSeconds(json['started_at']),
+      turnStartedAt: _epochSeconds(json['turn_started_at']),
+      info: DesktopSessionRuntimeInfo.fromJson(json['info']),
+      pendingClarify: _stringKeyedMap(json['pending_clarify']),
+      pendingClarifyProvided: json.containsKey('pending_clarify'),
+      pendingApproval: _stringKeyedMap(json['pending_approval']),
+      pendingApprovalProvided: json.containsKey('pending_approval'),
+      pendingConnection: normalizeConnectionRequest(json['pending_connection']),
+      pendingConnectionProvided: json.containsKey('pending_connection'),
+      openRequests: _openServerRequests(json['open_requests']),
+      todoState: AgentTaskList.tryParse(json['todo_state']),
+      // Keep only unknown, non-payload extension fields. The 0.19 snapshot can
+      // contain the whole transcript and a many-KiB system prompt; duplicating
+      // those in `raw` increases memory pressure and makes accidental logging
+      // much easier.
+      raw: _freezeExtras(json, _snapshotParsedKeys),
+    );
+  }
+
+  /// Inicio exacto del turno vivo anunciado por el Gateway.
+  ///
+  /// Hermes Agent actual lo publica como `turn_started_at` en el snapshot;
+  /// versiones experimentales lo incluyeron dentro de `inflight.started_at`.
+  /// Si ambas coordenadas existen y discrepan, no se inventa una equivalencia.
+  DateTime? get resolvedTurnStartedAt {
+    final nested = inflight?.startedAt;
+    final topLevel = turnStartedAt;
+    if (nested != null &&
+        topLevel != null &&
+        !nested.isAtSameMomentAs(topLevel)) {
+      return null;
+    }
+    return nested ?? topLevel;
+  }
+}
+
+/// Source of the durable identity selected while parsing the response. A
+/// request fallback correlates only that exact request and proves no lineage.
+enum DesktopStoredSessionIdProvenance {
+  storedSessionId,
+  sessionKey,
+  resumed,
+  requestedFallback,
+}
+
+enum DesktopSessionMessageRole { system, user, assistant, tool, unknown }
+
+class DesktopSessionMessage {
+  final String? stableId;
+  final int? rowId;
+  final bool identityAliasesConsistent;
+  final int? serverOrdinal;
+  final Map<String, dynamic> artifactContainers;
+  final DesktopSessionMessageRole role;
+  final String rawRole;
+
+  /// Privacy decision captured while the original row classifiers still exist.
+  final bool publiclyRenderable;
+  final TranscriptPrivacyObservation? privacyObservation;
+
+  TranscriptPrivacyObservation get transcriptPrivacyObservation =>
+      privacyObservation ??
+      TranscriptPrivacyObservation(
+        rowId: identityAliasesConsistent ? rowId : null,
+        messageId: identityAliasesConsistent ? stableId : null,
+        negative: !publiclyRenderable,
+        invalidRowClaims: [
+          if (!identityAliasesConsistent && rowId != null) rowId!,
+        ],
+        invalidMessageClaims: [
+          if (!identityAliasesConsistent && stableId != null) stableId!,
+        ],
+      );
+  final Object? content;
+  final String? text;
+  final String? name;
+  final String? reasoning;
+  final String? reasoningContent;
+  final Object? reasoningDetails;
+  final Object? codexReasoningItems;
+  final Object? codexMessageItems;
+  final Object? context;
+  final DateTime? timestamp;
+  final String? toolCallId;
+  final Object? toolCalls;
+  final String? toolName;
+  final Object? displayMetadata;
+  final Map<String, dynamic> raw;
+
+  const DesktopSessionMessage({
+    required this.role,
+    required this.rawRole,
+    this.publiclyRenderable = true,
+    this.privacyObservation,
+    this.stableId,
+    this.rowId,
+    this.identityAliasesConsistent = true,
+    this.serverOrdinal,
+    this.artifactContainers = const {},
+    this.content,
+    this.text,
+    this.name,
+    this.reasoning,
+    this.reasoningContent,
+    this.reasoningDetails,
+    this.codexReasoningItems,
+    this.codexMessageItems,
+    this.context,
+    this.timestamp,
+    this.toolCallId,
+    this.toolCalls,
+    this.toolName,
+    this.displayMetadata,
+    this.raw = const {},
+  });
+
+  static DesktopSessionMessage? tryParse(Object? value, {int? serverOrdinal}) {
+    final json = _stringKeyedMap(value);
+    if (json == null) return null;
+    final rawRole = _nonEmptyString(json['role']);
+    if (rawRole == null) return null;
+    final normalizedRole = rawRole.toLowerCase();
+    final role = switch (normalizedRole) {
+      'system' => DesktopSessionMessageRole.system,
+      'user' => DesktopSessionMessageRole.user,
+      'assistant' => DesktopSessionMessageRole.assistant,
+      'tool' => DesktopSessionMessageRole.tool,
+      _ => DesktopSessionMessageRole.unknown,
+    };
+    final content = json.containsKey('content')
+        ? _freezeJson(json['content'])
+        : _freezeJson(json['text']);
+    final text =
+        _stringValue(json['text']) ??
+        (json['content'] is String ? json['content'] as String : null);
+    final name = _nonEmptyString(json['name']);
+    final identity = _desktopTranscriptIdentity(json);
+    return DesktopSessionMessage(
+      stableId: identity.messageId,
+      rowId: identity.rowId,
+      identityAliasesConsistent: identity.consistent,
+      serverOrdinal: serverOrdinal != null && serverOrdinal >= 0
+          ? serverOrdinal
+          : null,
+      artifactContainers: _freezeArtifactContainers(json),
+      role: role,
+      rawRole: rawRole,
+      publiclyRenderable: !hasPrivateTranscriptClassifier(json),
+      privacyObservation: TranscriptPrivacyObservation.fromRaw(json),
+      content: content,
+      text: text,
+      name: name,
+      reasoning: _stringValue(json['reasoning']),
+      reasoningContent: _stringValue(json['reasoning_content']),
+      reasoningDetails: _freezeJson(json['reasoning_details']),
+      codexReasoningItems: _freezeJson(json['codex_reasoning_items']),
+      codexMessageItems: _freezeJson(json['codex_message_items']),
+      context: _freezeJson(json['context']),
+      timestamp: _epochSeconds(json['timestamp']),
+      toolCallId: _nonEmptyString(json['tool_call_id']),
+      toolCalls: _freezeJson(json['tool_calls']),
+      toolName:
+          _nonEmptyString(json['tool_name']) ??
+          (role == DesktopSessionMessageRole.tool ? name : null),
+      displayMetadata: _freezeJson(json['display_metadata']),
+      raw: _freezeExtras(json, _messageParsedKeys),
+    );
+  }
+}
+
+class DesktopInflightTurn {
+  final String? assistant;
+  final bool? streaming;
+  final String? user;
+  final String? error;
+  final String? status;
+  final bool? recoverable;
+
+  /// Structured failure descriptor of a retained failed turn
+  /// (agent/error_surface.py): only its short scalar fields are kept.
+  final Map<String, Object> errorSurface;
+  final List<DesktopInflightCorrection> corrections;
+  final List<int?> correctionOffsets;
+  final DateTime? startedAt;
+  final DateTime? updatedAt;
+  final Map<String, dynamic> raw;
+
+  DesktopInflightTurn({
+    this.assistant,
+    this.streaming,
+    this.user,
+    this.error,
+    this.status,
+    this.recoverable,
+    this.errorSurface = const {},
+    List<DesktopInflightCorrection> corrections = const [],
+    List<int?> correctionOffsets = const [],
+    this.startedAt,
+    this.updatedAt,
+    this.raw = const {},
+  }) : corrections = List<DesktopInflightCorrection>.unmodifiable(corrections),
+       correctionOffsets = List<int?>.unmodifiable(correctionOffsets);
+
+  static DesktopInflightTurn? tryParse(Object? value) {
+    final json = _stringKeyedMap(value);
+    if (json == null) return null;
+    final assistant = _stringValue(json['assistant']);
+    final streaming = json['streaming'] is bool
+        ? json['streaming'] as bool
+        : null;
+    final user = _stringValue(json['user']);
+    final error = _nonEmptyString(json['error']);
+    final status = _nonEmptyString(json['status']);
+    final recoverable = json['recoverable'] is bool
+        ? json['recoverable'] as bool
+        : null;
+    final corrections = <DesktopInflightCorrection>[];
+    final rawCorrections = json['corrections'];
+    if (rawCorrections is List) {
+      for (final value in rawCorrections) {
+        final correction = DesktopInflightCorrection.tryParse(value);
+        if (correction != null) corrections.add(correction);
+      }
+    }
+    final correctionOffsets = <int?>[];
+    final rawOffsets = json['correction_offsets'];
+    if (rawOffsets is List) {
+      for (final value in rawOffsets) {
+        correctionOffsets.add(_nonNegativeInt(value));
+      }
+    }
+    final terminalStatus = status?.toLowerCase() == 'error';
+    if (assistant == null &&
+        streaming == null &&
+        user == null &&
+        error == null &&
+        !terminalStatus &&
+        corrections.isEmpty) {
+      return null;
+    }
+    return DesktopInflightTurn(
+      assistant: assistant,
+      streaming: streaming,
+      user: user,
+      error: error,
+      status: status,
+      recoverable: recoverable,
+      errorSurface: _errorSurfaceScalars(json['error_surface']),
+      corrections: corrections,
+      correctionOffsets: correctionOffsets,
+      startedAt: _epochSeconds(json['started_at']),
+      updatedAt: _epochSeconds(json['updated_at']),
+      raw: _freezeExtras(json, _inflightParsedKeys),
+    );
+  }
+}
+
+class DesktopInflightCorrection {
+  final String text;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final Map<String, dynamic> raw;
+
+  DesktopInflightCorrection({
+    required this.text,
+    this.createdAt,
+    this.updatedAt,
+    Map<String, dynamic> raw = const {},
+  }) : raw = Map<String, dynamic>.unmodifiable(raw);
+
+  static DesktopInflightCorrection? tryParse(Object? value) {
+    final plainText = _nonEmptyString(value);
+    if (plainText != null) {
+      return DesktopInflightCorrection(text: plainText);
+    }
+
+    final json = _stringKeyedMap(value);
+    if (json == null) return null;
+    final text = _nonEmptyString(json['text']);
+    if (text == null) return null;
+    return DesktopInflightCorrection(
+      text: text,
+      createdAt: _epochSeconds(json['created_at']),
+      updatedAt: _epochSeconds(json['updated_at']),
+      raw: _freezeExtras(json, _inflightCorrectionParsedKeys),
+    );
+  }
+}
+
+class DesktopQueuedTurn {
+  final String user;
+  final Map<String, dynamic> raw;
+
+  const DesktopQueuedTurn({required this.user, this.raw = const {}});
+
+  static DesktopQueuedTurn? tryParse(Object? value) {
+    final json = _stringKeyedMap(value);
+    if (json == null) return null;
+    final user = _nonEmptyString(json['user']);
+    if (user == null) return null;
+    return DesktopQueuedTurn(
+      user: user,
+      raw: _freezeExtras(json, _queuedParsedKeys),
+    );
+  }
+}
+
+class DesktopSessionRuntimeInfo {
+  final String? model;
+  final String? provider;
+  final String? reasoningEffort;
+  final String? serviceTier;
+  final bool? fast;
+  final bool? yolo;
+  final String? approvalMode;
+  final int? toolCount;
+  final int? skillCount;
+  final String? cwd;
+  final String? branch;
+  final Map<String, dynamic>? project;
+  final String? personality;
+  final bool? running;
+  final bool? lazy;
+  final String? title;
+  final String? storedSessionId;
+  final int? desktopContract;
+  final String? version;
+  final String? releaseDate;
+  final Object? updateBehind;
+  final String? updateCommand;
+  final DesktopUsageStats? usage;
+  final String? profileName;
+  final int? mcpServerCount;
+  final String? configWarning;
+  final String? credentialWarning;
+  final String? installWarning;
+  final Map<String, dynamic> raw;
+
+  const DesktopSessionRuntimeInfo({
+    this.model,
+    this.provider,
+    this.reasoningEffort,
+    this.serviceTier,
+    this.fast,
+    this.yolo,
+    this.approvalMode,
+    this.toolCount,
+    this.skillCount,
+    this.cwd,
+    this.branch,
+    this.project,
+    this.personality,
+    this.running,
+    this.lazy,
+    this.title,
+    this.storedSessionId,
+    this.desktopContract,
+    this.version,
+    this.releaseDate,
+    this.updateBehind,
+    this.updateCommand,
+    this.usage,
+    this.profileName,
+    this.mcpServerCount,
+    this.configWarning,
+    this.credentialWarning,
+    this.installWarning,
+    this.raw = const {},
+  });
+
+  DesktopSessionRuntimeInfo withUsage(DesktopUsageStats value) =>
+      DesktopSessionRuntimeInfo(
+        model: model,
+        provider: provider,
+        reasoningEffort: reasoningEffort,
+        serviceTier: serviceTier,
+        fast: fast,
+        yolo: yolo,
+        approvalMode: approvalMode,
+        toolCount: toolCount,
+        skillCount: skillCount,
+        cwd: cwd,
+        branch: branch,
+        project: project,
+        personality: personality,
+        running: running,
+        lazy: lazy,
+        title: title,
+        storedSessionId: storedSessionId,
+        desktopContract: desktopContract,
+        version: version,
+        releaseDate: releaseDate,
+        updateBehind: updateBehind,
+        updateCommand: updateCommand,
+        usage: value,
+        profileName: profileName,
+        mcpServerCount: mcpServerCount,
+        configWarning: configWarning,
+        credentialWarning: credentialWarning,
+        installWarning: installWarning,
+        raw: raw,
+      );
+
+  factory DesktopSessionRuntimeInfo.fromJson(Object? value) {
+    final json = _stringKeyedMap(value);
+    if (json == null) return const DesktopSessionRuntimeInfo();
+    final project = _stringKeyedMap(json['project']);
+    final rawMcpServers = json['mcp_servers'];
+    return DesktopSessionRuntimeInfo(
+      model: _nonEmptyString(json['model']),
+      provider: _nonEmptyString(json['provider']),
+      reasoningEffort: _nonEmptyString(json['reasoning_effort']),
+      serviceTier: _nonEmptyString(json['service_tier']),
+      fast: json['fast'] is bool ? json['fast'] as bool : null,
+      yolo: json['yolo'] is bool ? json['yolo'] as bool : null,
+      approvalMode: _nonEmptyString(json['approval_mode']),
+      // Session info is a hot event. Keep inventory counts, not full tool,
+      // skill or MCP payloads; catalogs are loaded explicitly elsewhere.
+      toolCount: _nestedCollectionCount(json['tools']),
+      skillCount: _collectionCount(json['skills']),
+      cwd: _nonEmptyString(json['cwd']),
+      branch: _nonEmptyString(json['branch']),
+      project: project == null ? null : _freezeMap(project),
+      personality: _stringValue(json['personality']),
+      running: json['running'] is bool ? json['running'] as bool : null,
+      lazy: json['lazy'] is bool ? json['lazy'] as bool : null,
+      title: _stringValue(json['title']),
+      storedSessionId: _nonEmptyString(json['stored_session_id']),
+      desktopContract: _nonNegativeInt(json['desktop_contract']),
+      version: _nonEmptyString(json['version']),
+      releaseDate: _nonEmptyString(json['release_date']),
+      updateBehind: _freezeJson(json['update_behind']),
+      updateCommand: _nonEmptyString(json['update_command']),
+      usage: json['usage'] is Map
+          ? DesktopUsageStats.fromJson(json['usage'])
+          : null,
+      profileName: _nonEmptyString(json['profile_name']),
+      mcpServerCount: rawMcpServers is List ? rawMcpServers.length : null,
+      configWarning: _nonEmptyString(json['config_warning']),
+      credentialWarning: _nonEmptyString(json['credential_warning']),
+      installWarning: _nonEmptyString(json['install_warning']),
+      // `system_prompt` is deliberately neither parsed nor retained.
+      raw: _freezeExtras(json, _runtimeInfoParsedKeys),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DesktopSessionRuntimeInfo &&
+          model == other.model &&
+          provider == other.provider &&
+          reasoningEffort == other.reasoningEffort &&
+          serviceTier == other.serviceTier &&
+          fast == other.fast &&
+          yolo == other.yolo &&
+          approvalMode == other.approvalMode &&
+          toolCount == other.toolCount &&
+          skillCount == other.skillCount &&
+          cwd == other.cwd &&
+          branch == other.branch &&
+          _deepJsonEquals(project, other.project) &&
+          personality == other.personality &&
+          running == other.running &&
+          lazy == other.lazy &&
+          title == other.title &&
+          storedSessionId == other.storedSessionId &&
+          desktopContract == other.desktopContract &&
+          version == other.version &&
+          releaseDate == other.releaseDate &&
+          _deepJsonEquals(updateBehind, other.updateBehind) &&
+          updateCommand == other.updateCommand &&
+          usage == other.usage &&
+          profileName == other.profileName &&
+          mcpServerCount == other.mcpServerCount &&
+          configWarning == other.configWarning &&
+          credentialWarning == other.credentialWarning &&
+          installWarning == other.installWarning &&
+          _deepJsonEquals(raw, other.raw);
+
+  @override
+  int get hashCode => Object.hashAll([
+    model,
+    provider,
+    reasoningEffort,
+    serviceTier,
+    fast,
+    yolo,
+    approvalMode,
+    toolCount,
+    skillCount,
+    cwd,
+    branch,
+    _deepJsonHash(project),
+    personality,
+    running,
+    lazy,
+    title,
+    storedSessionId,
+    desktopContract,
+    version,
+    releaseDate,
+    _deepJsonHash(updateBehind),
+    updateCommand,
+    usage,
+    profileName,
+    mcpServerCount,
+    configWarning,
+    credentialWarning,
+    installWarning,
+    _deepJsonHash(raw),
+  ]);
+}
+
+class DesktopUsageStats {
+  final int? calls;
+  final int? input;
+  final int? output;
+  final int? total;
+  final int? cacheReadTokens;
+  final int? cacheWriteTokens;
+  final int? contextUsed;
+  final int? contextMax;
+  final double? contextPercent;
+  final double? costUsd;
+  final Map<String, dynamic> raw;
+
+  const DesktopUsageStats({
+    this.calls,
+    this.input,
+    this.output,
+    this.total,
+    this.cacheReadTokens,
+    this.cacheWriteTokens,
+    this.contextUsed,
+    this.contextMax,
+    this.contextPercent,
+    this.costUsd,
+    this.raw = const {},
+  });
+
+  factory DesktopUsageStats.fromJson(Object? value) {
+    final json = _stringKeyedMap(value) ?? const <String, dynamic>{};
+    return DesktopUsageStats(
+      calls: _nonNegativeInt(json['calls']),
+      input: _nonNegativeInt(json['input']),
+      output: _nonNegativeInt(json['output']),
+      total: _nonNegativeInt(json['total']),
+      cacheReadTokens: _nonNegativeInt(json['cache_read_tokens']),
+      cacheWriteTokens: _nonNegativeInt(json['cache_write_tokens']),
+      contextUsed: _nonNegativeInt(json['context_used']),
+      contextMax: _positiveInt(json['context_max']),
+      contextPercent: _nonNegativeDouble(json['context_percent']),
+      costUsd: _nonNegativeDouble(json['cost_usd']),
+      raw: _freezeExtras(json, _usageParsedKeys),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DesktopUsageStats &&
+          calls == other.calls &&
+          input == other.input &&
+          output == other.output &&
+          total == other.total &&
+          cacheReadTokens == other.cacheReadTokens &&
+          cacheWriteTokens == other.cacheWriteTokens &&
+          contextUsed == other.contextUsed &&
+          contextMax == other.contextMax &&
+          contextPercent == other.contextPercent &&
+          costUsd == other.costUsd &&
+          _deepJsonEquals(raw, other.raw);
+
+  @override
+  int get hashCode => Object.hash(
+    calls,
+    input,
+    output,
+    total,
+    cacheReadTokens,
+    cacheWriteTokens,
+    contextUsed,
+    contextMax,
+    contextPercent,
+    costUsd,
+    _deepJsonHash(raw),
+  );
+}
+
+String? _stringValue(Object? value) => value is String ? value : null;
+
+String? _nonEmptyString(Object? value) {
+  if (value is! String) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
+}
+
+String? _exactNonEmptyIdentity(Object? value) {
+  if (value is! String || value.isEmpty || value != value.trim()) return null;
+  return value;
+}
+
+String? _stableOpaqueId(Object? value) {
+  if (value is! String) return null;
+  if (!RegExp(r'^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,255}$').hasMatch(value)) {
+    return null;
+  }
+  return value;
+}
+
+({String? messageId, int? rowId, bool consistent}) _desktopTranscriptIdentity(
+  Map<String, dynamic> json,
+) {
+  final messageIds = <String>{};
+  for (final key in const ['_desktopMessageId', 'message_id', 'id']) {
+    final parsed = _stableOpaqueId(json[key]);
+    if (parsed != null) messageIds.add(parsed);
+  }
+  final rowIds = <int>{};
+  for (final key in const ['_desktopRowId', 'row_id', '_row_id', 'id']) {
+    final raw = json[key];
+    if (raw is int && raw > 0) rowIds.add(raw);
+  }
+  if (messageIds.length > 1 || rowIds.length > 1) {
+    return (messageId: null, rowId: null, consistent: false);
+  }
+  return (
+    messageId: messageIds.firstOrNull,
+    rowId: rowIds.firstOrNull,
+    consistent: true,
+  );
+}
+
+int? _nonNegativeInt(Object? value) {
+  if (value is! num || !value.isFinite || value < 0) return null;
+  final integer = value.toInt();
+  return value == integer ? integer : null;
+}
+
+int? _positiveInt(Object? value) {
+  final parsed = _nonNegativeInt(value);
+  return parsed != null && parsed > 0 ? parsed : null;
+}
+
+double? _nonNegativeDouble(Object? value) {
+  if (value is! num || !value.isFinite || value < 0) return null;
+  return value.toDouble();
+}
+
+DateTime? _epochSeconds(Object? value) {
+  if (value is! num || !value.isFinite || value < 0) return null;
+  try {
+    return DateTime.fromMicrosecondsSinceEpoch(
+      (value.toDouble() * Duration.microsecondsPerSecond).round(),
+      isUtc: true,
+    );
+  } on RangeError {
+    return null;
+  }
+}
+
+List<Map<String, dynamic>> _openServerRequests(Object? value) {
+  if (value is! List) return const [];
+  final requests = <Map<String, dynamic>>[];
+  for (final entry in value) {
+    final frame = _stringKeyedMap(entry);
+    if (frame == null) continue;
+    final id = frame['id'];
+    final method = frame['method'];
+    final params = _stringKeyedMap(frame['params']);
+    if (id is! String || id.trim().isEmpty || id != id.trim()) continue;
+    if (method is! String || method.trim().isEmpty || params == null) continue;
+    requests.add(
+      Map<String, dynamic>.unmodifiable({
+        'id': id,
+        'method': method,
+        'params': Map<String, dynamic>.unmodifiable(params),
+      }),
+    );
+  }
+  return List.unmodifiable(requests);
+}
+
+Map<String, dynamic>? _stringKeyedMap(Object? value) {
+  if (value is! Map) return null;
+  final result = <String, dynamic>{};
+  for (final entry in value.entries) {
+    if (entry.key is String) result[entry.key as String] = entry.value;
+  }
+  return result;
+}
+
+int? _collectionCount(Object? value) {
+  if (value is List) return value.length;
+  if (value is Map) return value.length;
+  return null;
+}
+
+int? _nestedCollectionCount(Object? value) {
+  final json = _stringKeyedMap(value);
+  if (json == null) return null;
+  var count = 0;
+  for (final item in json.values) {
+    if (item is List) {
+      count += item.length;
+    } else if (item is Map) {
+      count += item.length;
+    }
+  }
+  return count;
+}
+
+Map<String, dynamic> _freezeMap(Map<String, dynamic> value) {
+  return Map.unmodifiable(
+    value.map((key, item) => MapEntry(key, _freezeJson(item))),
+  );
+}
+
+Map<String, dynamic> _freezeArtifactContainers(Map<String, dynamic> value) {
+  final containers = <String, dynamic>{};
+  for (final key in _artifactContainerKeys) {
+    final item = value[key];
+    if (item is Map || item is List) {
+      containers[key] = _freezeJson(item);
+    }
+  }
+  return Map.unmodifiable(containers);
+}
+
+Object? _freezeJson(Object? value) {
+  final map = _stringKeyedMap(value);
+  if (map != null) return _freezeMap(map);
+  if (value is List) {
+    return List<Object?>.unmodifiable(value.map<Object?>(_freezeJson));
+  }
+  return value;
+}
+
+bool _deepJsonEquals(Object? left, Object? right) {
+  if (identical(left, right)) return true;
+  if (left is Map && right is Map) {
+    if (left.length != right.length) return false;
+    for (final entry in left.entries) {
+      if (!right.containsKey(entry.key) ||
+          !_deepJsonEquals(entry.value, right[entry.key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  if (left is List && right is List) {
+    if (left.length != right.length) return false;
+    for (var index = 0; index < left.length; index++) {
+      if (!_deepJsonEquals(left[index], right[index])) return false;
+    }
+    return true;
+  }
+  return left == right;
+}
+
+int _deepJsonHash(Object? value) {
+  if (value is Map) {
+    final keys = value.keys.map((key) => key.toString()).toList()..sort();
+    return Object.hashAll(
+      keys.map((key) => Object.hash(key, _deepJsonHash(value[key]))),
+    );
+  }
+  if (value is List) return Object.hashAll(value.map(_deepJsonHash));
+  return value.hashCode;
+}
+
+/// The identity/recovery scalars of an `error_surface`; never free text
+/// beyond a short label and the gateway's bounded `message`.
+Map<String, Object> _errorSurfaceScalars(Object? value) {
+  if (value is! Map) return const {};
+  final out = <String, Object>{};
+  for (final key in const [
+    'layer',
+    'code',
+    'provider',
+    'provider_label',
+    'auth_kind',
+    'model',
+  ]) {
+    final item = value[key];
+    if (item is String && item.isNotEmpty && item.length <= 128) {
+      out[key] = item;
+    }
+  }
+  final retryable = value['retryable'];
+  if (retryable is bool) out['retryable'] = retryable;
+  final resetsAt = value['resets_at'];
+  if (resetsAt is num && resetsAt.isFinite && resetsAt > 0) {
+    out['resets_at'] = resetsAt;
+  }
+  final message = value['message'];
+  if (message is String && message.trim().isNotEmpty) {
+    final text = message.trim();
+    out['message'] = text.length <= 500 ? text : text.substring(0, 500);
+  }
+  return Map.unmodifiable(out);
+}
+
+Map<String, dynamic> _freezeExtras(
+  Map<String, dynamic> value,
+  Set<String> parsedKeys,
+) {
+  final extras = <String, dynamic>{};
+  for (final entry in value.entries) {
+    if (parsedKeys.contains(entry.key)) continue;
+    // Unknown payload-like fields fail closed. New structural fields remain
+    // available for forward compatibility without retaining conversation text,
+    // credentials or prompts.
+    final normalized = entry.key.toLowerCase();
+    if (_payloadKeyFragments.any(normalized.contains)) continue;
+    final item = entry.value;
+    if (item == null || item is bool || item is num) {
+      extras[entry.key] = item;
+    } else if (item is String && item.length <= 256) {
+      extras[entry.key] = item;
+    }
+  }
+  return Map.unmodifiable(extras);
+}
+
+const _payloadKeyFragments = <String>{
+  'api_key',
+  'auth',
+  'content',
+  'credential',
+  'env',
+  'message',
+  'password',
+  'prompt',
+  'reasoning',
+  'secret',
+  'text',
+  'token',
+};
+
+const _snapshotParsedKeys = <String>{
+  'session_id',
+  'stored_session_id',
+  'session_key',
+  'resumed',
+  'messages',
+  'messages_omitted',
+  'message_count',
+  'hydrating',
+  'inflight',
+  'queued',
+  'running',
+  'status',
+  'started_at',
+  'turn_started_at',
+  'info',
+  'pending_clarify',
+  'pending_approval',
+  'pending_connection',
+  'open_requests',
+  'todo_state',
+};
+
+const _messageParsedKeys = <String>{
+  '_desktopMessageId',
+  '_desktopRowId',
+  'message_id',
+  'row_id',
+  '_row_id',
+  'id',
+  'role',
+  'content',
+  'text',
+  'name',
+  'reasoning',
+  'reasoning_content',
+  'reasoning_details',
+  'codex_reasoning_items',
+  'codex_message_items',
+  'context',
+  'timestamp',
+  'tool_call_id',
+  'tool_calls',
+  'tool_name',
+  'display_metadata',
+  ..._artifactContainerKeys,
+};
+
+const _artifactContainerKeys = <String>{
+  'attachment',
+  'attachments',
+  'artifact',
+  'artifacts',
+  'generated_image',
+  'generated_images',
+  'tool_result',
+  'tool_results',
+};
+
+const _inflightParsedKeys = <String>{
+  'assistant',
+  'corrections',
+  'error',
+  'error_surface',
+  'recoverable',
+  'status',
+  'streaming',
+  'user',
+  'started_at',
+  'updated_at',
+};
+
+const _inflightCorrectionParsedKeys = <String>{
+  'text',
+  'created_at',
+  'updated_at',
+};
+
+const _queuedParsedKeys = <String>{'user'};
+
+const _runtimeInfoParsedKeys = <String>{
+  'model',
+  'provider',
+  'reasoning_effort',
+  'service_tier',
+  'fast',
+  'yolo',
+  'approval_mode',
+  'tools',
+  'skills',
+  'cwd',
+  'branch',
+  'project',
+  'personality',
+  'running',
+  'lazy',
+  'title',
+  'stored_session_id',
+  'desktop_contract',
+  'version',
+  'release_date',
+  'update_behind',
+  'update_command',
+  'usage',
+  'profile_name',
+  'mcp_servers',
+  'config_warning',
+  'credential_warning',
+  'install_warning',
+  'system_prompt',
+};
+
+const _usageParsedKeys = <String>{
+  'calls',
+  'input',
+  'output',
+  'total',
+  'cache_read_tokens',
+  'cache_write_tokens',
+  'context_used',
+  'context_max',
+  'context_percent',
+  'cost_usd',
+};

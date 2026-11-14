@@ -1,0 +1,380 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Bloqueo local opcional (local_auth): pide la verificación al sistema,
+         nunca accede a datos biométricos. Justificación: docs/SECURITY_POLICY.md -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Dictado y conversación iniciados por el usuario. La conversación puede
+         usar el FGS Flutter compartido con microphone tras una elección separada.
+         Ningún audio arranca desde boot ni desde un receiver; una conversación
+         nunca se restaura tras process death. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- GPT-Live (opt-in voice over WebRTC): flutter_webrtc routes call audio
+         through the system audio mode and probes network changes while a
+         live session runs. Both are normal permissions without a dialog. The
+         app itself asks for no Bluetooth permission; the audio-routing library
+         under flutter_webrtc adds BLUETOOTH limited to Android 11 and older
+         (maxSdkVersion 30), see the uses-feature below and
+         docs/PLAY_PERMISSIONS.md. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <!-- Cámara: solo se abre por acción del usuario para escanear un QR de
+         emparejado o capturar una foto adjunta al chat. Nunca captura en
+         background. Justificación: docs/SECURITY_POLICY.md -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Cámara y micrófono son funciones opcionales (QR/adjuntos y dictado).
+         Declararlos como hardware no obligatorio evita que Google Play excluya
+         tablets/Chromebooks compatibles que carezcan de uno de ellos. -->
+    <uses-feature android:name="android.hardware.camera.any"
+        android:required="false" />
+    <uses-feature android:name="android.hardware.microphone"
+        android:required="false" />
+    <!-- The BLUETOOTH permission that the call-audio library adds would make
+         the Bluetooth radio a hard requirement on Google Play. Headset routing
+         is optional, so no device is filtered out for lacking it. -->
+    <uses-feature android:name="android.hardware.bluetooth"
+        android:required="false" />
+    <!-- Local notifications (Android 13+): replies, approvals and questions
+         while the app is open or from the opt-in background listening, plus
+         the Voice/Read Aloud controls. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 16 Live Updates: a room/Bot at work may be promoted to the
+         status-bar chip and lock screen (ProgressStyle, spec 070). -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- dataSync keeps SSH/SFTP the user started visible (a separate native
+         service on API >=35, the shared Flutter service on API <=34) and is
+         the opt-in listening fallback on API <=34. remoteMessaging keeps the
+         opt-in listening on API >=35 (Cron, Kanban and rooms with the app
+         closed). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- Lectura TTS iniciada por el usuario o por su ajuste de autolectura.
+         Permiso normal (sin diálogo runtime); evita que Android/GrapheneOS
+         silencie AudioTrack al bloquear o enviar la app a segundo plano. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Only the opt-in listening is restored after boot or an update
+         (remoteMessaging on API >=35, dataSync on API <=34), and only when
+         the user switched it on. Never Voice, Read Aloud, SSH or SFTP. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Guardar en la galería las imágenes que el agente genera y el usuario
+         pide exportar. Android 13+ NO requiere permiso
+         para la media propia de la app; este WRITE se limita a Android <=9
+         (maxSdkVersion 28) para que "Guardar en galería" funcione también ahí.
+         Solo se usa al pulsar el botón del visor. Justificación: docs/SECURITY_POLICY.md -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <!-- Defensa frente a permisos legacy que alguna dependencia transitiva
+         pudiera aportar al manifest fusionado. Hermes no usa ninguno:
+         SAF/Photo Picker no requieren lectura global y Voz no consulta estado
+         telefónico. Retirarlos aquí evita que lleguen a QA o release. -->
+    <uses-permission
+        android:name="android.permission.READ_PHONE_STATE"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        tools:node="remove" />
+    <application
+        android:name=".HermesApplication"
+        android:label="Console"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:usesCleartextTraffic="false">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- Deep link de emparejado: tocar un enlace hermes://pair (p.ej. el
+                 que devuelve el agente o desde Hermes Desktop) abre la app ya
+                 rellena. Esquema propio; no intercepta http/https. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="hermes" android:host="pair"/>
+                <!-- Catálogo: hermes://plugin/install?catalog=NAME y
+                     hermes://skill/install?identifier=ID abren una
+                     confirmación; nunca instalan solos. -->
+                <data android:scheme="hermes" android:host="plugin"/>
+                <data android:scheme="hermes" android:host="skill"/>
+            </intent-filter>
+            <!-- Share Sheet Android: el contenido se abre como borrador para
+                 revisarlo antes de enviarlo. Los content:// se copian al caché
+                 privado; no requiere permisos de almacenamiento. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="image/*"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="image/*"/>
+            </intent-filter>
+        </activity>
+        <!-- Digital assistant (issue #217): Console can be chosen under Default
+             apps > Digital assistant app. Invoking it opens a new chat with the
+             voice ready; it never reads the screen. The system holds
+             BIND_VOICE_INTERACTION: nothing else can bind these services. -->
+        <service
+            android:name="com.hermesagent.hermes_android.HermesVoiceInteractionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VOICE_INTERACTION">
+            <meta-data
+                android:name="android.voice_interaction"
+                android:resource="@xml/voice_interaction_service" />
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+        </service>
+        <service
+            android:name="com.hermesagent.hermes_android.HermesVoiceInteractionSessionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VOICE_INTERACTION" />
+        <!-- Placeholder the system requires in the assistant's metadata. No
+             intent filter: not offered as a speech recogniser. -->
+        <service
+            android:name="com.hermesagent.hermes_android.HermesAssistantRecognitionService"
+            android:exported="true" />
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.generated_file_provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/generated_media_paths" />
+        </provider>
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+        <!-- Monochrome icons of the foreground service. Without them the
+             plugin uses the full launcher icon, which Android draws as a busy
+             portrait on the card: a clean glyph for the transfer card and a
+             dedicated orb for the voice conversation. -->
+        <meta-data
+            android:name="dev.xpetalab.hermesconsole.service.NOTIFICATION_ICON"
+            android:resource="@drawable/ic_stat_hermes" />
+        <meta-data
+            android:name="dev.xpetalab.hermesconsole.voice.NOTIFICATION_ICON_ACTIVE"
+            android:resource="@drawable/ic_stat_voice_orb_active" />
+        <meta-data
+            android:name="dev.xpetalab.hermesconsole.voice.NOTIFICATION_ICON_PAUSED"
+            android:resource="@drawable/ic_stat_voice_orb_paused" />
+        <!-- Shared Flutter service. The opt-in listening (Settings >
+             Notifications) uses remoteMessaging on API >=35 and dataSync on
+             API <=34; microphone/mediaPlayback protect Voice and Read Aloud
+             and are never restored. Without the user's opt-in it never polls
+             and is not restored after process death or boot. -->
+        <service
+            android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+            android:foregroundServiceType="dataSync|remoteMessaging|microphone|mediaPlayback"
+            android:exported="false" />
+        <!-- On Android 15+ SSH/SFTP live in a separate ephemeral service so
+             the dataSync budget applies to the transfer alone and never
+             brings down the opt-in remoteMessaging listening. -->
+        <service
+            android:name=".HermesExternalDataSyncService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false"
+            android:stopWithTask="false" />
+
+        <!-- Turn-bounded keep-alive (1.4.0): only while a turn the user started
+             runs and right after the app leaves the foreground; stops with the
+             turn, on return, at its cap or the system timeout. Never at boot,
+             never restarted, never polls. Same dataSync type as SSH/SFTP. -->
+        <service
+            android:name=".HermesTurnKeepAliveService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false"
+            android:stopWithTask="true" />
+
+        <!-- The plugin's boot and restart receivers are stripped. The app's
+             own receiver sanitises the persisted state before boot/update:
+             only the opt-in listening is re-armed, nothing else. -->
+        <receiver
+            android:name="com.pravera.flutter_foreground_task.service.RebootReceiver"
+            tools:node="remove" />
+        <receiver
+            android:name=".HermesAutomationRebootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name="com.pravera.flutter_foreground_task.service.RestartReceiver"
+            tools:node="remove" />
+
+        <!-- Receiver no exportado requerido por flutter_local_notifications.
+             Las acciones solo abren la superficie autenticada correspondiente;
+             nunca autorizan ni ejecutan trabajo sensible desde el receiver. -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
+            android:exported="false" />
+        <!-- Approve / Deny / Stop / Reply from rich notifications and Bot Mode
+             widgets. Not exported: only our own PendingIntents reach it. It
+             stores the tap and wakes Flutter, which performs the server call. -->
+        <receiver
+            android:name=".HermesNotificationActionReceiver"
+            android:exported="false" />
+        <!-- Launcher widgets. The three receivers shipped since 1.2.13 keep
+             their names, so a widget already placed on a home screen becomes
+             the new one in place: Panel is Ahora, Compacto and Controles are
+             Chat rápido (the wide one is hidden from the picker, which offers
+             Chat rápido once). -->
+        <receiver
+            android:name=".NewSessionWidgetProvider"
+            android:label="@string/lw_ahora_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/new_session_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".HermesCompactWidgetProvider"
+            android:label="@string/lw_quick_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/hermes_widget_compact_info" />
+        </receiver>
+        <receiver
+            android:name=".HermesControlWidgetProvider"
+            android:label="@string/lw_quick_wide_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/hermes_widget_control_info" />
+        </receiver>
+        <receiver
+            android:name=".HermesCronWidgetProvider"
+            android:label="@string/lw_cron_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/hermes_widget_cron_info" />
+        </receiver>
+        <receiver
+            android:name=".HermesTasksWidgetProvider"
+            android:label="@string/lw_tasks_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/hermes_widget_tasks_info" />
+        </receiver>
+        <receiver
+            android:name=".HermesChatsWidgetProvider"
+            android:label="@string/lw_chats_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/hermes_widget_chats_info" />
+        </receiver>
+        <!-- Quick Settings tiles: new chat, voice chat and camera chat. They
+             open the same launch contract as the Quick chat widget. Only the
+             system can bind them (BIND_QUICK_SETTINGS_TILE); no permission is
+             requested by the app. -->
+        <service
+            android:name=".HermesNewChatTileService"
+            android:label="@string/widgets_qs_new_chat_label"
+            android:icon="@drawable/lw_ic_plus"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".HermesVoiceChatTileService"
+            android:label="@string/widgets_qs_voice_chat_label"
+            android:icon="@drawable/lw_ic_mic"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".HermesCameraChatTileService"
+            android:label="@string/widgets_qs_camera_chat_label"
+            android:icon="@drawable/lw_ic_cam"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+    </application>
+    <queries>
+        <!-- Reconocedor de voz del sistema (STT). Android 11+ (API 30+) filtra la
+             visibilidad de paquetes: sin esta query, speech_to_text NO puede ver el
+             SpeechRecognizer, initialize() devuelve false y el dictado aparece como
+             "no disponible" aunque el micro y los servicios de voz existan. Es el
+             requisito documentado del plugin para el motor del sistema. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <!-- Síntesis de voz del sistema (TTS). No concede acceso global a las
+             apps instaladas: permite resolver únicamente servicios que ofrecen
+             la acción estándar. Sin esta query Android 11+ bloquea incluso el
+             motor privado de GrapheneOS y TextToSpeech termina con status -1. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+        <intent>
+            <data android:scheme="http" />
+        </intent>
+    </queries>
+</manifest>

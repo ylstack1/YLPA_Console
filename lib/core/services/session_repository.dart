@@ -1,0 +1,942 @@
+import 'dart:async';
+
+import 'package:uuid/uuid.dart';
+
+import '../utils/fts_snippet.dart';
+import '../utils/session_timestamp.dart';
+import 'connection_manager.dart';
+import 'session_archive.dart';
+
+enum SessionArchiveMode {
+  exclude('exclude'),
+  only('only'),
+  include('include');
+
+  final String wire;
+  const SessionArchiveMode(this.wire);
+}
+
+enum SessionLibraryOrder {
+  recent('recent'),
+  created('created');
+
+  final String wire;
+  const SessionLibraryOrder(this.wire);
+}
+
+enum SessionLibrarySource { dashboard, gateway, local }
+
+final class SessionLibraryQuery {
+  final int pageSize;
+  final int minMessages;
+  final SessionArchiveMode archived;
+  final SessionLibraryOrder order;
+  final String? source;
+  final List<String> sources;
+  final List<String> excludeSources;
+  final String? cwdPrefix;
+  final String? profile;
+  final bool full;
+
+  const SessionLibraryQuery({
+    this.pageSize = 20,
+    this.minMessages = 1,
+    this.archived = SessionArchiveMode.exclude,
+    this.order = SessionLibraryOrder.recent,
+    this.source,
+    this.sources = const [],
+    this.excludeSources = const [],
+    this.cwdPrefix,
+    this.profile,
+    this.full = false,
+  });
+
+  int get boundedPageSize => pageSize.clamp(10, 100);
+  int get boundedMinMessages => minMessages.clamp(0, 1000000);
+
+  String? get normalizedSource {
+    final value = source?.trim() ?? '';
+    return value.isEmpty ? null : value;
+  }
+
+  /// Los filtros de inclusión son excluyentes entre sí. Un `source` explícito
+  /// tiene prioridad sobre `sources`; cualquier inclusión tiene prioridad
+  /// sobre exclusiones para no enviar una query contradictoria.
+  List<String> get normalizedSources => normalizedSource == null
+      ? _normalizedSourceList(sources)
+      : const <String>[];
+
+  List<String> get normalizedExcludeSources =>
+      normalizedSource == null && normalizedSources.isEmpty
+      ? _normalizedSourceList(excludeSources)
+      : const <String>[];
+
+  String get fingerprint => <String>[
+    '$boundedPageSize',
+    '$boundedMinMessages',
+    archived.wire,
+    order.wire,
+    normalizedSource ?? '',
+    _canonicalSourceFingerprint(normalizedSources),
+    _canonicalSourceFingerprint(normalizedExcludeSources),
+    cwdPrefix?.trim() ?? '',
+    profile?.trim() ?? '',
+    full ? '1' : '0',
+  ].join('\u001f');
+
+  String dashboardEndpoint(int offset) {
+    final params = <String, String>{
+      'archived': archived.wire,
+      'order': order.wire,
+      'source': ?normalizedSource,
+      if (normalizedSources.isNotEmpty) 'sources': normalizedSources.join(','),
+      if (normalizedExcludeSources.isNotEmpty)
+        'exclude_sources': normalizedExcludeSources.join(','),
+      if (cwdPrefix?.trim().isNotEmpty == true) 'cwd_prefix': cwdPrefix!.trim(),
+      if (profile?.trim().isNotEmpty == true) 'profile': profile!.trim(),
+      'limit': '$boundedPageSize',
+      'offset': '${offset < 0 ? 0 : offset}',
+      'min_messages': '$boundedMinMessages',
+      'full': full ? '1' : '0',
+    };
+    return 'sessions?${Uri(queryParameters: params).query}';
+  }
+
+  String dashboardSearchEndpoint(String text, {int limit = 20}) {
+    final params = <String, String>{
+      'source': ?normalizedSource,
+      if (normalizedSources.isNotEmpty) 'sources': normalizedSources.join(','),
+      if (normalizedExcludeSources.isNotEmpty)
+        'exclude_sources': normalizedExcludeSources.join(','),
+      if (profile?.trim().isNotEmpty == true) 'profile': profile!.trim(),
+      'q': text.trim(),
+      'limit': '${limit.clamp(1, 100)}',
+    };
+    return 'sessions/search?${Uri(queryParameters: params).query}';
+  }
+}
+
+final class SessionLibrarySnapshot {
+  final List<Session> sessions;
+  final SessionLibrarySource source;
+  final bool exhaustive;
+  final bool stale;
+  final int epoch;
+  final int? total;
+
+  /// Set only when this refresh fell back to the gateway: its complete
+  /// default listing of the query's profile (every page, no filter), as the
+  /// server returned it. What a deletion tombstone may be confirmed against
+  /// (SessionListRead.end).
+  final List<Session>? completeGatewayListing;
+
+  const SessionLibrarySnapshot({
+    this.sessions = const [],
+    this.source = SessionLibrarySource.local,
+    this.exhaustive = false,
+    this.stale = false,
+    this.epoch = 0,
+    this.total,
+    this.completeGatewayListing,
+  });
+}
+
+final class SessionSearchSnapshot {
+  final List<Session> sessions;
+  final SessionLibrarySource source;
+  final bool exhaustive;
+  final int epoch;
+
+  const SessionSearchSnapshot({
+    this.sessions = const [],
+    this.source = SessionLibrarySource.local,
+    this.exhaustive = false,
+    this.epoch = 0,
+  });
+}
+
+/// Authenticated, connection-scoped session library.
+///
+/// Dashboard is the only route used for rich pagination/search/archive. The
+/// Gateway fallback is explicitly non-exhaustive and never receives an
+/// `archived` PATCH.
+final class SessionRepository {
+  final DashboardClient _dashboard;
+  final ApiClient _gateway;
+  final bool _ownsDashboard;
+
+  int _queryEpoch = 0;
+  int _searchEpoch = 0;
+  SessionLibraryQuery? _query;
+  List<Session> _sessions = const [];
+  SessionLibrarySource _source = SessionLibrarySource.local;
+  int _nextOffset = 0;
+  int? _total;
+  bool _exhausted = false;
+  Future<SessionLibrarySnapshot>? _nextPageFlight;
+  final Set<String> _deletionTombstones = <String>{};
+
+  SessionRepository(this._dashboard, this._gateway) : _ownsDashboard = false;
+
+  SessionRepository._owned(this._dashboard, this._gateway)
+    : _ownsDashboard = true;
+
+  factory SessionRepository.forConnection(
+    SavedConnection connection, {
+    required ApiClient gateway,
+  }) => SessionRepository._owned(DashboardClient.lazy(connection), gateway);
+
+  SessionLibrarySnapshot get snapshot => _snapshot();
+
+  /// Removes a server-confirmed deletion from the retained bounded snapshot.
+  /// Gateway omissions are otherwise ambiguous and deliberately preserve rows.
+  void evictSessions(Iterable<Session> deleted) {
+    final aliases = <String>{
+      for (final session in deleted) ..._sessionIdentityAliases(session),
+    };
+    if (aliases.isEmpty) return;
+    _deletionTombstones.addAll(aliases);
+    ++_queryEpoch;
+    ++_searchEpoch;
+    if (_sessions.isEmpty) return;
+    final before = _sessions.length;
+    _sessions = List<Session>.unmodifiable(
+      _sessions.where(
+        (session) => _sessionIdentityAliases(
+          session,
+        ).every((alias) => !aliases.contains(alias)),
+      ),
+    );
+    final removed = before - _sessions.length;
+    final total = _total;
+    if (removed > 0 && total != null) {
+      _total = total > removed ? total - removed : 0;
+    }
+  }
+
+  Future<SessionLibrarySnapshot> refresh(
+    SessionLibraryQuery query, {
+    Iterable<String> keepIds = const <String>[],
+  }) async {
+    final previousFingerprint = _query?.fingerprint;
+    final previousSource = _source;
+    final epoch = ++_queryEpoch;
+    final deletionTombstones = Set<String>.of(_deletionTombstones);
+    final fingerprint = query.fingerprint;
+    final retainedIds = Set<String>.unmodifiable(keepIds);
+    _query = query;
+    try {
+      final page = await _loadDashboardPage(query, 0);
+      if (!_isCurrent(epoch, fingerprint)) return _snapshot();
+      if (previousFingerprint != fingerprint) _sessions = const [];
+      _applyPage(page, replace: true, epoch: epoch, keepIds: retainedIds);
+      _deletionTombstones.removeAll(deletionTombstones);
+      return _snapshot();
+    } catch (error) {
+      if (!_isCurrent(epoch, fingerprint)) return _snapshot();
+      if (_isDashboardAuthFailure(error)) rethrow;
+      final sameScope = previousFingerprint == fingerprint;
+      if (_sessions.isNotEmpty &&
+          sameScope &&
+          previousSource != SessionLibrarySource.gateway) {
+        rethrow;
+      }
+      final rawFallback = await _gateway.getSessions(profile: query.profile);
+      if (!_isCurrent(epoch, fingerprint)) return _snapshot();
+      final fallback = rawFallback
+          .where((row) => !_matchesAliases(row, deletionTombstones))
+          .toList(growable: false);
+      if (previousFingerprint != fingerprint) _sessions = const [];
+      final visibleFallback = _filterFallback(fallback, query).toList();
+      final visibleLineages = {
+        for (final row in visibleFallback) row.logicalId,
+      };
+      final explicitlyExcludedLineages = {
+        for (final row in fallback)
+          if (!visibleLineages.contains(row.logicalId)) row.logicalId,
+      };
+      final previousForMerge = _sessions
+          .where((row) => !explicitlyExcludedLineages.contains(row.logicalId))
+          .toList(growable: false);
+      final fallbackRetainedIds =
+          sameScope && previousSource == SessionLibrarySource.gateway
+          ? <String>{
+              ...retainedIds,
+              for (final row in previousForMerge) row.id,
+              for (final row in previousForMerge) row.logicalId,
+            }
+          : retainedIds;
+      final merged = _mergeSessionPage(
+        previousForMerge,
+        visibleFallback,
+        fallbackRetainedIds,
+      );
+      if (query.order == SessionLibraryOrder.recent) {
+        merged.sort(compareSessionsByRecentActivity);
+      }
+      _sessions = List<Session>.unmodifiable(merged);
+      _source = SessionLibrarySource.gateway;
+      _nextOffset = _sessions.length;
+      _total = null;
+      _exhausted = false;
+      _deletionTombstones.removeAll(deletionTombstones);
+      return _snapshot(
+        completeGatewayListing: List<Session>.unmodifiable(rawFallback),
+      );
+    }
+  }
+
+  /// The first Dashboard page of [query], read on the side: the library's
+  /// own query, rows, epoch and cursor are left untouched (the agent rail
+  /// peeks at the profiles the list is not scoped to). [more] says whether
+  /// the query has rows past this page, by the same rule the list's own
+  /// paging stops on. The server's `total` is no count of these rows (it
+  /// also counts rows the page never carries), so it is not handed out. No
+  /// gateway fallback: a failure is the caller's to keep its previous
+  /// values.
+  Future<({List<Session> sessions, bool more})> peekFirstPage(
+    SessionLibraryQuery query,
+  ) async {
+    final page = await _loadDashboardPage(query, 0);
+    return (
+      sessions: List<Session>.unmodifiable(
+        page.sessions.where(
+          (row) => !_matchesAliases(row, _deletionTombstones),
+        ),
+      ),
+      more: !page.last,
+    );
+  }
+
+  Future<SessionLibrarySnapshot> loadNext() {
+    if (_source != SessionLibrarySource.dashboard || _exhausted) {
+      return Future.value(_snapshot());
+    }
+    final inFlight = _nextPageFlight;
+    if (inFlight != null) return inFlight;
+    final query = _query;
+    if (query == null) return Future.value(_snapshot());
+    final epoch = _queryEpoch;
+    final fingerprint = query.fingerprint;
+    final offset = _nextOffset;
+    final future = _loadDashboardPage(query, offset).then((page) {
+      if (_isCurrent(epoch, fingerprint)) {
+        _applyPage(page, replace: false, epoch: epoch);
+      }
+      return _snapshot();
+    });
+    _nextPageFlight = future;
+    return future.whenComplete(() {
+      if (identical(_nextPageFlight, future)) _nextPageFlight = null;
+    });
+  }
+
+  Future<SessionSearchSnapshot> search(
+    String text, {
+    int limit = 20,
+    String? profile,
+    SessionLibraryQuery? libraryQuery,
+  }) async {
+    final epoch = ++_searchEpoch;
+    final deletionTombstones = Set<String>.of(_deletionTombstones);
+    final query = text.trim();
+    final scope = libraryQuery ?? SessionLibraryQuery(profile: profile?.trim());
+    if (query.isEmpty) {
+      return SessionSearchSnapshot(epoch: epoch);
+    }
+    try {
+      final data = await _dashboard.apiGet(
+        scope.dashboardSearchEndpoint(query, limit: limit),
+      );
+      if (epoch != _searchEpoch) {
+        return SessionSearchSnapshot(epoch: epoch);
+      }
+      final rawResults = data['results'];
+      if (rawResults is! List) {
+        throw const FormatException('Invalid Dashboard session search');
+      }
+      final byLogicalId = <String, Session>{};
+      for (final row in rawResults) {
+        final parsed = _searchResult(row);
+        final scoped = parsed == null
+            ? null
+            : _captureDashboardOwner(parsed, scope);
+        if (scoped != null &&
+            !_matchesAliases(scoped, deletionTombstones) &&
+            _matchesSearchScope(scoped, scope)) {
+          byLogicalId.putIfAbsent(scoped.logicalId, () => scoped);
+        }
+      }
+      return SessionSearchSnapshot(
+        sessions: List<Session>.unmodifiable(byLogicalId.values),
+        source: SessionLibrarySource.dashboard,
+        exhaustive: true,
+        epoch: epoch,
+      );
+    } catch (error) {
+      if (epoch != _searchEpoch) {
+        return SessionSearchSnapshot(epoch: epoch);
+      }
+      if (_isDashboardAuthFailure(error)) rethrow;
+      final needle = query.toLowerCase();
+      final local = _filterFallback(_sessions, scope)
+          .where((session) {
+            return session.displayTitle.toLowerCase().contains(needle) ||
+                session.preview.toLowerCase().contains(needle) ||
+                session.model.toLowerCase().contains(needle) ||
+                session.source.toLowerCase().contains(needle);
+          })
+          .toList(growable: false);
+      return SessionSearchSnapshot(
+        sessions: List<Session>.unmodifiable(local),
+        source: SessionLibrarySource.local,
+        exhaustive: false,
+        epoch: epoch,
+      );
+    }
+  }
+
+  Future<void> setArchived(
+    Session session,
+    bool archived, {
+    String? profile,
+  }) async {
+    // Desktop `setSessionArchived` (sessions.ts:424): archiving also clears the
+    // pin in the same write, so the server never keeps an archived pinned row.
+    final response = await patchDashboardSessionState(_dashboard, session.id, {
+      'archived': archived,
+      if (archived) 'pinned': false,
+    }, profile);
+    if (response['ok'] != true || response['archived'] != archived) {
+      throw const FormatException('Invalid Dashboard archive response');
+    }
+    _sessions = List<Session>.unmodifiable([
+      for (final row in _sessions)
+        if (row.id == session.id) row.copyWith(archived: archived) else row,
+    ]);
+  }
+
+  Future<void> setPinned(
+    String sessionId,
+    bool pinned, {
+    String? profile,
+  }) async {
+    final response = await patchDashboardSessionState(_dashboard, sessionId, {
+      'pinned': pinned,
+    }, profile);
+    if (response['ok'] != true || response['pinned'] != pinned) {
+      throw const FormatException('Invalid Dashboard pin response');
+    }
+    _sessions = List<Session>.unmodifiable([
+      for (final row in _sessions)
+        if (row.id == sessionId || row.logicalId == sessionId)
+          row.copyWith(pinned: pinned)
+        else
+          row,
+    ]);
+  }
+
+  /// PATCH /api/sessions/{id} with per-session state (`hidden`, `title`,
+  /// `unread`), as Desktop; see [SessionArchive.attachRemoteState]. Returns
+  /// the handler's answer and updates the retained rows it confirms.
+  Future<Map<String, Object?>> patchSessionState(
+    String sessionId,
+    Map<String, Object> fields,
+    String? profile,
+  ) async {
+    final response = await patchDashboardSessionState(
+      _dashboard,
+      sessionId,
+      fields,
+      profile,
+    );
+    final title = response['title'];
+    final hidden = response['hidden'];
+    final unread = response['unread'];
+    _sessions = List<Session>.unmodifiable([
+      for (final row in _sessions)
+        if (row.id == sessionId || row.logicalId == sessionId)
+          row.copyWith(
+            title: fields.containsKey('title') && title is String
+                ? title
+                : null,
+            hidden: hidden is bool ? hidden : null,
+            unread: unread is bool ? unread : null,
+          )
+        else
+          row,
+    ]);
+    return response;
+  }
+
+  bool _isCurrent(int epoch, String fingerprint) =>
+      epoch == _queryEpoch && _query?.fingerprint == fingerprint;
+
+  SessionLibrarySnapshot _snapshot({List<Session>? completeGatewayListing}) =>
+      SessionLibrarySnapshot(
+        sessions: List<Session>.unmodifiable(_sessions),
+        source: _source,
+        exhaustive: _source == SessionLibrarySource.dashboard && _exhausted,
+        stale: false,
+        epoch: _queryEpoch,
+        total: _total,
+        completeGatewayListing: completeGatewayListing,
+      );
+
+  Future<_SessionPage> _loadDashboardPage(
+    SessionLibraryQuery query,
+    int offset,
+  ) async {
+    final data = await _dashboard.apiGet(query.dashboardEndpoint(offset));
+    final rawRows = data['sessions'] ?? data['data'];
+    if (rawRows is! List) {
+      throw const FormatException('Invalid Dashboard session page');
+    }
+    final sessions = <Session>[];
+    for (final row in rawRows) {
+      final parsed = Session.tryParse(row);
+      final scoped = parsed == null
+          ? null
+          : _captureDashboardOwner(parsed, query);
+      if (scoped != null && !scoped.id.startsWith('mob-aux-')) {
+        sessions.add(scoped);
+      }
+    }
+    final serverLimit = _nonNegativeInt(data['limit']) ?? query.boundedPageSize;
+    final serverOffset = _nonNegativeInt(data['offset']) ?? offset;
+    return _SessionPage(
+      sessions: sessions,
+      rawCount: rawRows.length,
+      total: _nonNegativeInt(data['total']),
+      limit: serverLimit.clamp(1, 1000),
+      offset: serverOffset,
+    );
+  }
+
+  void _applyPage(
+    _SessionPage page, {
+    required bool replace,
+    required int epoch,
+    Set<String> keepIds = const <String>{},
+  }) {
+    final retained = replace
+        ? keepIds
+        : <String>{
+            for (final row in _sessions) row.id,
+            for (final row in _sessions) row.logicalId,
+          };
+    _sessions = List<Session>.unmodifiable(
+      _mergeSessionPage(
+        _sessions,
+        page.sessions.where(
+          (row) => !_matchesAliases(row, _deletionTombstones),
+        ),
+        retained,
+      ),
+    );
+    _source = SessionLibrarySource.dashboard;
+    _total = page.total;
+    // Agent back-fills pinned rows after the LIMIT/OFFSET window. Advancing by
+    // rawCount would therefore skip ordinary rows whenever a pin is appended.
+    _nextOffset = page.offset + page.limit;
+    _exhausted = page.last;
+  }
+
+  static Set<String> _sessionIdentityAliases(Session session) => {
+    session.logicalId,
+    ...session.identityIds,
+  };
+
+  static bool _matchesAliases(Session session, Set<String> aliases) =>
+      aliases.isNotEmpty &&
+      _sessionIdentityAliases(session).any(aliases.contains);
+
+  static Session _canonicalSessionWinner(Session current, Session candidate) {
+    if (current.id == candidate.id &&
+        current.lastActivityAt == candidate.lastActivityAt) {
+      return candidate;
+    }
+    return compareSessionsByRecentActivity(current, candidate) <= 0
+        ? current
+        : candidate;
+  }
+
+  static List<Session> _mergeSessionPage(
+    Iterable<Session> previous,
+    Iterable<Session> incoming,
+    Set<String> keepIds,
+  ) {
+    final previousByLineage = <String, Session>{};
+    final previousAliasesByLineage = <String, Set<String>>{};
+    for (final row in previous) {
+      previousByLineage.update(
+        row.logicalId,
+        (prior) => _canonicalSessionWinner(prior, row),
+        ifAbsent: () => row,
+      );
+      previousAliasesByLineage
+          .putIfAbsent(row.logicalId, () => <String>{row.logicalId})
+          .add(row.id);
+    }
+
+    final incomingByLineage = <String, Session>{};
+    for (final serverRow in incoming) {
+      final prior =
+          incomingByLineage[serverRow.logicalId] ??
+          previousByLineage[serverRow.logicalId];
+      incomingByLineage[serverRow.logicalId] = prior == null
+          ? serverRow
+          : _canonicalSessionWinner(prior, serverRow);
+    }
+
+    final incomingIds = {for (final row in incomingByLineage.values) row.id};
+    final incomingLineages = incomingByLineage.keys.toSet();
+    final survivorsByLineage = <String, Session>{};
+    for (final entry in previousByLineage.entries) {
+      final aliases = previousAliasesByLineage[entry.key]!;
+      if (incomingLineages.contains(entry.key) ||
+          aliases.any(incomingIds.contains)) {
+        continue;
+      }
+      if (aliases.any(keepIds.contains)) {
+        survivorsByLineage[entry.key] = entry.value;
+      }
+    }
+    return [...survivorsByLineage.values, ...incomingByLineage.values];
+  }
+
+  Iterable<Session> _filterFallback(
+    Iterable<Session> rows,
+    SessionLibraryQuery query,
+  ) sync* {
+    final included = query.normalizedSources.toSet();
+    final excluded = query.normalizedExcludeSources.toSet();
+    final requestedOwner = Session.profileOwner(query.profile);
+    for (final row in rows) {
+      if (row.messageCount < query.boundedMinMessages) continue;
+      if (!row.listsAsOwnRow) continue;
+      if (query.archived == SessionArchiveMode.exclude && row.archived) {
+        continue;
+      }
+      if (query.archived == SessionArchiveMode.only && !row.archived) continue;
+      if (query.normalizedSource != null &&
+          row.source != query.normalizedSource) {
+        continue;
+      }
+      if (included.isNotEmpty && !included.contains(row.source)) continue;
+      if (excluded.contains(row.source)) continue;
+      if (Session.profileOwner(row.profile) != requestedOwner) {
+        continue;
+      }
+      if (query.cwdPrefix?.trim().isNotEmpty == true &&
+          !(row.cwd ?? '').startsWith(query.cwdPrefix!.trim())) {
+        continue;
+      }
+      yield row;
+    }
+  }
+
+  static bool _isDashboardAuthFailure(Object error) =>
+      error is DashboardHttpException &&
+      (error.statusCode == 401 || error.statusCode == 403);
+
+  static Session? _searchResult(Object? value) {
+    if (value is! Map) return null;
+    final id = _boundedString(value['session_id'], 1024)?.trim();
+    if (id == null || id.isEmpty) return null;
+    final snippet = _boundedString(value['snippet'], 1024);
+    return Session(
+      id: id,
+      lineageRootId: _boundedString(value['lineage_root'], 1024)?.trim(),
+      title: _boundedString(value['title'], 512) ?? '',
+      model: _boundedString(value['model'], 256) ?? 'Default',
+      source: _boundedString(value['source'], 128) ?? '',
+      messageCount: _nonNegativeInt(value['message_count']) ?? 1,
+      isActive: value['is_active'] == true,
+      // Desktop strips the FTS delimiters from the preview; the raw snippet
+      // rides along so the row can paint the matches highlighted.
+      preview: snippet != null
+          ? stripFtsMarkers(snippet)
+          : _boundedString(value['preview'], 1024) ?? '',
+      searchSnippet: snippet != null && hasFtsMarkers(snippet) ? snippet : null,
+      startedAt:
+          normalizeEpochTimestamp(value['started_at']) ??
+          normalizeEpochTimestamp(value['session_started']) ??
+          0,
+      endedAt: normalizeEpochTimestamp(value['ended_at']),
+      updatedAt: normalizeEpochTimestamp(value['last_active']),
+      parentSessionId: _boundedString(value['parent_session_id'], 1024),
+      archived: value['archived'] == true,
+      pinned: value['pinned'] is bool ? value['pinned'] as bool : null,
+      profile: _boundedString(value['profile'], 128),
+      toolCallCount: _nonNegativeInt(value['tool_call_count']) ?? 0,
+      inputTokens: _nonNegativeInt(value['input_tokens']) ?? 0,
+      outputTokens: _nonNegativeInt(value['output_tokens']) ?? 0,
+    );
+  }
+
+  /// Dashboard `sessions` y `sessions/search` están scoped por la query, pero
+  /// Hermes Agent todavía no repite siempre el owner en cada fila. Capturamos
+  /// ese owner una vez en la frontera de red; un owner explícito contradictorio
+  /// se descarta en vez de caer al perfil global mutable al abrir el chat.
+  static Session? _captureDashboardOwner(
+    Session session,
+    SessionLibraryQuery query,
+  ) {
+    final requestedOwner = Session.profileOwner(query.profile);
+    final published = session.profile?.trim();
+    if (published != null && published.isNotEmpty) {
+      return published == requestedOwner ? session : null;
+    }
+    return session.copyWith(profile: requestedOwner);
+  }
+
+  static bool _matchesSearchScope(Session session, SessionLibraryQuery query) {
+    if (query.archived == SessionArchiveMode.exclude && session.archived) {
+      return false;
+    }
+    if (query.archived == SessionArchiveMode.only && !session.archived) {
+      return false;
+    }
+    final source = query.normalizedSource;
+    if (source != null && session.source != source) return false;
+    final sources = query.normalizedSources;
+    if (sources.isNotEmpty && !sources.contains(session.source)) return false;
+    if (query.normalizedExcludeSources.contains(session.source)) return false;
+    if (Session.profileOwner(session.profile) !=
+        Session.profileOwner(query.profile)) {
+      return false;
+    }
+    return true;
+  }
+
+  void close() {
+    _queryEpoch += 1;
+    _searchEpoch += 1;
+    if (_ownsDashboard) _dashboard.close();
+  }
+}
+
+final class _SessionPage {
+  final List<Session> sessions;
+  final int rawCount;
+  final int? total;
+  final int limit;
+  final int offset;
+
+  const _SessionPage({
+    required this.sessions,
+    required this.rawCount,
+    required this.total,
+    required this.limit,
+    required this.offset,
+  });
+
+  /// Whether this page is the last of its query: the server's total is
+  /// reached, or the window came back short. Agent back-fills pinned rows
+  /// after the LIMIT/OFFSET window, so the next offset is [offset] +
+  /// [limit], not + [rawCount].
+  bool get last {
+    final total = this.total;
+    return (total != null && offset + limit >= total) ||
+        (rawCount > 0 && rawCount < limit);
+  }
+}
+
+int? _nonNegativeInt(Object? value) {
+  if (value is! num || !value.isFinite || value < 0) return null;
+  final integer = value.toInt();
+  return value == integer ? integer : null;
+}
+
+String? _boundedString(Object? value, int maxRunes) {
+  if (value is! String) return null;
+  final bounded = String.fromCharCodes(value.runes.take(maxRunes));
+  final sanitized = bounded
+      .replaceAll(RegExp(r'[\u0000-\u001f\u007f]+'), ' ')
+      .trim();
+  return sanitized.isEmpty ? null : sanitized;
+}
+
+List<String> _normalizedSourceList(Iterable<String> values) {
+  final seen = <String>{};
+  final normalized = <String>[];
+  for (final item in values) {
+    final value = item.trim();
+    if (value.isNotEmpty && seen.add(value)) normalized.add(value);
+  }
+  return List<String>.unmodifiable(normalized);
+}
+
+String _canonicalSourceFingerprint(Iterable<String> values) {
+  final canonical = values.toList(growable: false)..sort();
+  return canonical.join(',');
+}
+
+/// The identity a fenced session write carries: the request it is, and the
+/// precondition it commits against.
+final class _SessionMutationIdentity {
+  const _SessionMutationIdentity({
+    required this.requestId,
+    required this.expectedRevision,
+    required this.expectedGeneration,
+  });
+
+  final String requestId;
+  final int expectedRevision;
+  final int? expectedGeneration;
+
+  /// The snapshot said `exists:false` (a generation exists only with a row).
+  bool get rowAbsent => expectedGeneration == null;
+
+  Map<String, Object> toJson() => {
+    'request_id': requestId,
+    'expected_revision': expectedRevision,
+    'expected_generation': ?expectedGeneration,
+  };
+}
+
+/// `GET /api/sessions/{id}/mutation-snapshot`: the read half of a fenced edit,
+/// as Desktop's `mutateSessionHttp` (`apps/desktop/src/api/sessions.ts`).
+///
+/// Answers null when there is no fence to read — an older runtime with no such
+/// route (404/405, the same verdict a session write already uses to stay local)
+/// or a body without the counter. The base write then goes out unchanged, and a
+/// backend that does require the fence refuses it by name instead of committing.
+Future<_SessionMutationIdentity?> _readMutationIdentity(
+  DashboardClient dashboard,
+  String sessionId,
+  String? profile,
+) async {
+  final cleanProfile = profile?.trim() ?? '';
+  final suffix = cleanProfile.isEmpty || cleanProfile == 'default'
+      ? ''
+      : '?profile=${Uri.encodeQueryComponent(cleanProfile)}';
+  final Map<String, dynamic> snapshot;
+  try {
+    snapshot = await dashboard.apiGet(
+      'sessions/${Uri.encodeComponent(sessionId)}/mutation-snapshot$suffix',
+    );
+  } on DashboardHttpException catch (error) {
+    if (error.statusCode == 404 || error.statusCode == 405) return null;
+    rethrow;
+  }
+  final exists = snapshot['exists'];
+  final revision = _nonNegativeInt(snapshot['runtime_revision']);
+  final generation = _nonNegativeInt(snapshot['runtime_generation']);
+  if (exists is! bool || revision == null || (exists && generation == null)) {
+    return null;
+  }
+  return _SessionMutationIdentity(
+    requestId: const Uuid().v4(),
+    expectedRevision: revision,
+    expectedGeneration: exists ? generation : null,
+  );
+}
+
+/// A fenced backend refuses a stale precondition instead of guessing a new one.
+/// Re-reading once inside the same user action is what Desktop's live pick
+/// does; the write carries one sidebar field, so the concurrent writer that
+/// bumped the revision cannot be overwritten by it.
+bool _isStaleMutation(DashboardHttpException error) {
+  if (error.statusCode != 409) return false;
+  final body = error.body.toLowerCase();
+  return body.contains('revision_conflict') ||
+      body.contains('stale_generation');
+}
+
+/// PATCH /api/sessions/{id} on the Dashboard with [fields] (Desktop's
+/// per-session flags); the owning profile rides in the body, as Desktop.
+///
+/// A Hermes backend that owns the session store commits only fenced writes: the
+/// same call without [request_id] and [expected_revision] answers `409
+/// client_upgrade_required` and nothing is written — which is what made archive,
+/// pin and rename read as a server sync failure on the phone.
+Future<Map<String, Object?>> patchDashboardSessionState(
+  DashboardClient dashboard,
+  String sessionId,
+  Map<String, Object> fields,
+  String? profile,
+) {
+  final endpoint = 'sessions/${Uri.encodeComponent(sessionId)}';
+  return _fencedSessionWrite(
+    dashboard,
+    sessionId,
+    profile,
+    (identity) => dashboard.apiPatch(
+      endpoint,
+      body: {
+        ...fields,
+        ...?identity?.toJson(),
+        if (profile?.trim().isNotEmpty == true) 'profile': profile!.trim(),
+      },
+    ),
+  );
+}
+
+/// DELETE /api/sessions/{id} with the same fence, as Desktop's `deleteSession`
+/// (sessions.ts:716 through `mutateSessionHttp`): the identity travels in the
+/// query, not in a body. Answers the handler's JSON (`{ok}` or
+/// `{ok, already_absent}`); a refusal that is not a stale precondition
+/// (`session_busy`, ...) is rethrown for the caller to read.
+Future<Map<String, dynamic>> deleteDashboardSession(
+  DashboardClient dashboard,
+  String sessionId,
+  String? profile,
+) => _fencedSessionWrite(dashboard, sessionId, profile, (identity) async {
+  // A session its own snapshot calls absent is already deleted; the fenced
+  // DELETE would answer 400 invalid_params (no generation). Desktop never
+  // sends it either (session-http-mutations.ts).
+  if (identity != null && identity.rowAbsent) {
+    return <String, dynamic>{'ok': true, 'already_absent': true};
+  }
+  return dashboard.deleteSession(
+    sessionId,
+    profile: profile,
+    identity: identity?.toJson(),
+  );
+});
+
+/// One fenced session write: read the precondition, send, and on a stale
+/// precondition re-read once. With no fence to read the write goes out as it
+/// always did.
+Future<T> _fencedSessionWrite<T>(
+  DashboardClient dashboard,
+  String sessionId,
+  String? profile,
+  Future<T> Function(_SessionMutationIdentity? identity) send,
+) async {
+  final identity = await _readMutationIdentity(dashboard, sessionId, profile);
+  if (identity == null) return send(null);
+  try {
+    return await send(identity);
+  } on DashboardHttpException catch (error) {
+    if (!_isStaleMutation(error)) rethrow;
+    final retried = await _readMutationIdentity(dashboard, sessionId, profile);
+    if (retried == null) rethrow;
+    return send(retried);
+  }
+}
+
+/// The HTTP status of a Dashboard failure, for
+/// [SessionArchive.attachRemoteState].
+int? dashboardHttpStatusOf(Object error) =>
+    error is DashboardHttpException ? error.statusCode : null;
+
+/// A [SessionStateWriter] for surfaces with no repository of their own
+/// (Home): each write opens and closes its own Dashboard client, so it
+/// outlives no screen.
+SessionStateWriter dashboardSessionStateWriter(SavedConnection connection) =>
+    (sessionId, fields, profile) async {
+      final dashboard = DashboardClient.lazy(connection);
+      try {
+        return await patchDashboardSessionState(
+          dashboard,
+          sessionId,
+          fields,
+          profile,
+        );
+      } finally {
+        dashboard.close();
+      }
+    };

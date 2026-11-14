@@ -1,0 +1,179 @@
+name: Code Quality Checks
+
+on:
+  pull_request:
+    # Also the 1.2.15 integration and review-only bases, so reviewers see CI.
+    branches: [main, 'feat/**', 'review/**']
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.47.1'
+          channel: 'stable'
+
+      - name: Set up Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+        id: pub_get
+
+      - name: Verify generated localizations
+        run: |
+          flutter gen-l10n
+          git diff --exit-code -- \
+            lib/l10n/app_localizations.dart \
+            lib/l10n/app_localizations_en.dart \
+            lib/l10n/app_localizations_es.dart
+
+      - name: Install REUSE
+        run: python3 -m pip install --disable-pip-version-check reuse==6.2.0
+
+      - name: Verify REUSE compliance
+        run: reuse lint
+
+      - name: Scan Git history with Gitleaks
+        env:
+          GITLEAKS_IMAGE: zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+        run: |
+          set -Eeuo pipefail
+          # A clean scan only counts if the same config still catches a fresh token.
+          tool/security/gitleaks_canary.sh
+          # Scan only the history of the commit under test: a clone that holds
+          # nothing but that commit and its ancestors (other remote branches
+          # are not part of this build).
+          rm -rf "$RUNNER_TEMP/scan" && mkdir "$RUNNER_TEMP/scan"
+          git -C "$RUNNER_TEMP/scan" init -q
+          git -C "$RUNNER_TEMP/scan" fetch -q --no-tags "$GITHUB_WORKSPACE" HEAD
+          git -C "$RUNNER_TEMP/scan" checkout -q --detach FETCH_HEAD
+          echo "history under scan: $(git -C "$RUNNER_TEMP/scan" rev-list --count HEAD) commits, tip $(git -C "$RUNNER_TEMP/scan" rev-parse --short HEAD)"
+          cp "$GITHUB_WORKSPACE/.gitleaks.toml" "$RUNNER_TEMP/scan/.gitleaks.toml" 2>/dev/null || true
+          docker run --rm \
+            -v "$RUNNER_TEMP/scan:/repo:ro" \
+            "$GITLEAKS_IMAGE" \
+            git /repo --config /repo/.gitleaks.toml --no-banner --redact=100 --verbose
+
+      - name: Scan verified and unknown secrets with TruffleHog
+        run: |
+          docker run --rm \
+            -v "$RUNNER_TEMP/scan:/repo:ro" \
+            trufflesecurity/trufflehog@sha256:674b2f187620a19df77f44cf9a7d77efcc581a5662accef2f2739cbb46ba4a3a \
+            --no-update --fail --fail-on-scan-errors \
+            --exclude-detectors=URI --results=verified,unknown \
+            --json git --exclude-paths=/repo/tool/security/trufflehog_exclude_paths.txt file:///repo \
+            > "$RUNNER_TEMP/trufflehog.jsonl"
+          test ! -s "$RUNNER_TEMP/trufflehog.jsonl"
+
+      - name: Verify Gradle wrapper and source SBOMs
+        run: |
+          echo "76805e32c009c0cf0dd5d206bddc9fb22ea42e84db904b764f3047de095493f3  android/gradle/wrapper/gradle-wrapper.jar" \
+            | sha256sum -c -
+          ./tool/sbom/generate.sh
+          git diff --exit-code -- sbom
+
+      - name: Run Python security and SBOM tests
+        run: python3 -m unittest discover -s test -p '*_test.py'
+
+      # ── Step 1: Static analysis ──────────────────────────
+      - name: Static analysis
+        id: analyze
+        continue-on-error: true
+        run: |
+          flutter analyze --fatal-infos 2>&1 | tee analyze_output.txt
+          exit "${PIPESTATUS[0]}"
+
+      # ── Step 2: Run tests ────────────────────────────────
+      - name: Run tests
+        id: test
+        continue-on-error: true
+        run: |
+          flutter test --concurrency=1 -x opt-in --reporter=expanded 2>&1 | tee test_output.txt
+          exit "${PIPESTATUS[0]}"
+
+      # ── Step 3: Summary & failure report ─────────────────
+      - name: Failure summary
+        if: steps.analyze.outcome != 'success' || steps.test.outcome != 'success'
+        env:
+          ANALYZE_OUTCOME: ${{ steps.analyze.outcome }}
+          TEST_OUTCOME: ${{ steps.test.outcome }}
+        run: |
+          {
+            echo "## Quality checks failed"
+            echo ""
+
+            if [ "$ANALYZE_OUTCOME" != "success" ]; then
+              echo "### Static analysis failed"
+              echo '```'
+              cat analyze_output.txt
+              echo '```'
+              echo ""
+            else
+              echo "### Static analysis passed"
+              echo ""
+            fi
+
+            if [ "$TEST_OUTCOME" != "success" ]; then
+              echo "### Tests failed"
+              echo '```'
+              cat test_output.txt
+              echo '```'
+            else
+              echo "### All tests passed"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Step 4: Pass/fail enforcement ────────────────────
+      - name: Enforce checks
+        if: steps.analyze.outcome != 'success' || steps.test.outcome != 'success'
+        env:
+          ANALYZE_OUTCOME: ${{ steps.analyze.outcome }}
+          TEST_OUTCOME: ${{ steps.test.outcome }}
+        run: |
+          echo "──────────────────────────────────────────────"
+          echo "Quality gate blocked - see summary above."
+          echo ""
+          if [ "$ANALYZE_OUTCOME" != "success" ]; then
+            echo "   FAILED: flutter analyze"
+          else
+            echo "   PASSED:  flutter analyze"
+          fi
+          if [ "$TEST_OUTCOME" != "success" ]; then
+            echo "   FAILED: flutter test"
+          else
+            echo "   PASSED:  flutter test"
+          fi
+          echo "──────────────────────────────────────────────"
+          exit 1
+
+      - name: All checks passed
+        if: steps.analyze.outcome == 'success' && steps.test.outcome == 'success'
+        run: |
+          {
+            echo "## All quality checks passed"
+            echo "- Static analysis: clean"
+            echo "- All tests: passing"
+          } >> "$GITHUB_STEP_SUMMARY"

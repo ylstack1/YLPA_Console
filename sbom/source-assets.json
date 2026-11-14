@@ -1,0 +1,549 @@
+{
+  "files": [
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "ASSET_PROVENANCE.md",
+      "path": "assets/branding/console_banner.png",
+      "sha256": "4423bec14eeb6e3964fe310533dfabbcc19f93669225f18d57dcf55b7e5c227b",
+      "size": 603787
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "ASSET_PROVENANCE.md",
+      "path": "assets/branding/console_icon.png",
+      "sha256": "7401045439e5fb107905b4e331eaa16def54bd8856fe7d77f44862446fde8fc4",
+      "size": 16237
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "ASSET_PROVENANCE.md",
+      "path": "assets/branding/console_icon.svg",
+      "sha256": "e543e80eb6bdcb38fc19d8a74a1b709fffc37f80cfcba51494ea1b7531905e9f",
+      "size": 539
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "ASSET_PROVENANCE.md",
+      "path": "assets/branding/console_mark.png",
+      "sha256": "34efb1edb6ac87ebb8d94fa5947d4bdee777cbf0e0edee21bead7a6fd298ac71",
+      "size": 50054
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "ASSET_PROVENANCE.md",
+      "path": "assets/branding/console_mark.svg",
+      "sha256": "259d95c15bc2ffc4e4c5aefd9f6f6e4e3986bbcb90e396561847d604a9a5baa2",
+      "size": 260
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "ASSET_PROVENANCE.md",
+      "path": "assets/branding/hermes_console_hero.png",
+      "sha256": "fbfada6ff6e3a7a21a0cf9eca106ec1f8b57f495e2cc712be2bddbd6dc02f9ae",
+      "size": 75151
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "ASSET_PROVENANCE.md",
+      "path": "assets/branding/hermes_console_hero.svg",
+      "sha256": "19cf1e8e28c2d04f3e57b0e292cfcd7b365cc33df90135a6bc0517169f44923c",
+      "size": 38996
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/chat_icons/LICENSE.txt",
+      "path": "assets/chat_icons/SOURCES.json",
+      "sha256": "ba41164f513060d7e9ae24d06efc82dc807716ecfeb59d27ea6d267b35799df3",
+      "size": 4845
+    },
+    {
+      "kind": "asset",
+      "license": "MIT",
+      "licenseEvidence": "assets/chat_icons/LICENSE.txt",
+      "path": "assets/chat_icons/agent-team.webp",
+      "sha256": "47be6862a5e4ea18f9a15914b24c28023f9fc282d533e97de20438a8d5cb6f97",
+      "size": 992
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/chat_icons/LICENSE.txt",
+      "path": "assets/chat_icons/atlas.json",
+      "sha256": "6554a84bc808547d45b8ad2bc4315da33ea7541df3e038c6bbbc181afd10bee8",
+      "size": 753
+    },
+    {
+      "kind": "asset",
+      "license": "MIT",
+      "licenseEvidence": "assets/chat_icons/LICENSE.txt",
+      "path": "assets/chat_icons/check.webp",
+      "sha256": "01d75105f3516929c99f871e77a4c41a3f077ac8231d29b7140b31cc9b21deb2",
+      "size": 1756
+    },
+    {
+      "kind": "asset",
+      "license": "MIT",
+      "licenseEvidence": "assets/chat_icons/LICENSE.txt",
+      "path": "assets/chat_icons/delegate-task.webp",
+      "sha256": "ae1f65d1d45f10ece288ad03623af9b72bd6150473d8c34f9b77bfc756415cfb",
+      "size": 3086
+    },
+    {
+      "kind": "asset",
+      "license": "MIT",
+      "licenseEvidence": "assets/chat_icons/LICENSE.txt",
+      "path": "assets/chat_icons/error.webp",
+      "sha256": "d4811cc83471287b948e6e5d9a006d7599956ffc10b99146ac73668009e40522",
+      "size": 832
+    },
+    {
+      "kind": "asset",
+      "license": "MIT",
+      "licenseEvidence": "assets/chat_icons/LICENSE.txt",
+      "path": "assets/chat_icons/parallel-tools.webp",
+      "sha256": "e0ea9677a220eb31f0428d9b30625ca7dc516107a3c136230135eeac0c78a179",
+      "size": 2988
+    },
+    {
+      "kind": "asset",
+      "license": "MIT",
+      "licenseEvidence": "assets/chat_icons/LICENSE.txt",
+      "path": "assets/chat_icons/queued.webp",
+      "sha256": "b7225488bd8c7be630c19c6066952216d962d7e5fae17d8923af8aa56f2f6a0a",
+      "size": 3300
+    },
+    {
+      "kind": "asset",
+      "license": "MIT",
+      "licenseEvidence": "assets/chat_icons/LICENSE.txt",
+      "path": "assets/chat_icons/reasoning.webp",
+      "sha256": "70bf953556b39077fa4738e735f6f459fdb2f98235aa96a2e80eb7218ad6d953",
+      "size": 3434
+    },
+    {
+      "kind": "asset",
+      "license": "MIT",
+      "licenseEvidence": "assets/chat_icons/LICENSE.txt",
+      "path": "assets/chat_icons/response-stream.webp",
+      "sha256": "b53fab9c29cff50773e2f8bdaf01e463bb8580e8cb126ff969ddc09d1008f441",
+      "size": 1152
+    },
+    {
+      "kind": "asset",
+      "license": "MIT",
+      "licenseEvidence": "assets/chat_icons/LICENSE.txt",
+      "path": "assets/chat_icons/terminal-agent.webp",
+      "sha256": "60739bbb2ba285a61067da612c001b7d7b1ab4f442342d76ef02828acd671e4d",
+      "size": 1290
+    },
+    {
+      "kind": "asset",
+      "license": "MIT",
+      "licenseEvidence": "assets/chat_icons/LICENSE.txt",
+      "path": "assets/chat_icons/tool-call.webp",
+      "sha256": "4d38ea5fb9dbadda5f91977a970c4916042b3b18a18087086492395aa928c715",
+      "size": 6130
+    },
+    {
+      "kind": "asset",
+      "license": "CC0-1.0",
+      "licenseEvidence": "assets/companions/nimbus/pet.json",
+      "path": "assets/companions/nimbus/pet.json",
+      "sha256": "058ce99c8e51ace521f70796e27ca865dc249e2bfa2401c244b5646d739cf968",
+      "size": 662
+    },
+    {
+      "kind": "asset",
+      "license": "CC0-1.0",
+      "licenseEvidence": "assets/companions/nimbus/pet.json",
+      "path": "assets/companions/nimbus/spritesheet.webp",
+      "sha256": "3c683495dd49d552c8775552d4af73a31a3482403dcb851badb36c09feb71b9b",
+      "size": 47176
+    },
+    {
+      "kind": "asset",
+      "license": "CC0-1.0",
+      "licenseEvidence": "assets/companions/pixel/pet.json",
+      "path": "assets/companions/pixel/pet.json",
+      "sha256": "f6d534728b318f6709154e509e15ddadf6a2218faebcaa834085f0afe396dbd2",
+      "size": 660
+    },
+    {
+      "kind": "asset",
+      "license": "CC0-1.0",
+      "licenseEvidence": "assets/companions/pixel/pet.json",
+      "path": "assets/companions/pixel/spritesheet.webp",
+      "sha256": "b3ccb5fbc29596e79071e9142d9e1167495c4b5dd6b960ab78e8c0158a7060bf",
+      "size": 26986
+    },
+    {
+      "kind": "asset",
+      "license": "CC0-1.0",
+      "licenseEvidence": "assets/companions/violet/pet.json",
+      "path": "assets/companions/violet/pet.json",
+      "sha256": "8ce3c39e29b9690b0c1a3587d38446efafbdd03fadc81b5f9a395836530d9983",
+      "size": 662
+    },
+    {
+      "kind": "asset",
+      "license": "CC0-1.0",
+      "licenseEvidence": "assets/companions/violet/pet.json",
+      "path": "assets/companions/violet/spritesheet.webp",
+      "sha256": "163b19c92d285e9b5c54b1d22ae9902a68af532bfd4912df0336e387b7ab918b",
+      "size": 28484
+    },
+    {
+      "kind": "asset",
+      "license": "OFL-1.1",
+      "licenseEvidence": "assets/fonts/OFL.txt",
+      "path": "assets/fonts/Inter.ttf",
+      "sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031",
+      "size": 876576
+    },
+    {
+      "kind": "asset",
+      "license": "OFL-1.1",
+      "licenseEvidence": "assets/fonts/OFL.txt",
+      "path": "assets/fonts/JetBrainsMono.ttf",
+      "sha256": "48715a42ec242c21e9f02692891e147d022299a52e48d5e413e1a942193ffeda",
+      "size": 187208
+    },
+    {
+      "kind": "asset",
+      "license": "OFL-1.1",
+      "licenseEvidence": "assets/fonts/OFL.txt",
+      "path": "assets/fonts/Montserrat.ttf",
+      "sha256": "0f7b311b2f3279e4eef9b2f968bcdbab6e28f4daeb1f049f4f278a902bcd82f7",
+      "size": 744936
+    },
+    {
+      "kind": "asset",
+      "license": "OFL-1.1",
+      "licenseEvidence": "assets/fonts/OFL.txt",
+      "path": "assets/fonts/Nunito.ttf",
+      "sha256": "bb55a5ca5c2042335b3991af27c4d0705d0ef41cac6164ac737fd8f2a1e85207",
+      "size": 276932
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "ASSET_PROVENANCE.md",
+      "path": "assets/icon/play_store_512.png",
+      "sha256": "8af00bd7efe9c16c998e3aefd9e65010f9896a4484535acb29bdc6de99a91442",
+      "size": 9667
+    },
+    {
+      "kind": "asset",
+      "license": "CC0-1.0",
+      "licenseEvidence": "assets/mascot/LICENSES.md",
+      "path": "assets/mascot/nimbus.webp",
+      "sha256": "e5bf12f45bfc9ad1d852587a5939f50ba5b10304748b7dcf397546a137b9260b",
+      "size": 20592
+    },
+    {
+      "kind": "asset",
+      "license": "CC0-1.0",
+      "licenseEvidence": "assets/mascot/LICENSES.md",
+      "path": "assets/mascot/pixel.webp",
+      "sha256": "7c7c8d45f9e9f6543de596cd61a97d849f3435a8302a22b52f1f5f29ae31be49",
+      "size": 19566
+    },
+    {
+      "kind": "asset",
+      "license": "CC0-1.0",
+      "licenseEvidence": "assets/mascot/LICENSES.md",
+      "path": "assets/mascot/violet.webp",
+      "sha256": "438b2a866bd6aaf7d5363c2ddd9d2b9982d3055c15620f377741bbc305045e7c",
+      "size": 15762
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/main/res/drawable-nodpi/lw_sample_face_builder.png",
+      "sha256": "de928a9369d15d22004ac0c81b6cdd050dbe41e2dff3dc784d5cafd9c4688dbf",
+      "size": 6318
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/main/res/drawable-nodpi/lw_sample_face_lead.png",
+      "sha256": "25e8da713e5dcc0a8e406acdb926da89014f4a83a7a565135761adeb3e8ee204",
+      "size": 6276
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/main/res/drawable-nodpi/lw_sample_face_review.png",
+      "sha256": "65f784da84a9d7020d6e24f296f7c585eebdd7e82fa7b8fd00a5bf9423caab08",
+      "size": 4639
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/main/res/drawable-nodpi/lw_sample_face_scout.png",
+      "sha256": "504a8cec25cc2d19acf781e7bcf35055ffad6f063211e267fae6a73ab7076966",
+      "size": 6239
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/branding/android-launcher-splash.sha256",
+      "path": "android/app/src/main/res/drawable-nodpi/splash_logo.png",
+      "sha256": "9cbddc6c6a619f157dfd9f37fbeb01d4b35f85134174902a6ef7cfa65eff5038",
+      "size": 42141
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/branding/android-launcher-splash.sha256",
+      "path": "android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
+      "sha256": "eedebf3ce6981f5334508a1a8389b5b45db091465dd53ae4e91e0ac607b6c781",
+      "size": 3431
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/branding/android-launcher-splash.sha256",
+      "path": "android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png",
+      "sha256": "b03b543f0270449a82ff44a9ea6799697aaac62738a944fc996634306f279525",
+      "size": 4507
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/branding/android-launcher-splash.sha256",
+      "path": "android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
+      "sha256": "e85dfc192c8d7b80103b58b113ac6758b69901cd80793ef8e3fe6c6fb81df61f",
+      "size": 2377
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/branding/android-launcher-splash.sha256",
+      "path": "android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png",
+      "sha256": "e388512b7f562ff11d15ee323ce1079c679034c3e3556574d64b8f07da2dd685",
+      "size": 2998
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/branding/android-launcher-splash.sha256",
+      "path": "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
+      "sha256": "cab31c3514ab7466ed6d8c5cfa496616d6c42328838fc48d298aece24687114e",
+      "size": 4746
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/branding/android-launcher-splash.sha256",
+      "path": "android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png",
+      "sha256": "b12f11cc38fdec36b2f61ca8226e3110a03e5f358b44f27d071798fc01e08364",
+      "size": 6071
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/branding/android-launcher-splash.sha256",
+      "path": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
+      "sha256": "db472db3248de11180e2a518aca0387922d1e0763c8572ba461eb53d10ce72b8",
+      "size": 7230
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/branding/android-launcher-splash.sha256",
+      "path": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png",
+      "sha256": "8529828dd14e76d7cc92189663e329586c558b907fcbc96bdc547b0fa5cac8c5",
+      "size": 9274
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/branding/android-launcher-splash.sha256",
+      "path": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+      "sha256": "3e107401475ee38cb16f43979b30df3ff4384790c558d6f6c047d610249fa6a6",
+      "size": 9637
+    },
+    {
+      "kind": "asset",
+      "license": "GPL-3.0-only",
+      "licenseEvidence": "assets/branding/android-launcher-splash.sha256",
+      "path": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png",
+      "sha256": "b9ab4b34b4d140cad393107adbdf10f10daa6f5a31d8b26215ca08140df356a5",
+      "size": 12499
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_builder_done.png",
+      "sha256": "797dbab9fab33a9fa5ef9914fe8467e8bbb72a7641ea3b1b86254a534d4ecf49",
+      "size": 10037
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_builder_failed.png",
+      "sha256": "77c1110eebac2510230e2641926ad797fe583c832bea1e4cd186a414685454ab",
+      "size": 9216
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_builder_idle.png",
+      "sha256": "c1f006f4ff813f178fd1b1b3534572aef974a3cb4642de50a698b575f4b15234",
+      "size": 8592
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_builder_needs.png",
+      "sha256": "60ed9ad77b3aaddbba1f902d47b801c6281246b07927ac12b1c5050389584be6",
+      "size": 9718
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_builder_working.png",
+      "sha256": "9781f68c510dca2941ee3fa11fd5f59d7811a7ea6419bf076810cd9493839c78",
+      "size": 10264
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_lead_done.png",
+      "sha256": "f4f8ed23406743fa265c661071f6b6beb69daed4cde97bb50e81e7b8da3bf74e",
+      "size": 9989
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_lead_failed.png",
+      "sha256": "a0ad881bc8b692ca0c31276d4c124cd998df6490b4fd05b3fea6ec29744338bc",
+      "size": 9217
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_lead_idle.png",
+      "sha256": "56440a7ad1e08e1c1d5bdf14fd612b3bc7f1d179ae08eabd693c9f16cce71fe0",
+      "size": 8558
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_lead_needs.png",
+      "sha256": "7a238a033879d49c7ec3d93332d8ae244c8e313a470ca8e44e4a451b4fe1db47",
+      "size": 9762
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_lead_working.png",
+      "sha256": "9ba6b13fec1cdf93add76eefcee5e5f289017ecec68724dd3538dde50b3f0645",
+      "size": 10180
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_review_done.png",
+      "sha256": "844b6743950605fb85d57c69114c7b29c39c990725bc4bfab77619f891c325cc",
+      "size": 8049
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_review_failed.png",
+      "sha256": "bb37ba2664956d3cfa605309ecb39d9d6a5fb6be55024a311bed9962c23f2fdd",
+      "size": 9448
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_review_idle.png",
+      "sha256": "9fb18f4bdcaeae610e0088a23db3abddc957dbc378109a5f432ddf5242a44abd",
+      "size": 6377
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_review_needs.png",
+      "sha256": "994402d2d42c0c439f63f30c7c68f34287e25983a85a773efafc8f2c2d1d5f1a",
+      "size": 8820
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_review_working.png",
+      "sha256": "754ab04bbee24109aa56e855dd95654fefa64a99bf61f0568e753649e6b8995e",
+      "size": 8604
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_scout_done.png",
+      "sha256": "a3e9725c26f10e0af2a0d95ec48ce100e753fcb24864f973dc1aaefbc636cf8c",
+      "size": 9942
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_scout_failed.png",
+      "sha256": "bc429feccde3ed982da8d5d35dc4c7cf88a2e767f05483c6fd0c70212b1d1512",
+      "size": 9124
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_scout_idle.png",
+      "sha256": "48ed7ff05b812dbc00fe87c81253a2d91825467e18476d1c0d5204555cd2f68e",
+      "size": 8494
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_scout_needs.png",
+      "sha256": "adbdc6de0e25841852f28192edfcd8e9c394cd64dc676ac21b1ddb05bf0eaaa5",
+      "size": 9605
+    },
+    {
+      "kind": "asset",
+      "license": "NOASSERTION",
+      "licenseEvidence": "none",
+      "path": "android/app/src/qa/res/drawable-nodpi/botw_sample_scout_working.png",
+      "sha256": "66a188a101bb0f279e2c25d8b021ef6445075e5fe459473bd030df7252c82082",
+      "size": 10103
+    }
+  ],
+  "inputFingerprint": "3eaf15f158c81bd1220f58acc4891abcc803034885aa424320cb8d5fbda60e13"
+}

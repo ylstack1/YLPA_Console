@@ -1,0 +1,200 @@
+name: hermes_android
+description: "Hermes Agent — chat with your Hermes Gateway API Server over LAN. SSE streaming, Bearer auth, session management."
+publish_to: 'none'
+version: 1.4.0+9812
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Internacionalización (i18n): delegates de Material/Cupertino + intl.
+  # Strings traducibles en lib/l10n/*.arb (generación con gen-l10n).
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
+  # UI
+  cupertino_icons: ^1.0.8
+  flutter_markdown: ^0.7.6
+  markdown: ^7.3.0
+
+  # Animación / fluidez estilo Telegram-ChatGPT (spec 041). Dart puro: sin
+  # permisos, telemetría ni destinos de red — no tocan la política de privacidad.
+  flutter_animate: ^4.5.0
+  flutter_staggered_animations: ^1.1.1
+
+  # Navigation
+  go_router: ^14.0.0
+
+  # Wall clock the holdoff windows read (package:clock: the tests drive it).
+  clock: ^1.1.1
+
+  # Network
+  http: ^1.2.0
+  web_socket_channel: ^3.0.0
+
+  # Local storage
+  shared_preferences: ^2.3.0
+  # Puente de estado no sensible entre Flutter y el widget Android Glance.
+  # No mantiene workers ni conexiones; la app solicita updates explícitos.
+  home_widget: ^0.9.3
+  path_provider: ^2.1.5
+
+  # Data models
+  json_annotation: ^4.9.0
+  uuid: ^4.5.1
+
+  # Misc
+  url_launcher: ^6.3.0
+  package_info_plus: ^8.0.0
+  app_links: ^6.3.0 # deep link hermes://pair (abrir la app ya rellena)
+  share_plus: ^10.1.4 # compartir imágenes generadas (spec 030)
+  gal: ^2.3.1 # guardar imágenes generadas en la galería (spec 030)
+
+  # Markdown syntax highlighting
+  highlight: ^0.7.0
+  flutter_secure_storage: ^10.3.1
+  image_picker: ^1.2.2
+  # Configura explícitamente el Photo Picker múltiple nativo en Android 13+.
+  # Ya era dependencia transitiva de image_picker; declararla permite usar su
+  # API pública sin depender accidentalmente de una dependencia indirecta.
+  image_picker_android: ^0.8.13+19
+  image_picker_platform_interface: ^2.11.1
+  file_picker: ^10.0.0
+
+  # App lock (biometric/PIN)
+  local_auth: ^2.3.0
+  crypto: ^3.0.6
+
+  # Voz: dictado (STT del sistema), lectura (TTS on-device) y audio (ElevenLabs)
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
+  audioplayers: ^6.1.0
+  # Whisper on-device (STT privado): grabación + whisper.cpp
+  record: ^6.0.0
+  whisper_ggml_plus: ^1.0.0
+  # Voz neuronal on-device (TTS privado): sherpa-onnx + modelos Piper/VITS de HF
+  sherpa_onnx: ^1.13.2
+  # Emparejado por QR: ZXing open source (sin ML Kit ni servicios de Google).
+  qr_code_scanner_plus: ^2.2.0
+  # Descompresión del modelo Piper (.tar.bz2): bzip2 + tar
+  archive: ^4.0.0
+
+  # Notificaciones locales (sin Google/FCM): eventos del agente
+  flutter_local_notifications: ^18.0.1
+  flutter_foreground_task: ^9.2.2
+
+  # SSH: cliente puro Dart (terminal PTY + SFTP) y emulador de terminal
+  dartssh2: ^2.9.0
+  xterm: ^4.0.0
+  sqflite: ^2.4.3
+  video_player: ^2.14.0
+  # Visor interno de artefactos HTML/SVG (spec 1215): WebView del sistema
+  # Android, sin motor empaquetado. BSD-3-Clause (Flutter Authors). La
+  # implementación Android se declara para fijar ajustes de seguridad
+  # (acceso a ficheros, geolocalización, contenido mixto) desde su API pública.
+  webview_flutter: ^4.14.1
+  webview_flutter_android: ^4.14.1
+  # GPT-Live (experimental voice, opt-in): full-duplex WebRTC against the voice
+  # model. MIT (flutter-webrtc.org). Only imported by the adapter
+  # lib/core/services/voice/live/flutter_webrtc_transport.dart.
+  flutter_webrtc: ^1.6.2+hotfix.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.14
+  json_serializable: ^6.9.4
+  sqflite_common_ffi: ^2.4.2+1
+  # Plataforma falsa de WebView para los tests del visor (no se empaqueta).
+  webview_flutter_platform_interface: ^2.15.1
+  # Lanzador falso para comprobar la apertura externa de enlaces del visor.
+  url_launcher_platform_interface: ^2.3.2
+  plugin_platform_interface: ^2.1.8
+
+flutter:
+  uses-material-design: true
+  shaders:
+    - shaders/live_reply_tail.frag
+    - shaders/liquid_glass.frag
+  # Genera la clase Strings (AppLocalizations) desde lib/l10n/*.arb (ver
+  # l10n.yaml). Migración de textos a i18n incremental, por pantalla.
+  generate: true
+  assets:
+    # Copia canónica de GPLv3 accesible desde Acerca de → Licencias.
+    - LICENSE
+    - assets/
+    - assets/fonts/OFL.txt
+    # Identidad Console: la «C» terracota con cursor (splash/onboarding) y el
+    # icono completo (Acerca de). Fuentes editables: console_*.svg.
+    - assets/branding/console_mark.png
+    - assets/branding/console_icon.png
+    # The native splash icon itself: the first Flutter frame paints the same
+    # mark so the system splash hands off without a cut (StartupHandoff).
+    - android/app/src/main/res/drawable-nodpi/splash_logo.png
+    # Mascotas "Companion" (Fase A): galería LOCAL de mascotas cosméticas en
+    # formato compatible Petdex (pet.json + spritesheet.webp). Son assets locales
+    # con licencia propia; nunca se descargan en runtime (la red es Fase C).
+    # NOTA: las declaraciones de directorio en Flutter NO son recursivas, así que
+    # cada carpeta de mascota debe listarse explícitamente.
+    # Formato y procedencia: docs/PETDEX_CONTRACT.md.
+    # U-04 (spec 028): ninguna mascota va de serie (sin mascota se ve la cara
+    # del perfil); nimbus/
+    # pixel/violet salen del bundle — siguen en el repo para publicarlas en el
+    # Petdex remoto cuando toque. El repositorio descubre pets del AssetManifest,
+    # así que basta con no empaquetarlas.
+    - assets/companions/
+    # Header mascot atlases (CC0-1.0, derived from the companion sheets by
+    # tool/mascot/build_atlas.py). Listed one by one so LICENSES.md stays
+    # out of the bundle. Licences: assets/mascot/LICENSES.md.
+    - assets/mascot/pixel.webp
+    - assets/mascot/nimbus.webp
+    - assets/mascot/violet.webp
+    # The live chat's ten icons (Generative Icons, MIT): pre-rendered frame
+    # strips, listed one by one so atlas.json and SOURCES.json stay out of the
+    # bundle. Licence and provenance: assets/chat_icons/LICENSE.txt.
+    - assets/chat_icons/agent-team.webp
+    - assets/chat_icons/check.webp
+    - assets/chat_icons/delegate-task.webp
+    - assets/chat_icons/error.webp
+    - assets/chat_icons/parallel-tools.webp
+    - assets/chat_icons/queued.webp
+    - assets/chat_icons/reasoning.webp
+    - assets/chat_icons/response-stream.webp
+    - assets/chat_icons/terminal-agent.webp
+    - assets/chat_icons/tool-call.webp
+    # noVNC core (MPL-2.0) plus pako (MIT). Flutter asset directories are not
+    # recursive, so each folder is listed. Notices: THIRD_PARTY_NOTICES.md.
+    - assets/novnc/
+    - assets/novnc/core/
+    - assets/novnc/core/crypto/
+    - assets/novnc/core/decoders/
+    - assets/novnc/core/input/
+    - assets/novnc/core/util/
+    - assets/novnc/docs/
+    - assets/novnc/vendor/
+    - assets/novnc/vendor/pako/
+    - assets/novnc/vendor/pako/lib/
+    - assets/novnc/vendor/pako/lib/utils/
+    - assets/novnc/vendor/pako/lib/zlib/
+  # Fuentes empaquetadas localmente bajo SIL OFL 1.1 para el selector de fuente
+  # en Ajustes → apariencia. Son archivos locales: nunca se descargan en
+  # runtime (no usamos google_fonts; ver docs/PRIVACY_POLICY.md).
+  # Las cuatro familias son variables y cubren los pesos usados por los temas.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat.ttf
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito.ttf
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono.ttf
