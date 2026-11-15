@@ -3,11 +3,11 @@
 // is pinned (or less than a screen away); reduced motion jumps, never eases.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/tool_steps_summary.dart';
-import 'package:hermes_android/core/widgets/chat/turn_step_cards.dart';
-import 'package:hermes_android/core/widgets/chat/turn_tail_follow.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/tool_steps_summary.dart';
+import 'package:ylpa_console/core/widgets/chat/turn_step_cards.dart';
+import 'package:ylpa_console/core/widgets/chat/turn_tail_follow.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _app(Widget child, {bool reduceMotion = false, String lang = 'es'}) =>
     MaterialApp(

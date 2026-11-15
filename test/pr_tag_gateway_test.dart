@@ -1,9 +1,9 @@
 // Wire contract of the PR tag reads: exact Dashboard routes and bodies, and
 // 404/405 turning the capability off without touching the socket.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 final class _RecordingDashboard extends DashboardClient {
   _RecordingDashboard()

@@ -1,4 +1,4 @@
-import 'package:hermes_android/core/design/floating.dart';
+import 'package:ylpa_console/core/design/floating.dart';
 // The chat and the lists wear the same liquid material as the buttons that
 // already had it: the gel (rims, sheen, press) over the theme's own grey,
 // never over a smoked or darker one. And the segmented control is a pill
@@ -6,18 +6,18 @@ import 'package:hermes_android/core/design/floating.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show BackdropFilterLayer;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/gel_surface.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/chat/chat_pinned_prompt_header.dart';
-import 'package:hermes_android/core/widgets/chat/console_composer.dart';
-import 'package:hermes_android/core/widgets/chat_status_pill.dart';
-import 'package:hermes_android/core/widgets/floating_chat_header.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart';
-import 'package:hermes_android/core/widgets/island.dart';
-import 'package:hermes_android/core/widgets/session_context_usage.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/gel_surface.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_pinned_prompt_header.dart';
+import 'package:ylpa_console/core/widgets/chat/console_composer.dart';
+import 'package:ylpa_console/core/widgets/chat_status_pill.dart';
+import 'package:ylpa_console/core/widgets/floating_chat_header.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart';
+import 'package:ylpa_console/core/widgets/island.dart';
+import 'package:ylpa_console/core/widgets/session_context_usage.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _host(
   Widget child, {

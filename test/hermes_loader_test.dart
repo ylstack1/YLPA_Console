@@ -12,11 +12,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/console_loader.dart';
-import 'package:hermes_android/core/widgets/hermes_loader.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/console_loader.dart';
+import 'package:ylpa_console/core/widgets/hermes_loader.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _app(
   Widget child, {

@@ -4,7 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/generated_media_service.dart';
+import 'package:ylpa_console/core/services/generated_media_service.dart';
 
 void main() {
   group('GeneratedMediaService.parseSegments', () {

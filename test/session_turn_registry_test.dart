@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/live_turn_probe.dart';
-import 'package:hermes_android/core/services/session_turn_registry.dart';
+import 'package:ylpa_console/core/services/live_turn_probe.dart';
+import 'package:ylpa_console/core/services/session_turn_registry.dart';
 
 /// DISENO-REGISTRO-ESTADO R1: one row per input of §2, with the Desktop
 /// reference each one replicates.

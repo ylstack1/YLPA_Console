@@ -4,9 +4,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/hermes_design.dart' show HermesChrome;
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace_host.dart';
+import 'package:ylpa_console/core/design/hermes_design.dart' show HermesChrome;
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace_host.dart';
 
 // A review capture: the pane's grey outline only wrapped the top strip and
 // stopped dead where an opaque body began. The edge has to stay on top of

@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/widgets/workspace/profile_rail_chats.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/widgets/workspace/profile_rail_chats.dart';
 
 // The rail's reads of the profiles the list of chats is not scoped to: one
 // sweep per scope at most once a minute, one request at a time, a failing

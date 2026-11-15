@@ -8,14 +8,14 @@ import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/activity_snapshot.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/live_turn_pills.dart';
-import 'package:hermes_android/core/widgets/chat/live_motion.dart';
-import 'package:hermes_android/core/widgets/frosted_backdrop.dart';
-import 'package:hermes_android/core/widgets/thinking_glyph.dart';
-import 'package:hermes_android/core/widgets/island.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/live_turn_pills.dart';
+import 'package:ylpa_console/core/widgets/chat/live_motion.dart';
+import 'package:ylpa_console/core/widgets/frosted_backdrop.dart';
+import 'package:ylpa_console/core/widgets/thinking_glyph.dart';
+import 'package:ylpa_console/core/widgets/island.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 final _start = DateTime(2026, 10, 28, 22, 20);
 

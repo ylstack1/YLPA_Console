@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_health_tracker.dart';
-import 'package:hermes_android/core/services/connection_status.dart';
+import 'package:ylpa_console/core/services/connection_health_tracker.dart';
+import 'package:ylpa_console/core/services/connection_status.dart';
 
 void main() {
   group('ConnectionHealthTracker', () {

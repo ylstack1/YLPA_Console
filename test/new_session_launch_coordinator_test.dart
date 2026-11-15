@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/models/new_session_launch_action.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/services/new_session_factory.dart';
-import 'package:hermes_android/core/services/new_session_launch_coordinator.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/models/new_session_launch_action.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/services/new_session_factory.dart';
+import 'package:ylpa_console/core/services/new_session_launch_coordinator.dart';
 
 SavedConnection connection(String id) => SavedConnection(
   id: id,

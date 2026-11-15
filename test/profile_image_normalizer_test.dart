@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/profile_image_normalizer.dart';
+import 'package:ylpa_console/core/services/profile_image_normalizer.dart';
 
 Future<Uint8List> _widePng() async {
   final recorder = ui.PictureRecorder();

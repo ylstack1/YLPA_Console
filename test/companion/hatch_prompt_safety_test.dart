@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/hatch/prompt_safety.dart';
+import 'package:ylpa_console/core/companion/hatch/prompt_safety.dart';
 
 void main() {
   const safety = PromptSafety();

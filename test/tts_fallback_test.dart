@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/voice_service.dart';
+import 'package:ylpa_console/core/services/voice/voice_service.dart';
 
 void main() {
   group('VoiceService.speakOrFallback — fallback Kokoro → sistema TTS', () {

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/compression_restore_store.dart';
+import 'package:ylpa_console/core/services/compression_restore_store.dart';
 
 import 'support/in_memory_compression_restore_storage.dart';
 

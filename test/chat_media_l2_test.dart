@@ -6,13 +6,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/attachment_card.dart';
-import 'package:hermes_android/core/widgets/chat/chat_link_card.dart';
-import 'package:hermes_android/core/widgets/chat/chat_markdown_body.dart';
-import 'package:hermes_android/core/widgets/generated_image_card.dart';
-import 'package:hermes_android/core/widgets/stacked_image_cards.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/attachment_card.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_link_card.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_markdown_body.dart';
+import 'package:ylpa_console/core/widgets/generated_image_card.dart';
+import 'package:ylpa_console/core/widgets/stacked_image_cards.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _app(
   Widget child, {

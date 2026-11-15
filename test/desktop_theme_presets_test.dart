@@ -7,8 +7,8 @@
 // border→divider, destructive→error.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_profile_store.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_profile_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// `BUILTIN_THEMES` key order in Desktop's presets.ts.

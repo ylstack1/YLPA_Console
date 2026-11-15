@@ -19,7 +19,7 @@ import 'launcher_widget_cron.dart'
 
 /// Android receiver of the Chats launcher widget.
 const launcherWidgetChatsProvider =
-    'com.hermesagent.hermes_android.HermesChatsWidgetProvider';
+    'com.ylpa.console.HermesChatsWidgetProvider';
 
 /// The owner's "hide sensitive content" choice for notifications also keeps
 /// answers off the home screen.

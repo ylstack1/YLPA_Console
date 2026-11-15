@@ -6,5 +6,5 @@
     <string name="new_session_shortcut_long_label">Start a new Hermes conversation</string>
     <string name="hermes_widget_not_configured">Not configured</string>
     <string name="hermes_widget_setup_action">Set up Hermes</string>
-    <string name="new_session_target_package" translatable="false">dev.xpetalab.hermesconsole</string>
+    <string name="new_session_target_package" translatable="false">com.ylpa.console</string>
 </resources>

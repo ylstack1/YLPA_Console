@@ -6,9 +6,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_geometry.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_images.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_scene.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_geometry.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_images.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_scene.dart';
 
 const _kt = 'android/app/src/main/kotlin/com/hermesagent/hermes_android';
 const _res = 'android/app/src/main/res';

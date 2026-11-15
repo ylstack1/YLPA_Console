@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/kanban.dart';
-import 'package:hermes_android/core/screens/home_dashboard_screen.dart';
-import 'package:hermes_android/core/screens/onboarding/halloween.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_motion.dart';
-import 'package:hermes_android/core/app_header_title.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/widgets/instance_status_panel.dart'
+import 'package:ylpa_console/core/models/kanban.dart';
+import 'package:ylpa_console/core/screens/home_dashboard_screen.dart';
+import 'package:ylpa_console/core/screens/onboarding/halloween.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_motion.dart';
+import 'package:ylpa_console/core/app_header_title.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/widgets/instance_status_panel.dart'
     show DashboardAuthCheck;
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';

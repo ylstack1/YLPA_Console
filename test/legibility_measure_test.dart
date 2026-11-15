@@ -1,7 +1,7 @@
 // Prints the legibility table (text tokens over the material of the boxes,
 // 42 presets). It asserts nothing: legibility_test.dart holds the thresholds.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
 
 import 'support/legibility_probe.dart';
 

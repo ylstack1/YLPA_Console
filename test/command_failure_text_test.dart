@@ -6,9 +6,9 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
-import 'package:hermes_android/core/utils/command_failure.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/utils/command_failure.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 void main() {
   final en = lookupStrings(const Locale('en'));

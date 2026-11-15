@@ -5,11 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hermes_android/core/services/voice/stt_engine.dart';
-import 'package:hermes_android/core/services/voice/stt_sherpa.dart';
-import 'package:hermes_android/core/services/voice/tts_engine.dart';
-import 'package:hermes_android/core/services/voice/tts_model_manager.dart';
-import 'package:hermes_android/core/services/voice/voice_settings.dart';
+import 'package:ylpa_console/core/services/voice/stt_engine.dart';
+import 'package:ylpa_console/core/services/voice/stt_sherpa.dart';
+import 'package:ylpa_console/core/services/voice/tts_engine.dart';
+import 'package:ylpa_console/core/services/voice/tts_model_manager.dart';
+import 'package:ylpa_console/core/services/voice/voice_settings.dart';
 
 void main() {
   group('VoiceSettings', () {

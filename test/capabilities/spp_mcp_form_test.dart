@@ -2,16 +2,16 @@
 // on the phone; and the detail never shows what the server list holds back.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/capabilities_screen.dart';
-import 'package:hermes_android/core/capabilities/capability_detail_screen.dart';
-import 'package:hermes_android/core/capabilities/capability_models.dart';
-import 'package:hermes_android/core/capabilities/mcp_logs_screen.dart';
-import 'package:hermes_android/core/design/hermes_design.dart'
+import 'package:ylpa_console/core/capabilities/capabilities_screen.dart';
+import 'package:ylpa_console/core/capabilities/capability_detail_screen.dart';
+import 'package:ylpa_console/core/capabilities/capability_models.dart';
+import 'package:ylpa_console/core/capabilities/mcp_logs_screen.dart';
+import 'package:ylpa_console/core/design/hermes_design.dart'
     show HermesSelectField;
-import 'package:hermes_android/core/models/admin_integrations.dart';
-import 'package:hermes_android/core/services/connection_manager.dart'
+import 'package:ylpa_console/core/models/admin_integrations.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart'
     show DashboardHttpException;
-import 'package:hermes_android/core/widgets/mcp_provisioning_surface.dart';
+import 'package:ylpa_console/core/widgets/mcp_provisioning_surface.dart';
 
 import '../support/inter_font.dart';
 import 'capabilities_fakes.dart';

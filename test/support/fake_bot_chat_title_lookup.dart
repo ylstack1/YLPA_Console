@@ -1,5 +1,5 @@
-import 'package:hermes_android/core/bots/state/bot_chat_target.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/bots/state/bot_chat_target.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
 
 /// In-memory Bot Chat registry (`session.list {title: "Bot Chat"}`) for
 /// widget tests: returns the configured row per profile, `null` otherwise.

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_profile.dart';
-import 'package:hermes_android/core/theme/theme_profile_adapter.dart';
-import 'package:hermes_android/core/theme/theme_profile_codec.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_profile.dart';
+import 'package:ylpa_console/core/theme/theme_profile_adapter.dart';
+import 'package:ylpa_console/core/theme/theme_profile_codec.dart';
 
 void main() {
   group('ThemeProfileAdapter built-in equivalence', () {

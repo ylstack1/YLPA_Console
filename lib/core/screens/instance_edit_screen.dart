@@ -89,7 +89,7 @@ class InstanceEditScreen extends StatefulWidget {
   /// desde "pegar enlace" / deep link). Se aplica como un escaneo de QR.
   final PairingLink? initialLink;
 
-  /// Si es true, [initialLink] llegó de un deep link `hermes://pair` tocado
+  /// Si es true, [initialLink] llegó de un deep link `ylpa://pair` tocado
   /// fuera de la app (no de un QR escaneado ni de "pegar enlace" dentro de
   /// la app). Activa el banner de aviso de datos precargados desde un
   /// enlace externo.
@@ -166,7 +166,7 @@ class _InstanceEditScreenState extends State<InstanceEditScreen> {
   bool _saving = false;
   String? _error;
 
-  // Aviso de datos precargados desde un deep link `hermes://pair`: visible
+  // Aviso de datos precargados desde un deep link `ylpa://pair`: visible
   // hasta que el usuario edite la URL del gateway o guarde.
 
   // Enlace aplicado (QR, pegado o deep link): la pantalla dice en una frase

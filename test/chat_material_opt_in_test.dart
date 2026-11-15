@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/liquid_glass.dart';
-import 'package:hermes_android/core/design/liquid_sheen.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/console_composer.dart';
-import 'package:hermes_android/core/widgets/chat_status_pill.dart';
-import 'package:hermes_android/core/widgets/frosted_backdrop.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart';
-import 'package:hermes_android/core/widgets/session_context_usage.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/liquid_glass.dart';
+import 'package:ylpa_console/core/design/liquid_sheen.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/console_composer.dart';
+import 'package:ylpa_console/core/widgets/chat_status_pill.dart';
+import 'package:ylpa_console/core/widgets/frosted_backdrop.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart';
+import 'package:ylpa_console/core/widgets/session_context_usage.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _composer = ValueKey('hermes-composer-visible-surface');
 const _capsule = ValueKey('status-pill-capsule');

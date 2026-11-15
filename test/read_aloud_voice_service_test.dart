@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/voice/read_aloud_session.dart';
-import 'package:hermes_android/core/services/voice/tts_engine.dart';
-import 'package:hermes_android/core/services/voice/voice_service.dart';
-import 'package:hermes_android/core/services/voice/voice_settings.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/voice/read_aloud_session.dart';
+import 'package:ylpa_console/core/services/voice/tts_engine.dart';
+import 'package:ylpa_console/core/services/voice/voice_service.dart';
+import 'package:ylpa_console/core/services/voice/voice_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _PendingSpeech {

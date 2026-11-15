@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/dock_config.dart';
-import 'package:hermes_android/core/models/room_summary.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/dock_style.dart';
-import 'package:hermes_android/core/widgets/frosted_backdrop.dart';
-import 'package:hermes_android/core/widgets/room_summary_pill.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/dock_config.dart';
+import 'package:ylpa_console/core/models/room_summary.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/dock_style.dart';
+import 'package:ylpa_console/core/widgets/frosted_backdrop.dart';
+import 'package:ylpa_console/core/widgets/room_summary_pill.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'room_member_status_test.dart' show statusEvent, statusRoom, statusNow;
 

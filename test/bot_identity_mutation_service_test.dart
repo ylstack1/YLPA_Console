@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/bot_visual_identity.dart';
-import 'package:hermes_android/core/models/profile_pet.dart';
-import 'package:hermes_android/core/companion/models/companion.dart';
-import 'package:hermes_android/core/companion/models/companion_animation_state.dart';
-import 'package:hermes_android/core/services/bot_identity_mutation_service.dart';
-import 'package:hermes_android/core/services/profile_pet_visual_adapter.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/bot_visual_identity.dart';
+import 'package:ylpa_console/core/models/profile_pet.dart';
+import 'package:ylpa_console/core/companion/models/companion.dart';
+import 'package:ylpa_console/core/companion/models/companion_animation_state.dart';
+import 'package:ylpa_console/core/services/bot_identity_mutation_service.dart';
+import 'package:ylpa_console/core/services/profile_pet_visual_adapter.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 const _png =
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';

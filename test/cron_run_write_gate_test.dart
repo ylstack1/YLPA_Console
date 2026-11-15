@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/cron_run_write_gate.dart';
-import 'package:hermes_android/core/models/session.dart';
+import 'package:ylpa_console/core/models/cron_run_write_gate.dart';
+import 'package:ylpa_console/core/models/session.dart';
 
 Session _run(Map<String, dynamic> extra) => Session.fromJson({
   'id': 'cron_job1_20261004_101500',

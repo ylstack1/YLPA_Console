@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/state/companion_presence_controller.dart';
-import 'package:hermes_android/core/companion/models/companion_mood.dart';
+import 'package:ylpa_console/core/companion/state/companion_presence_controller.dart';
+import 'package:ylpa_console/core/companion/models/companion_mood.dart';
 
 void main() {
   late CompanionPresenceController c;

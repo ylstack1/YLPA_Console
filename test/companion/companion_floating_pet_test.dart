@@ -3,16 +3,16 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/data/companion_preferences.dart';
-import 'package:hermes_android/core/companion/data/companion_repository.dart';
-import 'package:hermes_android/core/companion/models/companion.dart';
-import 'package:hermes_android/core/companion/models/companion_animation_state.dart';
-import 'package:hermes_android/core/companion/models/companion_presence_level.dart';
-import 'package:hermes_android/core/companion/render/companion_floating_pet.dart';
-import 'package:hermes_android/core/companion/render/spritesheet_renderer.dart';
-import 'package:hermes_android/core/companion/state/companion_controller.dart';
-import 'package:hermes_android/core/widgets/mascot/mascot_sprite.dart';
-import 'package:hermes_android/core/widgets/mascot/mascot_state.dart';
+import 'package:ylpa_console/core/companion/data/companion_preferences.dart';
+import 'package:ylpa_console/core/companion/data/companion_repository.dart';
+import 'package:ylpa_console/core/companion/models/companion.dart';
+import 'package:ylpa_console/core/companion/models/companion_animation_state.dart';
+import 'package:ylpa_console/core/companion/models/companion_presence_level.dart';
+import 'package:ylpa_console/core/companion/render/companion_floating_pet.dart';
+import 'package:ylpa_console/core/companion/render/spritesheet_renderer.dart';
+import 'package:ylpa_console/core/companion/state/companion_controller.dart';
+import 'package:ylpa_console/core/widgets/mascot/mascot_sprite.dart';
+import 'package:ylpa_console/core/widgets/mascot/mascot_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The active profile's pet as the floating mascot: when it is on, and

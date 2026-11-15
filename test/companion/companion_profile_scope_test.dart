@@ -4,14 +4,14 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/data/companion_preferences.dart';
-import 'package:hermes_android/core/companion/data/companion_repository.dart';
-import 'package:hermes_android/core/companion/models/companion.dart';
-import 'package:hermes_android/core/companion/models/companion_animation_state.dart';
-import 'package:hermes_android/core/companion/state/companion_controller.dart';
-import 'package:hermes_android/core/models/profile_pet.dart';
-import 'package:hermes_android/core/services/profile_pet_service.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/companion/data/companion_preferences.dart';
+import 'package:ylpa_console/core/companion/data/companion_repository.dart';
+import 'package:ylpa_console/core/companion/models/companion.dart';
+import 'package:ylpa_console/core/companion/models/companion_animation_state.dart';
+import 'package:ylpa_console/core/companion/state/companion_controller.dart';
+import 'package:ylpa_console/core/models/profile_pet.dart';
+import 'package:ylpa_console/core/services/profile_pet_service.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Companion _pet(

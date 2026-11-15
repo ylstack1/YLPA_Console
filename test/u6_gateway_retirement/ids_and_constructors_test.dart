@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/new_session_factory.dart';
+import 'package:ylpa_console/core/services/new_session_factory.dart';
 
 void main() {
   test('generateSessionId keeps the mob-<ms>-<uuid v4> format', () {

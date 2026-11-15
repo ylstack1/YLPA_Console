@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/themes_screen.dart';
-import 'package:hermes_android/core/theme/theme_profile_codec.dart';
+import 'package:ylpa_console/core/screens/themes_screen.dart';
+import 'package:ylpa_console/core/theme/theme_profile_codec.dart';
 
 Matcher _codecError(String code) => isA<ThemeProfileCodecException>().having(
   (error) => error.code,

@@ -2,15 +2,15 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/characters/bot_character.dart';
-import 'package:hermes_android/core/characters/character_face.dart';
-import 'package:hermes_android/core/characters/studio_catalog.dart';
-import 'package:hermes_android/core/characters/studio_eyes.dart';
-import 'package:hermes_android/core/characters/studio_motion.dart';
-import 'package:hermes_android/core/characters/studio_painter.dart';
-import 'package:hermes_android/core/characters/studio_pieces.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/hermes_bot_face.dart';
+import 'package:ylpa_console/core/characters/bot_character.dart';
+import 'package:ylpa_console/core/characters/character_face.dart';
+import 'package:ylpa_console/core/characters/studio_catalog.dart';
+import 'package:ylpa_console/core/characters/studio_eyes.dart';
+import 'package:ylpa_console/core/characters/studio_motion.dart';
+import 'package:ylpa_console/core/characters/studio_painter.dart';
+import 'package:ylpa_console/core/characters/studio_pieces.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/hermes_bot_face.dart';
 
 const _studio = BotCharacter(form: BotForm.round, seed: 'ana');
 

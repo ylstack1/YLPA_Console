@@ -6,13 +6,13 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/activity_snapshot.dart';
-import 'package:hermes_android/core/models/agent_task_list.dart';
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/session_reconciler.dart';
-import 'package:hermes_android/core/widgets/agent_task_widgets.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/models/agent_task_list.dart';
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/session_reconciler.dart';
+import 'package:ylpa_console/core/widgets/agent_task_widgets.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'session_identity_peer_test.dart' as peer;

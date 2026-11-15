@@ -2,14 +2,14 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
-import 'package:hermes_android/core/services/notifications/bot_face_bitmap.dart';
-import 'package:hermes_android/core/services/notifications/bot_notification_presenter.dart';
-import 'package:hermes_android/core/services/notifications/notification_strings.dart';
-import 'package:hermes_android/core/services/notifications/rich_notifications.dart';
-import 'package:hermes_android/core/services/notifications/room_watcher.dart';
-import 'package:hermes_android/core/widgets/bot_face_identity.dart';
-import 'package:hermes_android/core/widgets/hermes_bot_face.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/services/notifications/bot_face_bitmap.dart';
+import 'package:ylpa_console/core/services/notifications/bot_notification_presenter.dart';
+import 'package:ylpa_console/core/services/notifications/notification_strings.dart';
+import 'package:ylpa_console/core/services/notifications/rich_notifications.dart';
+import 'package:ylpa_console/core/services/notifications/room_watcher.dart';
+import 'package:ylpa_console/core/widgets/bot_face_identity.dart';
+import 'package:ylpa_console/core/widgets/hermes_bot_face.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../bots/room/room_fixtures.dart';

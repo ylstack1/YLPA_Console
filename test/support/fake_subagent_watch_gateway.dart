@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/services/subagent_live_watch.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/services/subagent_live_watch.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 const watchTestChild = 'child-stored-1';
 

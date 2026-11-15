@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/project_files.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/utils/chat_inline_refs.dart';
-import 'package:hermes_android/core/widgets/artifact_viewer/artifact_viewer_screen.dart';
-import 'package:hermes_android/core/widgets/chat/chat_file_opener.dart';
-import 'package:hermes_android/core/widgets/chat/chat_file_viewer_screen.dart';
-import 'package:hermes_android/core/widgets/chat/chat_inline_chips.dart';
-import 'package:hermes_android/core/widgets/chat/chat_markdown_body.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/project_files.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/utils/chat_inline_refs.dart';
+import 'package:ylpa_console/core/widgets/artifact_viewer/artifact_viewer_screen.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_file_opener.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_file_viewer_screen.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_inline_chips.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_markdown_body.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 ChatFileRef? _ref(String text, {bool plain = false}) =>
     chatFileRefFor(text, plain: plain);

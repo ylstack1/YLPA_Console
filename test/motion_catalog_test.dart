@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/motion.dart';
+import 'package:ylpa_console/core/theme/motion.dart';
 
 void main() {
   Future<Duration> effectiveUnder(WidgetTester tester, bool disable) async {

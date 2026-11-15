@@ -4,13 +4,13 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_control_center.dart';
-import 'package:hermes_android/core/models/git_hub.dart';
-import 'package:hermes_android/core/models/git_review.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
-import 'package:hermes_android/core/services/git_hub_controller.dart';
-import 'package:hermes_android/core/services/git_review_controller.dart';
-import 'package:hermes_android/core/services/session_pull_requests.dart';
+import 'package:ylpa_console/core/models/desktop_control_center.dart';
+import 'package:ylpa_console/core/models/git_hub.dart';
+import 'package:ylpa_console/core/models/git_review.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/services/git_hub_controller.dart';
+import 'package:ylpa_console/core/services/git_review_controller.dart';
+import 'package:ylpa_console/core/services/session_pull_requests.dart';
 
 import 'support/fake_git_hub_gateway.dart';
 

@@ -3,13 +3,13 @@
 // what comes back when the app starts again.
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/ssh_dashboard_tunnel.dart';
-import 'package:hermes_android/core/services/ssh_manager.dart';
-import 'package:hermes_android/core/services/ssh_tunnel_connector.dart';
-import 'package:hermes_android/core/utils/ssh_error.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/ssh_dashboard_tunnel.dart';
+import 'package:ylpa_console/core/services/ssh_manager.dart';
+import 'package:ylpa_console/core/services/ssh_tunnel_connector.dart';
+import 'package:ylpa_console/core/utils/ssh_error.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import '../support/onboarding_fakes.dart';
 import 'tunnel_fakes.dart';

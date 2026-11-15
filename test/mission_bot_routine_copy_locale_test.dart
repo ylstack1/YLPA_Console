@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/mission_bot_routine_sheet.dart';
+import 'package:ylpa_console/core/screens/mission_bot_routine_sheet.dart';
 
 void main() {
   test('routine copy resolves all languages, regions and unknown locales', () {

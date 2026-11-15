@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
-import 'package:hermes_android/core/services/session_pull_requests.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/services/session_pull_requests.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Session _s(

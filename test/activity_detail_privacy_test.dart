@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
 
 void main() {
   test('MEDIO-2: queries, q and patterns never become visible details', () {

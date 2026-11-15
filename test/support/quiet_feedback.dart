@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/hermes_notice.dart';
+import 'package:ylpa_console/core/widgets/hermes_notice.dart';
 
 /// Asserts that [message] was routine feedback under the quiet-UI policy: it
 /// is not drawn as a notice, but screen readers still hear it.

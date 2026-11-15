@@ -15,7 +15,7 @@ import 'notifications/notification_service.dart' show NotificationOpen;
 
 /// Android receiver of the Cron launcher widget.
 const launcherWidgetCronProvider =
-    'com.hermesagent.hermes_android.HermesCronWidgetProvider';
+    'com.ylpa.console.HermesCronWidgetProvider';
 
 /// Where the section is kept and how its widget is asked to redraw.
 abstract interface class LauncherWidgetSectionStore {

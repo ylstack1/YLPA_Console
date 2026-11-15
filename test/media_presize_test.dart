@@ -5,13 +5,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/generated_media_service.dart';
-import 'package:hermes_android/core/services/media_dimensions.dart';
-import 'package:hermes_android/core/services/media_prefetcher.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/attachment_card.dart';
-import 'package:hermes_android/core/widgets/generated_image_card.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/generated_media_service.dart';
+import 'package:ylpa_console/core/services/media_dimensions.dart';
+import 'package:ylpa_console/core/services/media_prefetcher.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/attachment_card.dart';
+import 'package:ylpa_console/core/widgets/generated_image_card.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const String _scope = 'conn-presize\u0000default';
 

@@ -2,9 +2,9 @@
 // WA (CUT-A): the chat's "no server" island offers the official command page.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_status.dart';
-import 'package:hermes_android/core/widgets/connection_help_action.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/connection_status.dart';
+import 'package:ylpa_console/core/widgets/connection_help_action.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Future<Strings> _strings(WidgetTester tester, Locale locale) async {
   late Strings s;

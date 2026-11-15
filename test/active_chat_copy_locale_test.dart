@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 void main() {
   for (final lang in ['es', 'en', 'pt', 'de', 'fr', 'it', 'ja', 'ko', 'zh']) {

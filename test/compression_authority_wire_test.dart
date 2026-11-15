@@ -6,10 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
-import 'package:hermes_android/core/services/compression_restore_store.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/services/compression_restore_store.dart';
 
 import 'support/rpc_frame_helpers.dart';
 import 'support/test_api_client.dart';

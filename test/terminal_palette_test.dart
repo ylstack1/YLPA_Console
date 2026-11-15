@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/terminal_palette.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/terminal_palette.dart';
 
 void main() {
   group('hermesTerminalTheme (gap 2, Desktop selection.ts)', () {

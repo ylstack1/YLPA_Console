@@ -2,9 +2,9 @@
 // highlights it once.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/settings/settings_deep_link.dart';
-import 'package:hermes_android/core/settings/settings_sections.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/settings/settings_deep_link.dart';
+import 'package:ylpa_console/core/settings/settings_sections.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
 
 Widget _host({int spacers = 8}) => MaterialApp(
   theme: AppTheme.fromId('dark'),

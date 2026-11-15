@@ -8,13 +8,13 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/herdr_status.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/ssh_manager.dart';
-import 'package:hermes_android/core/services/ssh_session_kind.dart';
-import 'package:hermes_android/core/services/ssh_session_service.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/herdr_status.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/ssh_manager.dart';
+import 'package:ylpa_console/core/services/ssh_session_kind.dart';
+import 'package:ylpa_console/core/services/ssh_session_service.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 final String _snapshotStdout = File(
   'test/fixtures/herdr/snapshot_0_9_5.json',

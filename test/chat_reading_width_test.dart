@@ -5,9 +5,9 @@
 // all its room.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/responsive.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace_host.dart';
+import 'package:ylpa_console/core/utils/responsive.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace_host.dart';
 
 const _body = ValueKey('chat-body');
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/voice_latency_trace.dart';
+import 'package:ylpa_console/core/services/voice/voice_latency_trace.dart';
 
 void main() {
   group('VoiceLatencyTrace gate', () {

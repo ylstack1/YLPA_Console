@@ -3,18 +3,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/list.dart' show HermesListRow;
-import 'package:hermes_android/core/models/activity_snapshot.dart';
-import 'package:hermes_android/core/models/session_activity.dart';
-import 'package:hermes_android/core/models/subagent_activity.dart';
-import 'package:hermes_android/core/screens/subagent_detail_screen.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart'
+import 'package:ylpa_console/core/design/list.dart' show HermesListRow;
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/models/session_activity.dart';
+import 'package:ylpa_console/core/models/subagent_activity.dart';
+import 'package:ylpa_console/core/screens/subagent_detail_screen.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart'
     show ProfileTranscriptAccessRequired;
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/subagent_activity_card.dart';
-import 'package:hermes_android/core/widgets/subagent_work_pill.dart';
-import 'package:hermes_android/core/widgets/running_work.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/subagent_activity_card.dart';
+import 'package:ylpa_console/core/widgets/subagent_work_pill.dart';
+import 'package:ylpa_console/core/widgets/running_work.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'support/inter_font.dart';
 
 final SubagentActivityScope _scope = SubagentActivityScope(

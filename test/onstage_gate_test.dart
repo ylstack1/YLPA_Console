@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/onstage_gate.dart';
+import 'package:ylpa_console/core/widgets/onstage_gate.dart';
 
 void main() {
   testWidgets('forwards while onstage, holds while offstage and catches up '

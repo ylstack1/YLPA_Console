@@ -8,8 +8,8 @@ import 'package:crypto/crypto.dart' show sha256;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
 
 /// Test-only observer of the actual ChatScreen. Captures the complete native
 /// view, so global logical rects have one explicit DPR transform. Controls do

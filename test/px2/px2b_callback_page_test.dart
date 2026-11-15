@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/mobile_oauth.dart';
+import 'package:ylpa_console/core/services/mobile_oauth.dart';
 
 class _Reply {
   _Reply(this.status, this.type, this.headers, this.body);

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/notifications/voice_notification_controller.dart';
+import 'package:ylpa_console/core/services/notifications/voice_notification_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeVoicePlatform implements VoicePlatformNotifier {

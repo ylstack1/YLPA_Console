@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
 
 import 'support/onboarding_fakes.dart';
 

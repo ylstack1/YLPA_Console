@@ -5,11 +5,11 @@
 // reads at 3:1 on every light theme; dark themes are untouched.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_widgets.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/box_fill.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/hermes_ui.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_widgets.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/box_fill.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/hermes_ui.dart';
 
 double _ratio(Color a, Color b) {
   final la = a.computeLuminance();

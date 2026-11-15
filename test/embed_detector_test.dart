@@ -3,7 +3,7 @@
 // YouTube ids, `t`/`start` as `90` or `1h2m3s`, nocookie embed URL, disjoint
 // hosts, first match wins).
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/chat/embeds/embed_detector.dart';
+import 'package:ylpa_console/core/widgets/chat/embeds/embed_detector.dart';
 
 void main() {
   group('YouTube', () {

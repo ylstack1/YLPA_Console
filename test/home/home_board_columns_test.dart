@@ -4,12 +4,12 @@
 // wide screen and back.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/roster/living_bot_face.dart';
-import 'package:hermes_android/core/home/board/home_board_model.dart';
-import 'package:hermes_android/core/home/board/home_board_store.dart';
-import 'package:hermes_android/core/home/board/home_board_view.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/bots/ui/roster/living_bot_face.dart';
+import 'package:ylpa_console/core/home/board/home_board_model.dart';
+import 'package:ylpa_console/core/home/board/home_board_store.dart';
+import 'package:ylpa_console/core/home/board/home_board_view.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/home_board_fixtures.dart';

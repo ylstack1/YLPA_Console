@@ -8,10 +8,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/provider_account_link.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/account_link_screen.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/provider_account_link.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/account_link_screen.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 /// A Dashboard reduced to the three calls of the flow.
 class _Fake {

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/profile/bot_profile_screen.dart';
-import 'package:hermes_android/core/bots/ui/roster/living_bot_face.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/desktop_model_catalog.dart';
-import 'package:hermes_android/core/services/bot_profile_client.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/bots/ui/profile/bot_profile_screen.dart';
+import 'package:ylpa_console/core/bots/ui/roster/living_bot_face.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/desktop_model_catalog.dart';
+import 'package:ylpa_console/core/services/bot_profile_client.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import '../support/reasoning_tap.dart';
 
 final class _FakeGateway implements BotModelGateway, BotProfileGateway {

@@ -12,13 +12,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show BackdropFilterLayer;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/config/feature_flags.dart';
-import 'package:hermes_android/core/shell/dock_geometry.dart';
-import 'package:hermes_android/core/shell/dock_light.dart';
-import 'package:hermes_android/core/shell/gesture_dock.dart';
-import 'package:hermes_android/core/shell/gesture_dock_state.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/config/feature_flags.dart';
+import 'package:ylpa_console/core/shell/dock_geometry.dart';
+import 'package:ylpa_console/core/shell/dock_light.dart';
+import 'package:ylpa_console/core/shell/gesture_dock.dart';
+import 'package:ylpa_console/core/shell/gesture_dock_state.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 GestureDockController get _c => GestureDockController.instance;

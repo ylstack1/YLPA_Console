@@ -4,16 +4,16 @@
 // or a fixed black shadow.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/tokens.dart'
+import 'package:ylpa_console/core/design/tokens.dart'
     show HermesChrome, HermesRadius;
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/chat_pinned_prompt_header.dart';
-import 'package:hermes_android/core/widgets/chat_status_pill.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart'
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_pinned_prompt_header.dart';
+import 'package:ylpa_console/core/widgets/chat_status_pill.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart'
     show HermesComposerSurface;
-import 'package:hermes_android/core/widgets/session_context_usage.dart';
-import 'package:hermes_android/core/widgets/voice_strip.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/widgets/session_context_usage.dart';
+import 'package:ylpa_console/core/widgets/voice_strip.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _labels = VoiceStripLabels(
   finishListening: 'Terminar de hablar',

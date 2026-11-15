@@ -2,7 +2,7 @@
 // shared by every surface that starts a long server action. Time is a fake
 // delay, never the wall clock.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/action_follower.dart';
+import 'package:ylpa_console/core/services/action_follower.dart';
 
 void main() {
   late List<Duration> delays;

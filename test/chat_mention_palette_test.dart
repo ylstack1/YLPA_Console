@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/services/bot_mention_roster.dart';
-import 'package:hermes_android/core/widgets/chat_mention_palette.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/services/bot_mention_roster.dart';
+import 'package:ylpa_console/core/widgets/chat_mention_palette.dart';
 
 void main() {
   test(

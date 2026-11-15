@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/characters/bot_character.dart';
-import 'package:hermes_android/core/characters/character_spec.dart';
-import 'package:hermes_android/core/characters/studio_catalog.dart';
+import 'package:ylpa_console/core/characters/bot_character.dart';
+import 'package:ylpa_console/core/characters/character_spec.dart';
+import 'package:ylpa_console/core/characters/studio_catalog.dart';
 
 void main() {
   test('a well-formed specification becomes a studio character', () {

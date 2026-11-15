@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:hermes_android/core/services/session_reconciler.dart';
+import 'package:ylpa_console/core/services/session_reconciler.dart';
 
 /// Deterministic newest-first transcript shaped like a long real session:
 /// prose and code answers (some with `<` literals and inline think tags),

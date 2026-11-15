@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/app_error_log.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/services/cold_start_store.dart';
-import 'package:hermes_android/main.dart';
+import 'package:ylpa_console/core/services/app_error_log.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/services/cold_start_store.dart';
+import 'package:ylpa_console/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

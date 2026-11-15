@@ -1,14 +1,14 @@
 // B1-B3 (performance audit 1.4.0): small per-frame and per-build garbage.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart'
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart'
     show friendlyModelName;
-import 'package:hermes_android/core/services/bot_mention_roster.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat_mention_palette.dart';
-import 'package:hermes_android/core/widgets/hermes_status_indicator.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/bot_mention_roster.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat_mention_palette.dart';
+import 'package:ylpa_console/core/widgets/hermes_status_indicator.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('B1 the working pulse beats without rebuilding anything', (

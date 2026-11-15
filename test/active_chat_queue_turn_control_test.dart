@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/prepared_turn.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/turn_outbox_store.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/prepared_turn.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/turn_outbox_store.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 import 'support/in_memory_compression_restore_storage.dart';
 

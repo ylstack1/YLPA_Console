@@ -1,7 +1,7 @@
 // The last lines of a thought being written never show the Markdown around
 // them: only well-formed pairs go, a lone `*` or a snake_case name stays.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/reasoning_plain.dart';
+import 'package:ylpa_console/core/utils/reasoning_plain.dart';
 
 void main() {
   test('a bold line on its own is its text, no asterisks', () {

@@ -4,9 +4,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/models/companion.dart';
-import 'package:hermes_android/core/companion/models/companion_animation_state.dart';
-import 'package:hermes_android/core/companion/render/spritesheet_renderer.dart';
+import 'package:ylpa_console/core/companion/models/companion.dart';
+import 'package:ylpa_console/core/companion/models/companion_animation_state.dart';
+import 'package:ylpa_console/core/companion/render/spritesheet_renderer.dart';
 
 const _companion = Companion(
   slug: 'nimbus',

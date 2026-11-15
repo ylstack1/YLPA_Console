@@ -3,17 +3,17 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_compression_outcome.dart';
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/services/connection_manager.dart'
+import 'package:ylpa_console/core/models/desktop_compression_outcome.dart';
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart'
     show
         DashboardAuthException,
         DashboardAuthFailureCode,
         DashboardWebSocketAuthException,
         DashboardWebSocketAuthFailureCause,
         DashboardWebSocketAuthFailureCode;
-import 'package:hermes_android/core/services/subagent_live_watch.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/services/subagent_live_watch.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 import 'support/fake_subagent_watch_gateway.dart';
 

@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/command_descriptor.dart';
-import 'package:hermes_android/core/models/desktop_compression_outcome.dart';
-import 'package:hermes_android/core/services/compression_dispatcher.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/command_descriptor.dart';
+import 'package:ylpa_console/core/models/desktop_compression_outcome.dart';
+import 'package:ylpa_console/core/services/compression_dispatcher.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 final class _RecordingCommandGateway implements HermesDesktopCommandGateway {
   final List<(String, Map<String, String>)> calls = [];

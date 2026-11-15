@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_compression_authority.dart';
+import 'package:ylpa_console/core/models/desktop_compression_authority.dart';
 
 void main() {
   final chat = Object();

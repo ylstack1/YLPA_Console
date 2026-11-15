@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/provider_auth_failure.dart';
-import 'package:hermes_android/core/models/turn_error_surface.dart';
+import 'package:ylpa_console/core/models/provider_auth_failure.dart';
+import 'package:ylpa_console/core/models/turn_error_surface.dart';
 
 TurnErrorSurface surfaceOf(
   String code, {

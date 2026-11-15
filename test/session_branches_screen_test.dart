@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/screens/session_branches_screen.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/screens/session_branches_screen.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Session _s(String id, {String? branchedFrom, double at = 1}) => Session(
   id: id,

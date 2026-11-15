@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:hermes_android/core/services/voice/live/flutter_webrtc_transport.dart';
+import 'package:ylpa_console/core/services/voice/live/flutter_webrtc_transport.dart';
 
 class _FakeChannel implements RTCDataChannel {
   int closeCalls = 0;

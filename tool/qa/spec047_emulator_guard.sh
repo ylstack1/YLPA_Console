@@ -4,7 +4,7 @@ set -Eeuo pipefail
 
 readonly EXPECTED_AVD="pixel_hermes_review_api36"
 readonly EXPECTED_SDK="36"
-readonly QA_PACKAGE="dev.xpetalab.hermesconsole.qa"
+readonly QA_PACKAGE="com.ylpa.console.qa"
 readonly DEFAULT_SERIAL="emulator-5556"
 readonly DEFAULT_APK="build/app/outputs/flutter-apk/app-qa-debug.apk"
 

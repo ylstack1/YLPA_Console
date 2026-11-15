@@ -4,14 +4,14 @@
 // with the request already written.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/capabilities_screen.dart';
-import 'package:hermes_android/core/capabilities/capability_plain_rows.dart';
-import 'package:hermes_android/core/capabilities/las_chat.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart' show ChatScreen;
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/hermes_row_switch.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/capabilities/capabilities_screen.dart';
+import 'package:ylpa_console/core/capabilities/capability_plain_rows.dart';
+import 'package:ylpa_console/core/capabilities/las_chat.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart' show ChatScreen;
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/hermes_row_switch.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import '../support/inter_font.dart';
 import 'capabilities_fakes.dart';

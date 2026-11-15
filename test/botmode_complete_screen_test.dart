@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hermes_android/core/services/bot_roster_cache.dart';
+import 'package:ylpa_console/core/services/bot_roster_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/screens/bot_sections_editor.dart';
-import 'package:hermes_android/core/screens/bot_profile_settings_screen.dart';
-import 'package:hermes_android/core/services/bot_section_service.dart';
-import 'package:hermes_android/core/services/bot_profile_client.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/widgets/remote_bot_roster.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/screens/bot_sections_editor.dart';
+import 'package:ylpa_console/core/screens/bot_profile_settings_screen.dart';
+import 'package:ylpa_console/core/services/bot_section_service.dart';
+import 'package:ylpa_console/core/services/bot_profile_client.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/widgets/remote_bot_roster.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Finder label(String value) => find.byWidgetPredicate(
   (w) => w is Text && (w.data == value || w.semanticsLabel == value),

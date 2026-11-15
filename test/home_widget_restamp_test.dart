@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/home_widget_snapshot.dart';
-import 'package:hermes_android/core/services/home_widget_publisher.dart';
+import 'package:ylpa_console/core/models/home_widget_snapshot.dart';
+import 'package:ylpa_console/core/services/home_widget_publisher.dart';
 
 class _Store implements HomeWidgetStore {
   final values = <String, Object?>{};

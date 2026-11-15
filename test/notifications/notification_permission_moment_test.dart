@@ -6,10 +6,10 @@ import 'package:flutter/material.dart' show SizedBox;
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
-import 'package:hermes_android/core/services/notifications/notification_permission_moment.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/core/services/notifications/notification_permission_moment.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/onboarding_fakes.dart';

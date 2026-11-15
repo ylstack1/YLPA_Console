@@ -73,7 +73,6 @@ class _AcpAgentSettingsScreenState extends State<AcpAgentSettingsScreen> {
     }
 
     var cwd = values.envValues.remove('__cwd') ?? widget.instance.cwd;
-    if (cwd.isEmpty) cwd = '~';
 
     final updated = AgentInstance(
       id: widget.instance.id,

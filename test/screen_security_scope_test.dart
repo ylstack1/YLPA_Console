@@ -3,7 +3,7 @@
 // nested page leaves.
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/screen_security.dart';
+import 'package:ylpa_console/core/services/screen_security.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

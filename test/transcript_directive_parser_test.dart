@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/transcript_directive_parser.dart';
+import 'package:ylpa_console/core/services/transcript_directive_parser.dart';
 
 void main() {
   group('parseTranscriptDirective', () {

@@ -4,10 +4,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/utils/unified_diff.dart';
-import 'package:hermes_android/core/widgets/chat/turn_changes_sheet.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/utils/unified_diff.dart';
+import 'package:ylpa_console/core/widgets/chat/turn_changes_sheet.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _frame = Duration(milliseconds: 16);
 final _anchor = GlobalKey(debugLabel: 'anchor');

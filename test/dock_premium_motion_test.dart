@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/dock.dart';
-import 'package:hermes_android/core/widgets/dock_style.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/dock.dart';
+import 'package:ylpa_console/core/widgets/dock_style.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 // One theme instance, so rebuilding the host never starts a theme lerp.
 final _theme = AppTheme.fromId('dark');

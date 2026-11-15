@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
-import 'package:hermes_android/core/models/desktop_control_center.dart';
-import 'package:hermes_android/core/models/project_files.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/models/desktop_control_center.dart';
+import 'package:ylpa_console/core/models/project_files.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
 
 /// Synthetic Projects fixture shared by the capture and behaviour tests.
 Map<String, dynamic> pj1215SampleTreeJson() => {

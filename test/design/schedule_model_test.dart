@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/schedule_model.dart';
-import 'package:hermes_android/l10n/app_localizations_en.dart';
-import 'package:hermes_android/l10n/app_localizations_es.dart';
+import 'package:ylpa_console/core/design/schedule_model.dart';
+import 'package:ylpa_console/l10n/app_localizations_en.dart';
+import 'package:ylpa_console/l10n/app_localizations_es.dart';
 
 void main() {
   final en = StringsEn();

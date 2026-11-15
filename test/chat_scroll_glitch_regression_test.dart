@@ -14,28 +14,28 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/app_lock.dart';
-import 'package:hermes_android/core/services/approval_policy.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/font_size_service.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/core/services/pinned_prompt_prefs.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/sftp_transfer_service.dart';
-import 'package:hermes_android/core/services/ssh_manager.dart';
-import 'package:hermes_android/core/services/ssh_session_service.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
-import 'package:hermes_android/core/services/turn_outbox_store.dart';
-import 'package:hermes_android/core/widgets/chat/chat_notch.dart'
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/app_lock.dart';
+import 'package:ylpa_console/core/services/approval_policy.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/font_size_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/pinned_prompt_prefs.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/sftp_transfer_service.dart';
+import 'package:ylpa_console/core/services/ssh_manager.dart';
+import 'package:ylpa_console/core/services/ssh_session_service.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/services/turn_outbox_store.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_notch.dart'
     show kChatNotchSheetOpen;
-import 'package:hermes_android/core/widgets/chat_turn_activity.dart'
+import 'package:ylpa_console/core/widgets/chat_turn_activity.dart'
     show LiveTurnTasks;
-import 'package:hermes_android/core/widgets/subagent_activity_card.dart'
+import 'package:ylpa_console/core/widgets/subagent_activity_card.dart'
     show SubagentActivityCard;
-import 'package:hermes_android/main.dart';
+import 'package:ylpa_console/main.dart';
 
 import 'support/test_api_client.dart';
 

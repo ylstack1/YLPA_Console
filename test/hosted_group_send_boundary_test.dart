@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
-import 'package:hermes_android/core/services/mission_control_repository.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/services/mission_control_repository.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 Map<String, Object?> _event({
   int seq = 4,

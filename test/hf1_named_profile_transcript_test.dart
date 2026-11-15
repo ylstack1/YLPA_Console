@@ -3,11 +3,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/local_transcript_store.dart';
-import 'package:hermes_android/core/services/session_deletion.dart';
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/local_transcript_store.dart';
+import 'package:ylpa_console/core/services/session_deletion.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';

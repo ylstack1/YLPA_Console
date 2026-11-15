@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/utils/session_title.dart';
-import 'package:hermes_android/core/widgets/session_deletion_dialogs.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/utils/session_title.dart';
+import 'package:ylpa_console/core/widgets/session_deletion_dialogs.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 void main() {
   final kanban = Session.fromJson({

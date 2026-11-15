@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/navigation/chat_route.dart';
-import 'package:hermes_android/core/widgets/adaptive_list_detail.dart';
+import 'package:ylpa_console/core/navigation/chat_route.dart';
+import 'package:ylpa_console/core/widgets/adaptive_list_detail.dart';
 
 // A chat opened in the list's detail pane lives on a nested Navigator.
 // openChatWithParent is what the drawer's «New chat» and recents use: it

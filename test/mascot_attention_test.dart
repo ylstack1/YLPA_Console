@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/core/services/notifications/notification_strings.dart';
-import 'package:hermes_android/core/shell/mascot_bridge.dart';
-import 'package:hermes_android/core/widgets/mascot/float/mascot_attention.dart';
-import 'package:hermes_android/core/widgets/mascot/float/mascot_sources.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
-import 'package:hermes_android/l10n/app_localizations_es.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_strings.dart';
+import 'package:ylpa_console/core/shell/mascot_bridge.dart';
+import 'package:ylpa_console/core/widgets/mascot/float/mascot_attention.dart';
+import 'package:ylpa_console/core/widgets/mascot/float/mascot_sources.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations_es.dart';
 
 /// What the floating mascot says for each thing the app knows, and where
 /// its one action goes.

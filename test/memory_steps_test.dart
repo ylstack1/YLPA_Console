@@ -2,12 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/activity_snapshot.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/turn_memory_pill.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
-import 'package:hermes_android/core/widgets/chat_turn_activity.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/turn_memory_pill.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/widgets/chat_turn_activity.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 // Memory steps (mock approved on 10 nov 2026): the OMH plugin's
 // `omh_remember` counts as memory like Hermes' own `memory`, and the live

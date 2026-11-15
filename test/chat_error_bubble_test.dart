@@ -6,12 +6,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/provider_auth_failure.dart';
-import 'package:hermes_android/core/models/turn_error_surface.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/utils/chat_error.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/provider_auth_failure.dart';
+import 'package:ylpa_console/core/models/turn_error_surface.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/utils/chat_error.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _retry = '↺ reintentar';
 

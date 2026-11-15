@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:hermes_android/core/theme/theme_profile.dart';
-import 'package:hermes_android/core/theme/theme_profile_codec.dart';
+import 'package:ylpa_console/core/theme/theme_profile.dart';
+import 'package:ylpa_console/core/theme/theme_profile_codec.dart';
 
 Map<String, dynamic> validThemeDocument({
   String id = 'b3be2e40-9fe6-4fc1-9fb5-9eb18844df76',

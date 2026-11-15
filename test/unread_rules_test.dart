@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/room/room_models.dart';
-import 'package:hermes_android/core/utils/chat_read_marker.dart';
-import 'package:hermes_android/core/utils/unread_rules.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_models.dart';
+import 'package:ylpa_console/core/utils/chat_read_marker.dart';
+import 'package:ylpa_console/core/utils/unread_rules.dart';
 
 import 'bots/room/room_fixtures.dart';
 

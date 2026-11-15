@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/assistant_content.dart';
+import 'package:ylpa_console/core/utils/assistant_content.dart';
 
 void main() {
   test('typed classic close cannot release a mismatched private tail', () {

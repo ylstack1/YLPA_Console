@@ -5,8 +5,8 @@ import 'dart:typed_data';
 // ignore: depend_on_referenced_packages
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/voice/hermes_dictation_stream.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/voice/hermes_dictation_stream.dart';
 
 /// Desktop `lib/voice-stream.ts` over `/api/audio/transcribe-stream`
 /// (`hermes_cli/web_routers/audio.py:516-590`), with fake sockets only.

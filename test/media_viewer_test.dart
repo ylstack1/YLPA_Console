@@ -10,15 +10,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/tokens.dart' show HermesChrome;
-import 'package:hermes_android/core/services/artifact_media.dart';
-import 'package:hermes_android/core/services/chat_content_extractor.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/motion.dart' show HermesMotion;
-import 'package:hermes_android/core/widgets/artifacts/open_artifact.dart';
-import 'package:hermes_android/core/widgets/generated_video_card.dart';
-import 'package:hermes_android/core/widgets/media_viewer/media_viewer.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/tokens.dart' show HermesChrome;
+import 'package:ylpa_console/core/services/artifact_media.dart';
+import 'package:ylpa_console/core/services/chat_content_extractor.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/motion.dart' show HermesMotion;
+import 'package:ylpa_console/core/widgets/artifacts/open_artifact.dart';
+import 'package:ylpa_console/core/widgets/generated_video_card.dart';
+import 'package:ylpa_console/core/widgets/media_viewer/media_viewer.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/fake_video_player_platform.dart';
 

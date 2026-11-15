@@ -5,9 +5,9 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/generated_media_service.dart';
-import 'package:hermes_android/core/services/media_dimensions.dart';
-import 'package:hermes_android/core/services/media_prefetcher.dart';
+import 'package:ylpa_console/core/services/generated_media_service.dart';
+import 'package:ylpa_console/core/services/media_dimensions.dart';
+import 'package:ylpa_console/core/services/media_prefetcher.dart';
 
 /// PNG signature + IHDR header only: enough for the header probe.
 Uint8List pngHeader(int width, int height) {

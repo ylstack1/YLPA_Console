@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/chat_prompt_index.dart';
+import 'package:ylpa_console/core/screens/chat_prompt_index.dart';
 
 Map<String, dynamic> _msg(String role, String content, {Object? rowId}) => {
   'role': role,

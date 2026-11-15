@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/interactive_prompt.dart';
-import 'package:hermes_android/core/services/interactive_prompt_reducer.dart';
-import 'package:hermes_android/core/widgets/accent_card.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart';
-import 'package:hermes_android/core/widgets/interactive_prompt_card.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/interactive_prompt.dart';
+import 'package:ylpa_console/core/services/interactive_prompt_reducer.dart';
+import 'package:ylpa_console/core/widgets/accent_card.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart';
+import 'package:ylpa_console/core/widgets/interactive_prompt_card.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 InteractivePromptEntry _entry(InteractivePromptRequest request) =>
     InteractivePromptEntry(

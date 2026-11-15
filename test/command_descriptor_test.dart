@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/capability_descriptor.dart';
-import 'package:hermes_android/core/models/command_descriptor.dart';
+import 'package:ylpa_console/core/models/capability_descriptor.dart';
+import 'package:ylpa_console/core/models/command_descriptor.dart';
 
 CommandDescriptor _descriptor({
   String name = 'compress',

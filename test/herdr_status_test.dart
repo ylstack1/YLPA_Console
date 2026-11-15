@@ -5,7 +5,7 @@ import 'dart:io';
 // ignore: depend_on_referenced_packages
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/herdr_status.dart';
+import 'package:ylpa_console/core/services/herdr_status.dart';
 
 /// Exact command lines sent to the server: Herdr's CLI in the login shell.
 String _login(String command) => '"\${SHELL:-/bin/sh}" -lc \'$command\'';

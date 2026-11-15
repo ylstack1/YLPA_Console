@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/motion_prefs.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/hermes_tree_rows.dart';
-import 'package:hermes_android/core/widgets/hermes_shiny_text.dart';
-import 'package:hermes_android/core/widgets/hermes_streaming_cursor.dart';
-import 'package:hermes_android/core/widgets/hermes_theme_reveal.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/motion_prefs.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/hermes_tree_rows.dart';
+import 'package:ylpa_console/core/widgets/hermes_shiny_text.dart';
+import 'package:ylpa_console/core/widgets/hermes_streaming_cursor.dart';
+import 'package:ylpa_console/core/widgets/hermes_theme_reveal.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _host(Widget child, {bool disableAnimations = false}) => MaterialApp(

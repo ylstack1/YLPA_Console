@@ -6,7 +6,7 @@
 // the chat) cannot be made here because ChatScreen needs the whole app, so it
 // is added by hand and said so.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/onboarding_arrival.dart';
+import 'package:ylpa_console/core/services/onboarding_arrival.dart';
 
 import 'c3d_support.dart';
 

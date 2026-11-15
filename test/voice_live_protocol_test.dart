@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/live/voice_live_protocol.dart';
+import 'package:ylpa_console/core/services/voice/live/voice_live_protocol.dart';
 
 Map<String, dynamic> _msg(String role, String content, {Object? extra}) => {
   'role': role,

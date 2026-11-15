@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
-import 'package:hermes_android/core/services/mission_control_repository.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/services/mission_control_repository.dart';
 
 Map<String, Object?> _roomJson({String gateway = 'gateway-1', int epoch = 2}) =>
     {

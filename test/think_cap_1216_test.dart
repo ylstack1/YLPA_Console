@@ -9,10 +9,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat_turn_activity.dart';
-import 'package:hermes_android/core/widgets/compact_markdown.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat_turn_activity.dart';
+import 'package:ylpa_console/core/widgets/compact_markdown.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 // The quote adds 4 + 4 of vertical padding around the capped box.
 const double _pad = 8;

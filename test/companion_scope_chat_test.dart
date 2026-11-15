@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/state/companion_controller.dart';
+import 'package:ylpa_console/core/companion/state/companion_controller.dart';
 
 void main() {
   group('QA 9493: the header wears only the chat\'s own companion', () {

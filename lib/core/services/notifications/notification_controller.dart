@@ -1,5 +1,5 @@
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/core/services/run_registry.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/run_registry.dart';
 
 /// Capa semántica entre los eventos SSE de ejecución y NotificationService.
 /// Traduce RunRecord a notificaciones Android sin duplicar la lógica de

@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_session_config.dart';
-import 'package:hermes_android/core/models/desktop_model_catalog.dart';
-import 'package:hermes_android/core/services/model_presets_store.dart';
+import 'package:ylpa_console/core/models/desktop_session_config.dart';
+import 'package:ylpa_console/core/models/desktop_model_catalog.dart';
+import 'package:ylpa_console/core/services/model_presets_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

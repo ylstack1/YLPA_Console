@@ -6,12 +6,12 @@
 //    nothing and the pill was left empty around the connection dot.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/floating_chat_header.dart';
-import 'package:hermes_android/core/widgets/hermes_app_bar.dart';
-import 'package:hermes_android/core/widgets/island.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/floating_chat_header.dart';
+import 'package:ylpa_console/core/widgets/hermes_app_bar.dart';
+import 'package:ylpa_console/core/widgets/island.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _app(Widget home, {double textScale = 1}) => MaterialApp(
   locale: const Locale('es'),

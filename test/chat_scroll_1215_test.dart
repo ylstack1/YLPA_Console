@@ -1,7 +1,7 @@
 import 'support/live_chat_v4.dart';
 
-import 'package:hermes_android/core/widgets/chat/chat_pinned_prompt_header.dart';
-import 'package:hermes_android/core/design/floating.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_pinned_prompt_header.dart';
+import 'package:ylpa_console/core/design/floating.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -16,43 +16,43 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:hermes_android/core/widgets/chat/chat_notch.dart';
-import 'package:hermes_android/core/widgets/chat/console_composer.dart';
-import 'package:hermes_android/core/widgets/chat/live_reply_reveal.dart';
-import 'package:hermes_android/core/design/tokens.dart' show HermesChrome;
-import 'package:hermes_android/core/design/glass_strip.dart'
+import 'package:ylpa_console/core/widgets/chat/chat_notch.dart';
+import 'package:ylpa_console/core/widgets/chat/console_composer.dart';
+import 'package:ylpa_console/core/widgets/chat/live_reply_reveal.dart';
+import 'package:ylpa_console/core/design/tokens.dart' show HermesChrome;
+import 'package:ylpa_console/core/design/glass_strip.dart'
     show HermesGlassStrip;
-import 'package:hermes_android/core/widgets/frosted_backdrop.dart'
+import 'package:ylpa_console/core/widgets/frosted_backdrop.dart'
     show FrostedBackdrop, FrostedBackdropPolicy, FrostedZone;
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/app_lock.dart';
-import 'package:hermes_android/core/services/approval_policy.dart';
-import 'package:hermes_android/core/services/chat_draft_store.dart';
-import 'package:hermes_android/core/services/chat_stream_trace.dart';
-import 'package:hermes_android/core/models/attachment_draft.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/font_size_service.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/core/services/pinned_prompt_prefs.dart';
-import 'package:hermes_android/core/services/reasoning_disclosure_prefs.dart';
-import 'package:hermes_android/core/widgets/generated_image_card.dart';
-import 'package:hermes_android/core/widgets/hermes_notice.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/sftp_transfer_service.dart';
-import 'package:hermes_android/core/services/ssh_manager.dart';
-import 'package:hermes_android/core/services/ssh_session_service.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
-import 'package:hermes_android/core/services/turn_outbox_store.dart';
-import 'package:hermes_android/core/utils/unread_rules.dart';
-import 'package:hermes_android/core/widgets/attachment_card.dart';
-import 'package:hermes_android/main.dart';
-import 'package:hermes_android/core/widgets/floating_chat_header.dart';
-import 'package:hermes_android/core/widgets/island.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace.dart'
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/app_lock.dart';
+import 'package:ylpa_console/core/services/approval_policy.dart';
+import 'package:ylpa_console/core/services/chat_draft_store.dart';
+import 'package:ylpa_console/core/services/chat_stream_trace.dart';
+import 'package:ylpa_console/core/models/attachment_draft.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/font_size_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/pinned_prompt_prefs.dart';
+import 'package:ylpa_console/core/services/reasoning_disclosure_prefs.dart';
+import 'package:ylpa_console/core/widgets/generated_image_card.dart';
+import 'package:ylpa_console/core/widgets/hermes_notice.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/sftp_transfer_service.dart';
+import 'package:ylpa_console/core/services/ssh_manager.dart';
+import 'package:ylpa_console/core/services/ssh_session_service.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/services/turn_outbox_store.dart';
+import 'package:ylpa_console/core/utils/unread_rules.dart';
+import 'package:ylpa_console/core/widgets/attachment_card.dart';
+import 'package:ylpa_console/main.dart';
+import 'package:ylpa_console/core/widgets/floating_chat_header.dart';
+import 'package:ylpa_console/core/widgets/island.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace.dart'
     show chatWorkspaceSplitFits;
-import 'package:hermes_android/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
 
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 

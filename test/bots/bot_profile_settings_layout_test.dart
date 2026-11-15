@@ -3,11 +3,11 @@
 // anything to save.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/bot_profile_settings_screen.dart';
-import 'package:hermes_android/core/services/bot_profile_client.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/hermes_ui.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/bot_profile_settings_screen.dart';
+import 'package:ylpa_console/core/services/bot_profile_client.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/hermes_ui.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _description = 'Hermes: orquestador';
 

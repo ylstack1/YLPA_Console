@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/render/companion_status_indicator.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/companion/models/companion_mood.dart';
-import 'package:hermes_android/core/widgets/message_avatar_header.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/companion/render/companion_status_indicator.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/companion/models/companion_mood.dart';
+import 'package:ylpa_console/core/widgets/message_avatar_header.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _app(
   Widget child, {

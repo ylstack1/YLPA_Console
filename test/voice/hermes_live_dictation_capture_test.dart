@@ -5,10 +5,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/voice/hermes_dictation_stream.dart';
-import 'package:hermes_android/core/services/voice/stt_engine.dart';
-import 'package:hermes_android/core/services/voice/stt_hermes_server.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/voice/hermes_dictation_stream.dart';
+import 'package:ylpa_console/core/services/voice/stt_engine.dart';
+import 'package:ylpa_console/core/services/voice/stt_hermes_server.dart';
 import 'package:record/record.dart';
 
 /// Live dictation over the recording, copied from Desktop

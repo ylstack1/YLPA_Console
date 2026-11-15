@@ -1,6 +1,6 @@
 import 'support/live_chat_v4.dart';
 
-import 'package:hermes_android/core/widgets/chat_turn_activity.dart';
+import 'package:ylpa_console/core/widgets/chat_turn_activity.dart';
 
 // ss1215: opening a chat that is already running on the server paints the
 // transcript (running tool, «n/m» tasks) on its first frame, the resume snapshot
@@ -11,21 +11,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_active_session.dart';
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/app_lock.dart';
-import 'package:hermes_android/core/services/approval_policy.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/font_size_service.dart';
-import 'package:hermes_android/core/services/global_activity_aggregate.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/sftp_transfer_service.dart';
-import 'package:hermes_android/core/services/ssh_manager.dart';
-import 'package:hermes_android/core/services/ssh_session_service.dart';
-import 'package:hermes_android/main.dart';
+import 'package:ylpa_console/core/models/desktop_active_session.dart';
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/app_lock.dart';
+import 'package:ylpa_console/core/services/approval_policy.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/font_size_service.dart';
+import 'package:ylpa_console/core/services/global_activity_aggregate.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/sftp_transfer_service.dart';
+import 'package:ylpa_console/core/services/ssh_manager.dart';
+import 'package:ylpa_console/core/services/ssh_session_service.dart';
+import 'package:ylpa_console/main.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';

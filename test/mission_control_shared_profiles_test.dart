@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/services/bot_roster_cache.dart';
-import 'package:hermes_android/core/services/bot_roster_store.dart';
-import 'package:hermes_android/core/services/connection_manager.dart'
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/services/bot_roster_cache.dart';
+import 'package:ylpa_console/core/services/bot_roster_store.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart'
     show DashboardHttpException;
-import 'package:hermes_android/core/services/mission_control_repository.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/services/mission_control_repository.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final connection = SavedConnection(

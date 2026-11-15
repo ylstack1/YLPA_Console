@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/utf8_chunks.dart';
+import 'package:ylpa_console/core/utils/utf8_chunks.dart';
 
 const _replacement = '�';
 

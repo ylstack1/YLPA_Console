@@ -3,11 +3,11 @@
 // edit reads the map again.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/memory/constellation_graph.dart';
-import 'package:hermes_android/core/memory/constellation_view.dart';
-import 'package:hermes_android/core/screens/constellation_screen.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/memory/constellation_graph.dart';
+import 'package:ylpa_console/core/memory/constellation_view.dart';
+import 'package:ylpa_console/core/screens/constellation_screen.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Map<String, dynamic> _one(Map<String, Object?> node) => {
   'nodes': [node],

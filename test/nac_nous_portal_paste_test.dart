@@ -6,11 +6,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/onboarding/manual_connect_page.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_widgets.dart';
-import 'package:hermes_android/core/services/dashboard_address.dart';
-import 'package:hermes_android/core/widgets/animated_hermes_logo.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/onboarding/manual_connect_page.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_widgets.dart';
+import 'package:ylpa_console/core/services/dashboard_address.dart';
+import 'package:ylpa_console/core/widgets/animated_hermes_logo.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 

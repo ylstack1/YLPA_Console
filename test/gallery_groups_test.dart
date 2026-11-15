@@ -1,9 +1,9 @@
 // «Galería»: which artifacts are pictures, the day each belongs to, and how
 // they group by day and by conversation.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/chat_content_extractor.dart';
-import 'package:hermes_android/core/services/gallery_groups.dart';
-import 'package:hermes_android/core/services/global_artifacts.dart';
+import 'package:ylpa_console/core/services/chat_content_extractor.dart';
+import 'package:ylpa_console/core/services/gallery_groups.dart';
+import 'package:ylpa_console/core/services/global_artifacts.dart';
 
 import 'support/fake_global_artifacts_source.dart';
 

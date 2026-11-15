@@ -3,12 +3,12 @@
 // hands back what is left. Backing out hands back nothing.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/attachment_draft.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/screens/shared_review_screen.dart';
-import 'package:hermes_android/core/services/android_share_inbox.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/attachment_draft.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/screens/shared_review_screen.dart';
+import 'package:ylpa_console/core/services/android_share_inbox.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 SavedConnection _conn(String id, String label) => SavedConnection(
   id: id,

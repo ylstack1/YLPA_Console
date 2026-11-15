@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/bot_profile_client.dart';
-import 'package:hermes_android/core/services/bot_section_service.dart';
+import 'package:ylpa_console/core/services/bot_profile_client.dart';
+import 'package:ylpa_console/core/services/bot_section_service.dart';
 
 void main() {
   test(

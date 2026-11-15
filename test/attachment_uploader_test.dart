@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hermes_android/core/models/attachment_draft.dart';
-import 'package:hermes_android/core/services/attachment_uploader.dart';
+import 'package:ylpa_console/core/models/attachment_draft.dart';
+import 'package:ylpa_console/core/services/attachment_uploader.dart';
 
 void main() {
   late Directory temp;

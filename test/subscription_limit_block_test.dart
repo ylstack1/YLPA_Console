@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat_status_pill.dart';
-import 'package:hermes_android/core/widgets/subscription_limit_block.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat_status_pill.dart';
+import 'package:ylpa_console/core/widgets/subscription_limit_block.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 final _now = DateTime.utc(2026, 10, 6, 12);
 

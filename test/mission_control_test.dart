@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/kanban.dart';
-import 'package:hermes_android/core/models/mission_control.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/mission_control_repository.dart';
-import 'package:hermes_android/core/services/mission_organization_store.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/kanban.dart';
+import 'package:ylpa_console/core/models/mission_control.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/mission_control_repository.dart';
+import 'package:ylpa_console/core/services/mission_organization_store.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Session _session({

@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:flutter/material.dart';
-import 'package:hermes_android/core/models/activity_snapshot.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/floating_chat_header.dart';
-import 'package:hermes_android/core/widgets/island.dart';
-import 'package:hermes_android/core/widgets/mascot/header_mascot.dart';
-import 'package:hermes_android/core/widgets/mascot/mascot.dart';
-import 'package:hermes_android/core/widgets/mascot/mascot_sprite.dart'
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/floating_chat_header.dart';
+import 'package:ylpa_console/core/widgets/island.dart';
+import 'package:ylpa_console/core/widgets/mascot/header_mascot.dart';
+import 'package:ylpa_console/core/widgets/mascot/mascot.dart';
+import 'package:ylpa_console/core/widgets/mascot/mascot_sprite.dart'
     show debugMascotActiveTimers;
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 final _theme = AppTheme.hermesRedDark;
 

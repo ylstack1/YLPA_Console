@@ -178,6 +178,9 @@ class _AcpHubScreenState extends State<AcpHubScreen> {
         instance: instance,
         manifest: manifest,
         bearerToken: token,
+        instanceStore: widget.instanceStore,
+        secureStorage: widget.secureStorage,
+        catalog: _catalog!,
       ),
     ));
   }

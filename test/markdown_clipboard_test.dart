@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/markdown_clipboard.dart';
+import 'package:ylpa_console/core/utils/markdown_clipboard.dart';
 
 void main() {
   group('userMessageClipboardText', () {

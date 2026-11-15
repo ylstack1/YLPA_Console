@@ -10,7 +10,7 @@ firmado final continúa pendiente; este documento no la da por realizada.
 |---|---:|---|
 | Chat anónimo/aleatorio y seguridad infantil | No directamente | La app conversa con el agente privado del usuario; no empareja personas ni ofrece chat anónimo entre usuarios. Mantener «no dirigida a menores» y clasificación de contenido precisa |
 | `READ_CALL_LOG` para verificación telefónica | No | El manifest no declara SMS, llamadas ni `READ_CALL_LOG` |
-| Registro/verificación de apps del desarrollador | Sí, administrativo | Revisar la portada de Play Console y confirmar que `dev.xpetalab.hermesconsole` figure registrada antes del plazo. No requiere código si Google la registró automáticamente |
+| Registro/verificación de apps del desarrollador | Sí, administrativo | Revisar la portada de Play Console y confirmar que `com.ylpa.console` figure registrada antes del plazo. No requiere código si Google la registró automáticamente |
 | Integraciones de IA de terceros sujetas a uso limitado, divulgación y consentimiento | Sí | Actualizados aviso de primer uso, Política ES/EN, Data Safety y textos de Play para explicar Hermes, proveedores de modelo/herramienta y motores de voz |
 | Clasificación de contenido obligatoria | Sí, administrativo | Completar/revisar el cuestionario IARC; no dejar la app «sin clasificar» |
 | Target API más reciente antes del 31-08-2026 | Cumplido en código | La candidata usa target/compile SDK 36; verificarlo otra vez en el AAB final |

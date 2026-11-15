@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
-import 'package:hermes_android/core/models/kanban.dart';
-import 'package:hermes_android/core/models/mission_control.dart';
-import 'package:hermes_android/core/models/room_member_status.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/models/kanban.dart';
+import 'package:ylpa_console/core/models/mission_control.dart';
+import 'package:ylpa_console/core/models/room_member_status.dart';
 
 final statusNow = DateTime.fromMillisecondsSinceEpoch(1000000);
 final statusRoom = HostedGroupRoom.fromJson({

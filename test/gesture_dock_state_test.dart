@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/ssh_profile_presence.dart';
-import 'package:hermes_android/core/shell/gesture_dock_state.dart';
+import 'package:ylpa_console/core/services/ssh_profile_presence.dart';
+import 'package:ylpa_console/core/shell/gesture_dock_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/ambient_backdrop.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/glass_look.dart';
-import 'package:hermes_android/core/theme/component_profile.dart';
+import 'package:ylpa_console/core/design/ambient_backdrop.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/glass_look.dart';
+import 'package:ylpa_console/core/theme/component_profile.dart';
 
 /// QA 1.4.0: the terminal component profile drew 6 dp rectangles for its
 /// action buttons (the SSH screens). They are pills; icon buttons and every

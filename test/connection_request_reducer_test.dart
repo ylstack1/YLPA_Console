@@ -3,7 +3,7 @@
 // ported from Hermes Desktop's connection-request store. Pure data; fixtures
 // are synthetic and the links use an example host.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/connection_request.dart';
+import 'package:ylpa_console/core/models/connection_request.dart';
 
 Map<String, dynamic> _target(
   String name, {

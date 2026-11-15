@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/json_rpc_wire.dart';
-import 'package:hermes_android/core/services/recovery_proof.dart';
-import 'package:hermes_android/core/services/replay_coordinator.dart';
+import 'package:ylpa_console/core/services/json_rpc_wire.dart';
+import 'package:ylpa_console/core/services/recovery_proof.dart';
+import 'package:ylpa_console/core/services/replay_coordinator.dart';
 
 void main() {
   test('recovery authority rejects anything but the exact channel', () {

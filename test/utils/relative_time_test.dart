@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/relative_time.dart';
+import 'package:ylpa_console/core/utils/relative_time.dart';
 
 void main() {
   final now = DateTime(2026, 7, 26, 21);

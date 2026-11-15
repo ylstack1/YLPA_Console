@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/data/room_member_prompts.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/bots/data/room_member_prompts.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 import 'room_fixtures.dart';
 

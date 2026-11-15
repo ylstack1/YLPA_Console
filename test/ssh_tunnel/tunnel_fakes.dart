@@ -3,8 +3,8 @@
 import 'dart:async';
 
 import 'package:dartssh2/dartssh2.dart';
-import 'package:hermes_android/core/services/ssh_dashboard_tunnel.dart';
-import 'package:hermes_android/core/services/ssh_manager.dart';
+import 'package:ylpa_console/core/services/ssh_dashboard_tunnel.dart';
+import 'package:ylpa_console/core/services/ssh_manager.dart';
 
 /// One end of a byte stream: [emit] is what arrives, [sent] what was written.
 class FakeEnd implements TunnelEnd {

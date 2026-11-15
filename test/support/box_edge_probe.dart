@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/box_edge.dart';
+import 'package:ylpa_console/core/design/box_edge.dart';
 
 /// The finish of a box ([HermesBoxEdges]) painted somewhere under [owner].
 Finder boxEdgesUnder(Finder owner) => find.descendant(

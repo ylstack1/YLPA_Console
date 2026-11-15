@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/home/board/home_board_tiles.dart';
-import 'package:hermes_android/core/services/startup_guard.dart';
-import 'package:hermes_android/core/utils/relative_time.dart';
-import 'package:hermes_android/core/widgets/activity_pill.dart';
-import 'package:hermes_android/core/widgets/compaction_dock.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/home/board/home_board_tiles.dart';
+import 'package:ylpa_console/core/services/startup_guard.dart';
+import 'package:ylpa_console/core/utils/relative_time.dart';
+import 'package:ylpa_console/core/widgets/activity_pill.dart';
+import 'package:ylpa_console/core/widgets/compaction_dock.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

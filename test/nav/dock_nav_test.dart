@@ -3,23 +3,23 @@
 // profile; Ajustes opens Ajustes de la app and is the selected item there.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/config/feature_flags.dart';
-import 'package:hermes_android/core/models/dock_config.dart';
-import 'package:hermes_android/core/navigation/agents_destination.dart';
-import 'package:hermes_android/core/screens/app_settings_screen.dart';
-import 'package:hermes_android/core/screens/herdr_agents_screen.dart'
+import 'package:ylpa_console/core/config/feature_flags.dart';
+import 'package:ylpa_console/core/models/dock_config.dart';
+import 'package:ylpa_console/core/navigation/agents_destination.dart';
+import 'package:ylpa_console/core/screens/app_settings_screen.dart';
+import 'package:ylpa_console/core/screens/herdr_agents_screen.dart'
     show AgentsHomeScreen;
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/dock_preferences_store.dart';
-import 'package:hermes_android/core/services/ssh_profile_presence.dart';
-import 'package:hermes_android/core/shell/dock_activity_sheet.dart';
-import 'package:hermes_android/core/shell/dock_geometry.dart';
-import 'package:hermes_android/core/shell/dock_mode.dart';
-import 'package:hermes_android/core/shell/gesture_dock.dart';
-import 'package:hermes_android/core/shell/gesture_dock_host.dart';
-import 'package:hermes_android/core/shell/gesture_dock_state.dart';
-import 'package:hermes_android/core/widgets/general_dock_shell.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/dock_preferences_store.dart';
+import 'package:ylpa_console/core/services/ssh_profile_presence.dart';
+import 'package:ylpa_console/core/shell/dock_activity_sheet.dart';
+import 'package:ylpa_console/core/shell/dock_geometry.dart';
+import 'package:ylpa_console/core/shell/dock_mode.dart';
+import 'package:ylpa_console/core/shell/gesture_dock.dart';
+import 'package:ylpa_console/core/shell/gesture_dock_host.dart';
+import 'package:ylpa_console/core/shell/gesture_dock_state.dart';
+import 'package:ylpa_console/core/widgets/general_dock_shell.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import '../support/nav_harness.dart';
 

@@ -6,7 +6,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:hermes_android/core/services/mobile_oauth.dart';
+import 'package:ylpa_console/core/services/mobile_oauth.dart';
 
 /// Hermes-shaped dashboard: authorize redirects to the app callback with a
 /// one-use code (120 s TTL on its own clock), token checks PKCE and audits

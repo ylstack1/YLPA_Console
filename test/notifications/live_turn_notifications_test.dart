@@ -7,12 +7,12 @@ import 'dart:io';
 // ignore: depend_on_referenced_packages
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session_live_status.dart';
-import 'package:hermes_android/core/services/notifications/bot_face_bitmap.dart';
-import 'package:hermes_android/core/services/notifications/live_turn_notifications.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/core/services/notifications/notification_strings.dart';
-import 'package:hermes_android/core/services/notifications/rich_notifications.dart';
+import 'package:ylpa_console/core/models/session_live_status.dart';
+import 'package:ylpa_console/core/services/notifications/bot_face_bitmap.dart';
+import 'package:ylpa_console/core/services/notifications/live_turn_notifications.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_strings.dart';
+import 'package:ylpa_console/core/services/notifications/rich_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const es = NotifL10n(true);

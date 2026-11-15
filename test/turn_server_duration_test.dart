@@ -1,7 +1,7 @@
 // The duration of a finished turn by the server's clock («Trabajó 186 s» for
 // a 41 s turn reconciled minutes later from the background).
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/turn_server_duration.dart';
+import 'package:ylpa_console/core/utils/turn_server_duration.dart';
 
 const prompt = 1800000000.0; // seconds, as Hermes stamps its rows
 

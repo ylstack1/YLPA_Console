@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/stt_sherpa.dart';
+import 'package:ylpa_console/core/services/voice/stt_sherpa.dart';
 
 const _dirName = 'sherpa-test-model';
 const _required = ['tokens.txt', 'encoder.int8.onnx', 'decoder.int8.onnx'];

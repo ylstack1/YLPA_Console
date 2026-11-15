@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/capabilities_repository.dart';
-import 'package:hermes_android/core/capabilities/capability_models.dart';
-import 'package:hermes_android/core/services/connection_manager.dart'
+import 'package:ylpa_console/core/capabilities/capabilities_repository.dart';
+import 'package:ylpa_console/core/capabilities/capability_models.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart'
     show DashboardHttpException;
 
 import 'capabilities/capabilities_fakes.dart';

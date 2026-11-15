@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/external_provider_screen.dart';
-import 'package:hermes_android/core/services/litert_engine.dart';
-import 'package:hermes_android/core/services/voice/stt_remote.dart';
-import 'package:hermes_android/core/services/voice/tts_engine.dart';
+import 'package:ylpa_console/core/screens/external_provider_screen.dart';
+import 'package:ylpa_console/core/services/litert_engine.dart';
+import 'package:ylpa_console/core/services/voice/stt_remote.dart';
+import 'package:ylpa_console/core/services/voice/tts_engine.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

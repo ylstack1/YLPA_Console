@@ -4,7 +4,7 @@
 // the app is in the background.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/chat_turn_activity.dart';
+import 'package:ylpa_console/core/widgets/chat_turn_activity.dart';
 
 Widget _host(List<Widget> marks, {bool reduceMotion = false}) => MaterialApp(
   home: Builder(

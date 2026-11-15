@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-readonly PERFETTO_PACKAGE='dev.xpetalab.hermesconsole.qa'
+readonly PERFETTO_PACKAGE='com.ylpa.console.qa'
 readonly PERFETTO_DEFAULT_SERIAL=''
 
 # These sources are the minimum evidence gate. A capture must not continue if

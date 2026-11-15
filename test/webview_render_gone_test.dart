@@ -2,12 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/browser/in_app_browser_screen.dart';
-import 'package:hermes_android/core/browser/webview_render_guard.dart';
-import 'package:hermes_android/core/screen/takeover_view.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/artifact_viewer/artifact_html_policy.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/browser/in_app_browser_screen.dart';
+import 'package:ylpa_console/core/browser/webview_render_guard.dart';
+import 'package:ylpa_console/core/screen/takeover_view.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/artifact_viewer/artifact_html_policy.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'support/fake_webview_platform.dart';

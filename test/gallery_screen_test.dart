@@ -5,14 +5,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/artifacts_screen.dart';
-import 'package:hermes_android/core/screens/gallery_screen.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/global_artifacts.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat_content_thumbnail.dart';
-import 'package:hermes_android/core/widgets/media_viewer/media_viewer.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/artifacts_screen.dart';
+import 'package:ylpa_console/core/screens/gallery_screen.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/global_artifacts.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat_content_thumbnail.dart';
+import 'package:ylpa_console/core/widgets/media_viewer/media_viewer.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/fake_global_artifacts_source.dart';
 

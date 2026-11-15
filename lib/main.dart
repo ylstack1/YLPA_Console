@@ -826,13 +826,13 @@ class HermesAppState extends State<HermesApp> with WidgetsBindingObserver {
   final AppNavigationIntentFence _appNavigationFence =
       AppNavigationIntentFence();
 
-  // Deep link hermes://pair (abrir la app ya rellena desde un enlace tocado).
+  // Deep link ylpa://pair (abrir la app ya rellena desde un enlace tocado).
   // La suscripción mantiene viva la instancia de AppLinks mientras escucha.
   StreamSubscription<Uri>? _linkSub;
   final PairingLinkDeliveryGate _pairingLinkDeliveryGate =
       PairingLinkDeliveryGate();
   bool _pairingLinkRetryScheduled = false;
-  // hermes://plugin|skill/install: held until unlocked, onboarded and
+  // ylpa://plugin|skill/install: held until unlocked, onboarded and
   // connected; opens a confirmation, never an install.
   final CatalogDeepLinkInbox _catalogLinks = CatalogDeepLinkInbox();
 
@@ -1758,7 +1758,7 @@ class HermesAppState extends State<HermesApp> with WidgetsBindingObserver {
     voice.prepareReadAloudPlayback = _prepareReadAloudPlayback;
     voice.readAloud.addListener(_onReadAloudRuntimeChanged);
     FlutterForegroundTask.addTaskDataCallback(_onVoiceTaskData);
-    // Deep link hermes://pair → abrir el alta de instancia ya rellena.
+    // Deep link ylpa://pair → abrir el alta de instancia ya rellena.
     _initDeepLinks();
     // Notifications are asked for once there is a Hermes to hear from,
     // never on opening the app.
@@ -3121,7 +3121,7 @@ class HermesAppState extends State<HermesApp> with WidgetsBindingObserver {
     _redrawLauncherWidgets();
   }
 
-  /// Inicializa la escucha de deep links `hermes://pair` (enlace de emparejado).
+  /// Inicializa la escucha de deep links `ylpa://pair` (enlace de emparejado).
   /// Cubre el arranque en frío (getInitialLink) y la app ya abierta (stream).
   Future<void> _initDeepLinks() async {
     try {

@@ -7,11 +7,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:hermes_android/core/services/agent_processes.dart';
-import 'package:hermes_android/core/services/herdr_harness.dart';
-import 'package:hermes_android/core/services/herdr_status.dart';
-import 'package:hermes_android/core/services/ssh_session_kind.dart';
-import 'package:hermes_android/core/services/terminal_sessions.dart';
+import 'package:ylpa_console/core/services/agent_processes.dart';
+import 'package:ylpa_console/core/services/herdr_harness.dart';
+import 'package:ylpa_console/core/services/herdr_status.dart';
+import 'package:ylpa_console/core/services/ssh_session_kind.dart';
+import 'package:ylpa_console/core/services/terminal_sessions.dart';
 
 /// Absolute path the fake server reports for `herdr`.
 const String fakeHerdrPath = '/home/demo/.local/bin/herdr';

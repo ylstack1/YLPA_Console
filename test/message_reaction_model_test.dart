@@ -1,7 +1,7 @@
 // Reaction rules shared by the optimistic UI and the server echo: one emoji
 // per author, the same emoji again retracts, null clears.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/message_reaction.dart';
+import 'package:ylpa_console/core/models/message_reaction.dart';
 
 void main() {
   const user = MessageReactionAuthor.user;

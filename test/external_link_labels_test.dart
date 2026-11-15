@@ -1,7 +1,7 @@
 // Port of Hermes Desktop's link labels (`lib/external-link.tsx`), with the
 // cases of its own test (`external-link.test.tsx`).
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/external_link_labels.dart';
+import 'package:ylpa_console/core/utils/external_link_labels.dart';
 
 void main() {
   test('URL fallbacks read as host + path (Desktop case)', () {

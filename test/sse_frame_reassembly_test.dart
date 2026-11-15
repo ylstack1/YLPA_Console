@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hermes_android/core/services/sse_frame_buffer.dart';
+import 'package:ylpa_console/core/services/sse_frame_buffer.dart';
 
 /// Los lectores SSE reensamblan frames que llegan partidos por la red. El
 /// acumulador no puede perder un separador que quede a caballo entre dos

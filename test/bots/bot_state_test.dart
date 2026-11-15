@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/state/attention.dart';
-import 'package:hermes_android/core/bots/state/bot_chat_target.dart';
-import 'package:hermes_android/core/bots/state/bot_presence.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/desktop_active_session.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/bots/state/attention.dart';
+import 'package:ylpa_console/core/bots/state/bot_chat_target.dart';
+import 'package:ylpa_console/core/bots/state/bot_presence.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/desktop_active_session.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
 
 import '../support/spec070_fixtures.dart';
 

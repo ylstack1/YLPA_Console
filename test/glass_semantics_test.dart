@@ -5,10 +5,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/edges.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/scroll_behavior.dart';
-import 'package:hermes_android/core/widgets/hermes_app_bar.dart';
+import 'package:ylpa_console/core/design/edges.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/scroll_behavior.dart';
+import 'package:ylpa_console/core/widgets/hermes_app_bar.dart';
 
 List<Widget> _rows() => [
   for (var i = 0; i < 60; i++) SizedBox(height: 56, child: Text('Fila $i')),

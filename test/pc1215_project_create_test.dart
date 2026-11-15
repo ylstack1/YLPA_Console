@@ -7,16 +7,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_control_center.dart';
-import 'package:hermes_android/core/models/project_files.dart';
-import 'package:hermes_android/core/screens/projects_center_screen.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/utils/byte_bounded_lru_cache.dart';
-import 'package:hermes_android/core/widgets/projects/project_create_sheet.dart';
-import 'package:hermes_android/core/widgets/projects/project_files_browser.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/desktop_control_center.dart';
+import 'package:ylpa_console/core/models/project_files.dart';
+import 'package:ylpa_console/core/screens/projects_center_screen.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/utils/byte_bounded_lru_cache.dart';
+import 'package:ylpa_console/core/widgets/projects/project_create_sheet.dart';
+import 'package:ylpa_console/core/widgets/projects/project_files_browser.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/pj1215_fake_projects_gateway.dart';

@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/account_usage_limits.dart';
-import 'package:hermes_android/core/usage/plan_limits_view.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/account_usage_limits.dart';
+import 'package:ylpa_console/core/usage/plan_limits_view.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import '../../support/account_usage_fixtures.dart' as fx;
 

@@ -5,8 +5,8 @@
 // `#media:` href is no media, and a URL with such an escape is still a URL,
 // labelled by its undecoded last segment (`new URL(value).pathname`).
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/agent_preview_extractor.dart';
-import 'package:hermes_android/core/services/chat_content_extractor.dart';
+import 'package:ylpa_console/core/services/agent_preview_extractor.dart';
+import 'package:ylpa_console/core/services/chat_content_extractor.dart';
 
 import 'support/malformed_artifact_rows.dart';
 

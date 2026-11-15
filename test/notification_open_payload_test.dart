@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/screens/mission_control_screen.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/main.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/screens/mission_control_screen.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/main.dart';
 
 void main() {
   group('NotificationOpen payload', () {

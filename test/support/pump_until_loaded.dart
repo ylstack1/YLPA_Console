@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/console_loader.dart';
+import 'package:ylpa_console/core/widgets/console_loader.dart';
 
 /// `pumpAndSettle` that also waits for the Console loader to go away.
 ///

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/utils/home_recent_sessions.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/utils/home_recent_sessions.dart';
 
 Session _session({
   String preview = '',

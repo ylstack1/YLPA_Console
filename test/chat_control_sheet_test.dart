@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/hermes_design.dart'
+import 'package:ylpa_console/core/design/hermes_design.dart'
     show
         HermesChrome,
         HermesFloatingSurface,
         HermesScrim,
         hermesOriginOf,
         showHermesSurface;
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat_control_sheet.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart';
-import 'package:hermes_android/core/widgets/hermes_ui.dart';
-import 'package:hermes_android/l10n/app_localizations_en.dart';
-import 'package:hermes_android/l10n/app_localizations_es.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat_control_sheet.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart';
+import 'package:ylpa_console/core/widgets/hermes_ui.dart';
+import 'package:ylpa_console/l10n/app_localizations_en.dart';
+import 'package:ylpa_console/l10n/app_localizations_es.dart';
 
 // The chat's «Ajustes» window, the owner's final windows (ventanas-final-png): a
 // LIST. On top, the conversation's name and the pill of two round buttons

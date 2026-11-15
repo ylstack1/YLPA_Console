@@ -71,9 +71,9 @@ class PluginHomeWidgetStore implements HomeWidgetStore {
   const PluginHomeWidgetStore();
 
   static const _androidProviders = <String>[
-    'com.hermesagent.hermes_android.NewSessionWidgetProvider',
-    'com.hermesagent.hermes_android.HermesCompactWidgetProvider',
-    'com.hermesagent.hermes_android.HermesControlWidgetProvider',
+    'com.ylpa.console.NewSessionWidgetProvider',
+    'com.ylpa.console.HermesCompactWidgetProvider',
+    'com.ylpa.console.HermesControlWidgetProvider',
   ];
 
   @override

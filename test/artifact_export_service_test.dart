@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/artifact_export_service.dart';
+import 'package:ylpa_console/core/services/artifact_export_service.dart';
 
 String _repeat(String value, int count) => List.filled(count, value).join();
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/browser/in_app_browser_policy.dart';
+import 'package:ylpa_console/core/browser/in_app_browser_policy.dart';
 
 // The address bar behaves like a browser: an address navigates, anything else
 // is a web search. Only http/https ever load; the agent's own browser control

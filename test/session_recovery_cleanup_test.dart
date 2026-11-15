@@ -6,10 +6,10 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:hermes_android/core/models/prepared_turn.dart';
-import 'package:hermes_android/core/services/chat_draft_store.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/turn_outbox_store.dart';
+import 'package:ylpa_console/core/models/prepared_turn.dart';
+import 'package:ylpa_console/core/services/chat_draft_store.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/turn_outbox_store.dart';
 
 import 'support/test_api_client.dart';
 

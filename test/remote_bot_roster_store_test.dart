@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/screens/profiles_screen.dart';
-import 'package:hermes_android/core/services/bot_roster_store.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/widgets/remote_bot_roster.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/screens/profiles_screen.dart';
+import 'package:ylpa_console/core/services/bot_roster_store.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/widgets/remote_bot_roster.dart';
 
 import 'support/bot_roster_fakes.dart';
 

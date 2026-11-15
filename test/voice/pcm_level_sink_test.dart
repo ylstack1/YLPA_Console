@@ -5,8 +5,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/hermes_pcm_stream.dart';
-import 'package:hermes_android/core/services/voice/pcm_level_sink.dart';
+import 'package:ylpa_console/core/services/voice/hermes_pcm_stream.dart';
+import 'package:ylpa_console/core/services/voice/pcm_level_sink.dart';
 
 class _Sink implements HermesPcmStreamSink {
   final List<String> calls = [];

@@ -5,13 +5,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/attachment_card.dart';
-import 'package:hermes_android/core/widgets/floating_chat_header.dart';
-import 'package:hermes_android/core/widgets/generated_image_card.dart';
-import 'package:hermes_android/core/widgets/island.dart';
-import 'package:hermes_android/core/widgets/stacked_image_cards.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/attachment_card.dart';
+import 'package:ylpa_console/core/widgets/floating_chat_header.dart';
+import 'package:ylpa_console/core/widgets/generated_image_card.dart';
+import 'package:ylpa_console/core/widgets/island.dart';
+import 'package:ylpa_console/core/widgets/stacked_image_cards.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 // fh1215: every chat surface gets a floating header (no app bar band): a
 // round back button, a round button on the right and, in the centre, the

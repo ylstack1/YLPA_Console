@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show BackdropFilterLayer;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/glass_strip.dart';
-import 'package:hermes_android/core/design/liquid_glass.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/models/dock_config.dart';
-import 'package:hermes_android/core/services/dock_preferences_store.dart';
-import 'package:hermes_android/core/shell/gesture_dock.dart';
-import 'package:hermes_android/core/shell/gesture_dock_state.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/dock_style.dart';
-import 'package:hermes_android/core/widgets/frosted_backdrop.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/glass_strip.dart';
+import 'package:ylpa_console/core/design/liquid_glass.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/models/dock_config.dart';
+import 'package:ylpa_console/core/services/dock_preferences_store.dart';
+import 'package:ylpa_console/core/shell/gesture_dock.dart';
+import 'package:ylpa_console/core/shell/gesture_dock_state.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/dock_style.dart';
+import 'package:ylpa_console/core/widgets/frosted_backdrop.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _app(String theme) => MaterialApp(

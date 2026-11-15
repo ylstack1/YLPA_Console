@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/generated_image_service.dart';
+import 'package:ylpa_console/core/services/generated_image_service.dart';
 import 'package:http/http.dart' as http;
 
 void main() {

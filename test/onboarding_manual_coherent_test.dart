@@ -6,7 +6,7 @@
 // full editor with them off.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/instance_edit_screen.dart';
+import 'package:ylpa_console/core/screens/instance_edit_screen.dart';
 
 import 'c3d/c3d_support.dart';
 

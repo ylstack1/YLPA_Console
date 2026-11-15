@@ -2,12 +2,12 @@
 // for them, its mark, and the plan only when the provider names one.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/home/board/home_board_model.dart';
-import 'package:hermes_android/core/home/board/home_limits.dart';
-import 'package:hermes_android/core/models/account_usage_limits.dart';
-import 'package:hermes_android/core/models/model_provider.dart';
-import 'package:hermes_android/core/widgets/provider_logo.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/home/board/home_board_model.dart';
+import 'package:ylpa_console/core/home/board/home_limits.dart';
+import 'package:ylpa_console/core/models/account_usage_limits.dart';
+import 'package:ylpa_console/core/models/model_provider.dart';
+import 'package:ylpa_console/core/widgets/provider_logo.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import '../support/account_usage_fixtures.dart';
 import '../support/home_board_fixtures.dart';

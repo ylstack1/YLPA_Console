@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/activity_snapshot.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/bot_chat_header.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
-import 'package:hermes_android/l10n/app_localizations_en.dart';
-import 'package:hermes_android/l10n/app_localizations_es.dart';
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/bot_chat_header.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations_en.dart';
+import 'package:ylpa_console/l10n/app_localizations_es.dart';
 
 // dc1215: the canonical Bot Chat header in the Dots style. The bot's face
 // sits centred over a pill with its name in bold and ONE grey line of live

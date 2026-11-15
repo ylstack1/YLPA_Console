@@ -3,12 +3,12 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hermes_android/core/models/attachment_draft.dart';
-import 'package:hermes_android/core/models/capability_matrix.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/models/prepared_turn.dart';
-import 'package:hermes_android/core/services/connection_diagnostics.dart';
-import 'package:hermes_android/core/services/diagnostic_bundle_service.dart';
+import 'package:ylpa_console/core/models/attachment_draft.dart';
+import 'package:ylpa_console/core/models/capability_matrix.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/models/prepared_turn.dart';
+import 'package:ylpa_console/core/services/connection_diagnostics.dart';
+import 'package:ylpa_console/core/services/diagnostic_bundle_service.dart';
 
 void main() {
   late Directory cache;

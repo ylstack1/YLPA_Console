@@ -8,10 +8,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/instance_edit_screen.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/mobile_oauth.dart';
-import 'package:hermes_android/core/services/native_session_store.dart';
+import 'package:ylpa_console/core/screens/instance_edit_screen.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/mobile_oauth.dart';
+import 'package:ylpa_console/core/services/native_session_store.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 

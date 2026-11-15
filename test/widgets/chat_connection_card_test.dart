@@ -3,10 +3,10 @@
 // operation. Fixtures are synthetic and use an example host.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/connection_request.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat_connection_card.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/connection_request.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat_connection_card.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 ConnectionRequest _request({
   bool settled = false,

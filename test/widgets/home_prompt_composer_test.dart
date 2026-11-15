@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/attachment_source_sheet.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart';
-import 'package:hermes_android/core/widgets/home_prompt_composer.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/attachment_source_sheet.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart';
+import 'package:ylpa_console/core/widgets/home_prompt_composer.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('es un campo real y no envía contenido vacío', (tester) async {

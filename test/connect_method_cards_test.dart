@@ -7,11 +7,11 @@
 // explanation is one tap away, and changing one's mind loses nothing typed.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/onboarding/connect_method_cards.dart';
-import 'package:hermes_android/core/screens/onboarding/manual_connect_page.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_scanner.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
-import 'package:hermes_android/core/services/dashboard_address.dart';
+import 'package:ylpa_console/core/screens/onboarding/connect_method_cards.dart';
+import 'package:ylpa_console/core/screens/onboarding/manual_connect_page.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_scanner.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/core/services/dashboard_address.dart';
 
 import 'support/onboarding_fakes.dart';
 

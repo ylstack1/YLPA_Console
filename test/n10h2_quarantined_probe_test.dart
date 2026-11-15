@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 /// N10h-2: a busy runtime whose replay was not provable (quarantined, no
 /// watermark) must not poll `session.events.since(0)` and call every answer

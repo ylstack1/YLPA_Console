@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hermes_android/core/screens/chat_screen.dart';
-import 'package:hermes_android/core/utils/assistant_suggestions.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/utils/assistant_suggestions.dart';
 
 void main() {
   test('proyecta solo el cierre explicito y limpia el conector suelto', () {

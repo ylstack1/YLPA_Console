@@ -3,11 +3,11 @@
 // UI. Every built-in preset has a Spanish and an English subtitle.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/themes_screen.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_profile_store.dart';
-import 'package:hermes_android/core/theme/theme_tagline.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/themes_screen.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_profile_store.dart';
+import 'package:ylpa_console/core/theme/theme_tagline.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 void main() {
   test('every built-in preset has its own Spanish subtitle', () async {

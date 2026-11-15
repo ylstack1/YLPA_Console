@@ -5,12 +5,12 @@
 // for a public http host keeps the strong, undismissable notice.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/hermes_design.dart'
+import 'package:ylpa_console/core/design/hermes_design.dart'
     show HermesSelectField;
-import 'package:hermes_android/core/models/admin_integrations.dart';
-import 'package:hermes_android/core/utils/cleartext_notice_memory.dart';
-import 'package:hermes_android/core/widgets/cleartext_once_line.dart';
-import 'package:hermes_android/core/widgets/mcp_provisioning_surface.dart';
+import 'package:ylpa_console/core/models/admin_integrations.dart';
+import 'package:ylpa_console/core/utils/cleartext_notice_memory.dart';
+import 'package:ylpa_console/core/widgets/cleartext_once_line.dart';
+import 'package:ylpa_console/core/widgets/mcp_provisioning_surface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'capabilities/capabilities_fakes.dart';

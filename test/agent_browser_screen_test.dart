@@ -2,17 +2,17 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/app_lock_sensitive_read_fence.dart';
+import 'package:ylpa_console/core/services/app_lock_sensitive_read_fence.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hermes_android/core/browser/agent_browser_bridge.dart';
-import 'package:hermes_android/core/browser/agent_preview_act.dart';
-import 'package:hermes_android/core/browser/agent_preview_offer_card.dart';
-import 'package:hermes_android/core/browser/agent_preview_protocol.dart';
-import 'package:hermes_android/core/browser/hermes_preview_engine.g.dart';
-import 'package:hermes_android/core/browser/in_app_browser_screen.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/artifact_viewer/artifact_html_policy.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/browser/agent_browser_bridge.dart';
+import 'package:ylpa_console/core/browser/agent_preview_act.dart';
+import 'package:ylpa_console/core/browser/agent_preview_offer_card.dart';
+import 'package:ylpa_console/core/browser/agent_preview_protocol.dart';
+import 'package:ylpa_console/core/browser/hermes_preview_engine.g.dart';
+import 'package:ylpa_console/core/browser/in_app_browser_screen.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/artifact_viewer/artifact_html_policy.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'support/fake_webview_platform.dart';

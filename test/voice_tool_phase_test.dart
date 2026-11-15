@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hermes_android/core/services/voice/voice_tool_phase.dart';
+import 'package:ylpa_console/core/services/voice/voice_tool_phase.dart';
 
 void main() {
   test('agrupa herramientas para el estado operativo del modo voz', () {

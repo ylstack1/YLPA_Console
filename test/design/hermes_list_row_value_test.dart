@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/hermes_design.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/design/hermes_design.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
 
 import '../support/design_shots.dart';
 

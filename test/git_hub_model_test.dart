@@ -4,8 +4,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/git_hub.dart';
-import 'package:hermes_android/core/models/git_review.dart';
+import 'package:ylpa_console/core/models/git_hub.dart';
+import 'package:ylpa_console/core/models/git_review.dart';
 
 void main() {
   group('shapes', () {

@@ -1,4 +1,4 @@
-// `hermes://plugin/install?catalog=NAME` and `hermes://skill/install?
+// `ylpa://plugin/install?catalog=NAME` and `ylpa://skill/install?
 // identifier=ID` — catalog deep links.
 //
 // Ported from Hermes Desktop (`deeplink-routes.ts`): a link only ever names a

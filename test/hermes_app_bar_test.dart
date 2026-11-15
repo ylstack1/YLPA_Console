@@ -3,14 +3,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/rendering.dart';
-import 'package:hermes_android/core/design/floating.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/feedback/screen_help.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/frosted_backdrop.dart';
-import 'package:hermes_android/core/widgets/hermes_app_bar.dart';
-import 'package:hermes_android/core/widgets/read_only.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/floating.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/feedback/screen_help.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/frosted_backdrop.dart';
+import 'package:ylpa_console/core/widgets/hermes_app_bar.dart';
+import 'package:ylpa_console/core/widgets/read_only.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _scaffold(String themeId) => MaterialApp(
   theme: AppTheme.fromId(themeId),

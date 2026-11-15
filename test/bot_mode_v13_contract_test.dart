@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/kanban.dart';
-import 'package:hermes_android/core/models/mission_control.dart';
-import 'package:hermes_android/core/models/bot_mode_v13.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/kanban.dart';
+import 'package:ylpa_console/core/models/mission_control.dart';
+import 'package:ylpa_console/core/models/bot_mode_v13.dart';
 
 void main() {
   group('V13 work authority and privacy', () {

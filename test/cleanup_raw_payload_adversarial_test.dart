@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hermes_android/core/services/session_deletion.dart';
-import 'package:hermes_android/core/models/prepared_turn.dart';
-import 'package:hermes_android/core/services/local_transcript_store.dart';
-import 'package:hermes_android/core/services/chat_draft_store.dart';
-import 'package:hermes_android/core/services/turn_outbox_store.dart';
+import 'package:ylpa_console/core/services/session_deletion.dart';
+import 'package:ylpa_console/core/models/prepared_turn.dart';
+import 'package:ylpa_console/core/services/local_transcript_store.dart';
+import 'package:ylpa_console/core/services/chat_draft_store.dart';
+import 'package:ylpa_console/core/services/turn_outbox_store.dart';
 
 LocalConversationLifecycle owner({
   String connection = 'c',

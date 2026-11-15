@@ -3,7 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show WebSocketException;
 
-import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Fakes for the auth notice tests: a Dashboard that answers ticket requests

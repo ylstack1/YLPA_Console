@@ -5,7 +5,7 @@
 <p align="center">
   Tu Hermes Agent autoalojado, nativo en Android.
   <br><br>
-  <a href="https://play.google.com/store/apps/details?id=dev.xpetalab.hermesconsole"><img align="middle" height="45" alt="Disponible en Google Play" src="docs/badges/google-play-es.png"></a>
+  <a href="https://play.google.com/store/apps/details?id=com.ylpa.console"><img align="middle" height="45" alt="Disponible en Google Play" src="docs/badges/google-play-es.png"></a>
   <a href="https://github.com/xP3ta/hermes-console/releases/latest"><img align="middle" height="52" alt="Descárgala en GitHub" src="docs/badges/get-it-on-github.png"></a>
   <a href="https://hermes.xpetalab.dev/obtainium/"><img align="middle" height="52" alt="Descárgala con Obtainium" src="docs/badges/obtainium.png"></a>
   <a href="https://hermes.xpetalab.dev"><img align="middle" height="52" alt="Visita la web" src="docs/badges/visit-website-es.png"></a>

@@ -4,8 +4,8 @@
 // existing notice, with no action.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/dashboard_sign_in_event.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/widgets/dashboard_sign_in_event.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Future<Strings> _strings(WidgetTester tester, Locale locale) async {
   late Strings s;

@@ -2,10 +2,10 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/data/companion_repository.dart';
-import 'package:hermes_android/core/companion/models/companion_animation_state.dart';
-import 'package:hermes_android/core/models/profile_pet.dart';
-import 'package:hermes_android/core/services/profile_pet_visual_adapter.dart';
+import 'package:ylpa_console/core/companion/data/companion_repository.dart';
+import 'package:ylpa_console/core/companion/models/companion_animation_state.dart';
+import 'package:ylpa_console/core/models/profile_pet.dart';
+import 'package:ylpa_console/core/services/profile_pet_visual_adapter.dart';
 
 const _twoRowPngBase64 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAEUlEQVR4nGP4z8AARAz//wMAEfgD/XUCLkgAAAAASUVORK5CYII=';

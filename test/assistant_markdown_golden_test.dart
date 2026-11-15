@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart';
-import 'package:hermes_android/core/services/font_size_service.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/callout_card.dart';
-import 'package:hermes_android/core/widgets/hermes_file_tree.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/services/font_size_service.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/callout_card.dart';
+import 'package:ylpa_console/core/widgets/hermes_file_tree.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 String _visibleMarkdownText(WidgetTester tester) {
   final richText = tester

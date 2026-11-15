@@ -1,15 +1,15 @@
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/bot_mention.dart';
-import 'package:hermes_android/core/models/prepared_turn.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/bot_mention_roster.dart';
-import 'package:hermes_android/core/utils/chat_turn.dart';
-import 'package:hermes_android/core/utils/markdown_clipboard.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/bot_mention.dart';
+import 'package:ylpa_console/core/models/prepared_turn.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/bot_mention_roster.dart';
+import 'package:ylpa_console/core/utils/chat_turn.dart';
+import 'package:ylpa_console/core/utils/markdown_clipboard.dart';
 
 const ops = BotMention(connectionId: 'local', profile: 'ops', handle: 'ops');
 BotMentionResolver resolver(

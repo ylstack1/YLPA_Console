@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/notifications/notification_controller.dart';
-import 'package:hermes_android/core/services/notifications/notification_event_ledger.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/core/services/run_registry.dart';
+import 'package:ylpa_console/core/services/notifications/notification_controller.dart';
+import 'package:ylpa_console/core/services/notifications/notification_event_ledger.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/run_registry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ─── Fake ─────────────────────────────────────────────────────────────────────

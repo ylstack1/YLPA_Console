@@ -9,10 +9,10 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_geometry.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_painter.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_scene.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_text.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_geometry.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_painter.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_scene.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_text.dart';
 
 import 'launcher_widget_fixtures.dart';
 

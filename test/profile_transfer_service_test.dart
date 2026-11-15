@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/attachment_uploader.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/profile_transfer_service.dart';
+import 'package:ylpa_console/core/services/attachment_uploader.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/profile_transfer_service.dart';
 import 'package:http/http.dart' as http;
 
 void main() {

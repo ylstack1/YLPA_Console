@@ -67,7 +67,22 @@ class AcpSessionController extends ChangeNotifier
     required this.instance,
     required this.manifest,
     required this.bearerToken,
-  });
+    String? sessionCwd,
+  }) : _sessionCwd = sessionCwd;
+
+  final AgentInstance instance;
+  final AgentTypeManifest? manifest;
+
+  /// [redacted] for the bridge daemon, read from secure storage by the
+  /// caller; null when the daemon is unauthenticated.
+  final String? bearerToken;
+
+  /// Workspace (cwd) for this session. Defaults to `instance.cwd`; call
+  /// [setWorkspace] to change it mid-chat (reconnects with the new path).
+  String? _sessionCwd;
+
+  /// Effective working directory sent to `session/new`.
+  String get sessionCwd => _sessionCwd ?? instance.cwd;
 
   final AgentInstance instance;
   final AgentTypeManifest? manifest;
@@ -122,10 +137,10 @@ class AcpSessionController extends ChangeNotifier
           ? 'Connected (agent did not report a name)'
           : 'Connected to ${caps.agentName} ${caps.agentVersion}'.trim();
       lines.add(AcpChatLine.system(capsLine));
-      final result = await client.sessionNew(cwd: instance.cwd);
+      final result = await client.sessionNew(cwd: sessionCwd);
       session = result;
       _activeSessionId = result.sessionId;
-      lines.add(AcpChatLine.system('Working directory: ${instance.cwd}'));
+      lines.add(AcpChatLine.system('Working directory: $sessionCwd'));
       state = AcpConnectionState.ready;
     } catch (e) {
       state = AcpConnectionState.failed;
@@ -277,6 +292,27 @@ class AcpSessionController extends ChangeNotifier
     } catch (_) {
       // fail soft: cancel is best-effort
     }
+  }
+
+  /// Change the session workspace mid-chat. Reconnects with the new cwd so
+  /// `session/new` is sent with the updated path. Fail-soft: on failure the
+  /// old connection state is preserved and an error line is added.
+  Future<void> setWorkspace(String cwd) async {
+    final trimmed = cwd.trim();
+    if (trimmed.isEmpty) {
+      lines.add(AcpChatLine.system('Workspace path is required.'));
+      notifyListeners();
+      return;
+    }
+    if (!trimmed.startsWith('/') && !RegExp(r'^[A-Za-z]:').hasMatch(trimmed)) {
+      lines.add(AcpChatLine.system('Workspace must be an absolute path.'));
+      notifyListeners();
+      return;
+    }
+    _sessionCwd = trimmed;
+    state = AcpConnectionState.idle;
+    failure = null;
+    await connect();
   }
 
   /// The UI's permission dialog answered.

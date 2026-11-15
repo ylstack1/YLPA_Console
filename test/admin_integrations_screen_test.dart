@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/select.dart';
-import 'package:hermes_android/core/design/tokens.dart' show HermesSpace;
-import 'package:hermes_android/core/models/admin_integrations.dart';
-import 'package:hermes_android/core/models/desktop_control_center.dart';
-import 'package:hermes_android/core/screens/admin_integrations_screen.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/hermes_app_bar.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart';
-import 'package:hermes_android/core/widgets/mcp_provisioning_surface.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/select.dart';
+import 'package:ylpa_console/core/design/tokens.dart' show HermesSpace;
+import 'package:ylpa_console/core/models/admin_integrations.dart';
+import 'package:ylpa_console/core/models/desktop_control_center.dart';
+import 'package:ylpa_console/core/screens/admin_integrations_screen.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/hermes_app_bar.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart';
+import 'package:ylpa_console/core/widgets/mcp_provisioning_surface.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 class _AdminGateway
     implements

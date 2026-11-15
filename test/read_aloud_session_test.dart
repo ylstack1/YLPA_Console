@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/read_aloud_session.dart';
-import 'package:hermes_android/core/services/voice/speech_renderer.dart';
+import 'package:ylpa_console/core/services/voice/read_aloud_session.dart';
+import 'package:ylpa_console/core/services/voice/speech_renderer.dart';
 
 void main() {
   const chunks = [

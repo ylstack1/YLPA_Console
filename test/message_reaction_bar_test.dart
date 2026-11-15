@@ -2,10 +2,10 @@
 // the user's own reaction, nothing at all when the feature is off.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/message_reaction.dart';
-import 'package:hermes_android/core/services/message_reaction_prefs.dart';
-import 'package:hermes_android/core/widgets/chat/message_reaction_bar.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/message_reaction.dart';
+import 'package:ylpa_console/core/services/message_reaction_prefs.dart';
+import 'package:ylpa_console/core/widgets/chat/message_reaction_bar.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _host(Widget child, {Locale locale = const Locale('en')}) => MaterialApp(

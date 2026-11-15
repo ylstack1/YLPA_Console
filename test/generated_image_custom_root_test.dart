@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Hermes Console contributors
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/generated_image_fetch.dart';
-import 'package:hermes_android/core/services/generated_image_service.dart';
+import 'package:ylpa_console/core/services/generated_image_fetch.dart';
+import 'package:ylpa_console/core/services/generated_image_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -38,7 +38,7 @@ class QrScanView extends StatefulWidget {
   /// v2 Dashboard links; without it only v1 codes are accepted.
   final ValueChanged<DashboardPairingLink>? onDashboardLink;
 
-  /// Códigos que no son enlaces `hermes://` (p. ej. el código `hc-pair1:` del
+  /// Códigos que no son enlaces `ylpa://` (p. ej. el código `hc-pair1:` del
   /// push): con [onRaw] el texto leído se entrega tal cual si [acceptsRaw] lo
   /// admite, y los enlaces no se aceptan.
   final ValueChanged<String>? onRaw;

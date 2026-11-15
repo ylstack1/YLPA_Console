@@ -9,9 +9,9 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/core_read.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/session_export_service.dart';
+import 'package:ylpa_console/core/models/core_read.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/session_export_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 

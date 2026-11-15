@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/voice_language.dart';
-import 'package:hermes_android/core/services/voice/voice_response_policy.dart';
+import 'package:ylpa_console/core/services/voice/voice_language.dart';
+import 'package:ylpa_console/core/services/voice/voice_response_policy.dart';
 
 List<String> _noticeProblems(Map<String, Map<String, String>> catalogs) {
   final problems = <String>[];

@@ -4,14 +4,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/instance_edit_screen.dart';
-import 'package:hermes_android/core/screens/onboarding/manual_setup_page.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_widgets.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
-import 'package:hermes_android/core/services/official_dashboard_command.dart';
-import 'package:hermes_android/core/widgets/command_block.dart';
-import 'package:hermes_android/core/widgets/dashboard_password_help.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/instance_edit_screen.dart';
+import 'package:ylpa_console/core/screens/onboarding/manual_setup_page.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_widgets.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/core/services/official_dashboard_command.dart';
+import 'package:ylpa_console/core/widgets/command_block.dart';
+import 'package:ylpa_console/core/widgets/dashboard_password_help.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import '../support/onboarding_fakes.dart';
 

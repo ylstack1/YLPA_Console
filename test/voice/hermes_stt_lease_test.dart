@@ -4,12 +4,12 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/voice/hermes_stt_lease.dart';
-import 'package:hermes_android/core/services/voice/stt_engine.dart';
-import 'package:hermes_android/core/services/voice/stt_hermes_server.dart';
-import 'package:hermes_android/core/services/voice/voice_service.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/voice/hermes_stt_lease.dart';
+import 'package:ylpa_console/core/services/voice/stt_engine.dart';
+import 'package:ylpa_console/core/services/voice/stt_hermes_server.dart';
+import 'package:ylpa_console/core/services/voice/voice_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:record/record.dart';

@@ -6,13 +6,13 @@ import 'package:flutter/rendering.dart' show BackdropFilterLayer;
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/hermes_design.dart'
+import 'package:ylpa_console/core/design/hermes_design.dart'
     show HermesChrome, HermesScrim;
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/motion.dart' show HermesMotion;
-import 'package:hermes_android/core/widgets/workspace/chat_workspace.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace_host.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/motion.dart' show HermesMotion;
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace_host.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _chatField = ValueKey('fake-chat-field');

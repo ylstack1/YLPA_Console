@@ -6,7 +6,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
 
 const _doc =
     'content://com.android.externalstorage.documents/document/primary%3ADownload%2Finforme.pdf';

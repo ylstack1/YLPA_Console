@@ -1,10 +1,10 @@
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/glass_strip.dart';
-import 'package:hermes_android/core/design/smoked_glass.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/design/glass_strip.dart';
+import 'package:ylpa_console/core/design/smoked_glass.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
 
 // The two classic palettes, as in app_theme.dart.
 const _classicDark = HermesThemeColors(

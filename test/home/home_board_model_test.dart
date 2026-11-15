@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/home/board/home_board_catalog.dart';
-import 'package:hermes_android/core/home/board/home_board_model.dart';
-import 'package:hermes_android/core/home/board/home_board_store.dart';
+import 'package:ylpa_console/core/home/board/home_board_catalog.dart';
+import 'package:ylpa_console/core/home/board/home_board_model.dart';
+import 'package:ylpa_console/core/home/board/home_board_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 int _seq = 0;

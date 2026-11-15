@@ -4,7 +4,7 @@
      the namespace of the Kotlin code. Assist data (screen text, screenshot) is
      neither requested nor used. -->
 <voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:sessionService="com.hermesagent.hermes_android.HermesVoiceInteractionSessionService"
-    android:recognitionService="com.hermesagent.hermes_android.HermesAssistantRecognitionService"
+    android:sessionService="com.ylpa.console.HermesVoiceInteractionSessionService"
+    android:recognitionService="com.ylpa.console.HermesAssistantRecognitionService"
     android:supportsAssist="true"
     android:supportsLaunchVoiceAssistFromKeyguard="false" />

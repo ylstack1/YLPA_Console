@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/conversation/streaming_narration_queue.dart';
+import 'package:ylpa_console/core/services/voice/conversation/streaming_narration_queue.dart';
 
 /// Spec 048 / US1 — valla de reproducción (contracts/narration-fence.md).
 ///

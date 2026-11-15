@@ -2,19 +2,19 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/room/room_gateway.dart';
-import 'package:hermes_android/core/bots/ui/room/room_models.dart';
-import 'package:hermes_android/core/bots/ui/room/room_widgets.dart';
-import 'package:hermes_android/core/models/attachment_draft.dart';
-import 'package:hermes_android/core/services/artifact_export_service.dart';
-import 'package:hermes_android/core/services/attachment_uploader.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/attachment_card.dart';
-import 'package:hermes_android/core/widgets/attachment_history_preview.dart';
-import 'package:hermes_android/core/widgets/attachment_preview.dart';
-import 'package:hermes_android/core/widgets/cover_resize_image.dart';
-import 'package:hermes_android/core/widgets/generated_video_card.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_gateway.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_models.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_widgets.dart';
+import 'package:ylpa_console/core/models/attachment_draft.dart';
+import 'package:ylpa_console/core/services/artifact_export_service.dart';
+import 'package:ylpa_console/core/services/attachment_uploader.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/attachment_card.dart';
+import 'package:ylpa_console/core/widgets/attachment_history_preview.dart';
+import 'package:ylpa_console/core/widgets/attachment_preview.dart';
+import 'package:ylpa_console/core/widgets/cover_resize_image.dart';
+import 'package:ylpa_console/core/widgets/generated_video_card.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/fake_video_player_platform.dart';
 

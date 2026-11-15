@@ -7,17 +7,17 @@
 // «Trabajó 0 s».
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/hermes_design.dart'
+import 'package:ylpa_console/core/design/hermes_design.dart'
     show HermesListRow;
-import 'package:hermes_android/core/models/activity_snapshot.dart';
-import 'package:hermes_android/core/models/subagent_activity.dart';
-import 'package:hermes_android/core/screens/subagent_detail_screen.dart';
-import 'package:hermes_android/core/services/subagent_finished_record.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/chat_live_icon.dart';
-import 'package:hermes_android/core/widgets/chat/tool_steps_summary.dart';
-import 'package:hermes_android/core/widgets/subagent_activity_card.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/models/subagent_activity.dart';
+import 'package:ylpa_console/core/screens/subagent_detail_screen.dart';
+import 'package:ylpa_console/core/services/subagent_finished_record.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_live_icon.dart';
+import 'package:ylpa_console/core/widgets/chat/tool_steps_summary.dart';
+import 'package:ylpa_console/core/widgets/subagent_activity_card.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 final _start = DateTime.utc(2026, 11, 7, 17, 19);
 final _scope = SubagentActivityScope(

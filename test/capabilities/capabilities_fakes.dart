@@ -3,11 +3,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/capabilities_repository.dart';
-import 'package:hermes_android/core/services/connection_manager.dart'
+import 'package:ylpa_console/core/capabilities/capabilities_repository.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart'
     show DashboardHttpException;
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 class ScriptedRest implements CapabilitiesRest {
   final Map<String, Object> gets = {};

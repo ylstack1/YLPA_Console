@@ -9,7 +9,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/vad/local_vad.dart';
+import 'package:ylpa_console/core/services/voice/vad/local_vad.dart';
 
 /// Deja correr la cola de microtareas (los `StreamController` usados aquí
 /// son asíncronos por defecto: `add`/`close` no entregan a los listeners de

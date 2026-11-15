@@ -1,12 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/hatch/hatch_provider.dart';
-import 'package:hermes_android/core/companion/hatch/hatch_service.dart';
-import 'package:hermes_android/core/companion/hatch/mock_hatch_provider.dart';
-import 'package:hermes_android/core/companion/hatch/prompt_safety.dart';
-import 'package:hermes_android/core/companion/models/companion.dart';
-import 'package:hermes_android/core/companion/models/companion_animation_state.dart';
+import 'package:ylpa_console/core/companion/hatch/hatch_provider.dart';
+import 'package:ylpa_console/core/companion/hatch/hatch_service.dart';
+import 'package:ylpa_console/core/companion/hatch/mock_hatch_provider.dart';
+import 'package:ylpa_console/core/companion/hatch/prompt_safety.dart';
+import 'package:ylpa_console/core/companion/models/companion.dart';
+import 'package:ylpa_console/core/companion/models/companion_animation_state.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

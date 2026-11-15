@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/navigation/instance_route_guard.dart';
-import 'package:hermes_android/core/screens/themes_screen.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/navigation/instance_route_guard.dart';
+import 'package:ylpa_console/core/screens/themes_screen.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 final _connection = SavedConnection(
   id: 'appearance-guard-test',

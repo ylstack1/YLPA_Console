@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/list.dart';
-import 'package:hermes_android/core/screens/bot_create_screen.dart';
-import 'package:hermes_android/core/screens/bot_profile_settings_screen.dart';
-import 'package:hermes_android/core/widgets/bot_capabilities.dart';
-import 'package:hermes_android/core/widgets/hermes_ui.dart';
+import 'package:ylpa_console/core/design/list.dart';
+import 'package:ylpa_console/core/screens/bot_create_screen.dart';
+import 'package:ylpa_console/core/screens/bot_profile_settings_screen.dart';
+import 'package:ylpa_console/core/widgets/bot_capabilities.dart';
+import 'package:ylpa_console/core/widgets/hermes_ui.dart';
 
 import 'support/profile_capability_fakes.dart';
 import 'support/profile_model_fakes.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/roster/roster_model.dart';
+import 'package:ylpa_console/core/bots/ui/roster/roster_model.dart';
 
 void main() {
   test('server-truncated previews never show dangling markdown markers', () {

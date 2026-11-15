@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/semantic_markdown.dart';
+import 'package:ylpa_console/core/utils/semantic_markdown.dart';
 
 void main() {
   group('enhanceCommandBlocks', () {

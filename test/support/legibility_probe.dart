@@ -1,15 +1,15 @@
-import 'package:hermes_android/core/home/launcher/launcher_widget_palette.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_palette.dart';
 // Measures how legible the text tokens are on the material of the content
 // boxes (cards, groups, panels, list sections and their rows, the search
 // field, the notices), for every preset, in its own brightness. The tests of
 // legibility use the same numbers they print, so the table and the checks
 // can never disagree.
 import 'package:flutter/material.dart';
-import 'package:hermes_android/core/home/board/home_board_kit.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/glass_look.dart';
-import 'package:hermes_android/core/theme/soft_tokens.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/home/board/home_board_kit.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/glass_look.dart';
+import 'package:ylpa_console/core/theme/soft_tokens.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
 
 /// One surface a text token can sit on, opaque, and a short name for it.
 typedef LegibilitySurface = (String name, Color color);

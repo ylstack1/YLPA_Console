@@ -3,11 +3,11 @@
 // themes it gets the floating hairline; dark keeps its edge-less card.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/services/chat_content_extractor.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/artifacts/artifact_sections.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/services/chat_content_extractor.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/artifacts/artifact_sections.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 void main() {
   const item = ChatContentItem(

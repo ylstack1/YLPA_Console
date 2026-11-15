@@ -1,10 +1,10 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
-import 'package:hermes_android/core/models/mission_control.dart';
-import 'package:hermes_android/core/models/room_member_status.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/models/mission_control.dart';
+import 'package:ylpa_console/core/models/room_member_status.dart';
 
 // QA 9490 profile build: Mission Control's Bots tab spent ~16 ms per build in
 // BotLiveStatus.forAgent, which merged, copied and sorted every room log once

@@ -4,9 +4,9 @@
 // the conversation controls at the composer's trailing end.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/voice_meter.dart';
-import 'package:hermes_android/core/widgets/voice_strip.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/voice_meter.dart';
+import 'package:ylpa_console/core/widgets/voice_strip.dart';
 
 const _labels = VoiceStripLabels(
   finishListening: 'Terminar de hablar',

@@ -1,13 +1,13 @@
-import 'package:hermes_android/core/models/agent_task_list.dart';
-import 'package:hermes_android/core/utils/projected_content_copy.dart';
+import 'package:ylpa_console/core/models/agent_task_list.dart';
+import 'package:ylpa_console/core/utils/projected_content_copy.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:hermes_android/core/services/ssh_commands.dart';
-import 'package:hermes_android/core/utils/api_error.dart';
-import 'package:hermes_android/core/utils/companion_error_copy.dart';
-import 'package:hermes_android/core/utils/theme_error_copy.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/ssh_commands.dart';
+import 'package:ylpa_console/core/utils/api_error.dart';
+import 'package:ylpa_console/core/utils/companion_error_copy.dart';
+import 'package:ylpa_console/core/utils/theme_error_copy.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

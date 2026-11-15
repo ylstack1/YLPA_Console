@@ -3,9 +3,9 @@
 // text holds back. What a live prefix shows is checked at every length: the
 // state in between never holds raw pipes nor «[n] https://…».
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/chat_inline_refs.dart';
-import 'package:hermes_android/core/utils/streaming_normalizer.dart';
-import 'package:hermes_android/core/widgets/markdown_table.dart';
+import 'package:ylpa_console/core/utils/chat_inline_refs.dart';
+import 'package:ylpa_console/core/utils/streaming_normalizer.dart';
+import 'package:ylpa_console/core/widgets/markdown_table.dart';
 
 const String _efe =
     'https://efe.com/espana/2026-11-01/heridos-urda-toledo-ingresados-accidente';

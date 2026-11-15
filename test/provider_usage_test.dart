@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/model_provider.dart';
-import 'package:hermes_android/core/models/provider_usage.dart';
+import 'package:ylpa_console/core/models/model_provider.dart';
+import 'package:ylpa_console/core/models/provider_usage.dart';
 
 Map<String, dynamic> _row(Object? usage) => {
   'slug': 'openai-codex',

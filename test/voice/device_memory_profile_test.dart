@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/device_memory_profile.dart';
+import 'package:ylpa_console/core/services/voice/device_memory_profile.dart';
 
 /// Spec 048 / US4 — perfil de memoria del dispositivo
 /// (contracts/model-residency.md): lectura de /proc/meminfo inyectable,

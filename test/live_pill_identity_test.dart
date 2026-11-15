@@ -3,9 +3,9 @@
 // and the main profile keeps Hermes' sprite only while the roster gives it
 // no name or face of its own.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart';
-import 'package:hermes_android/core/services/bot_roster_store.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/services/bot_roster_store.dart';
 
 BotRosterStore _store(List<AgentProfile> profiles) {
   final registry = BotRosterRegistry();

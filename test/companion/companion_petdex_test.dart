@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
-import 'package:hermes_android/core/companion/companion_links.dart';
-import 'package:hermes_android/core/companion/data/companion_preferences.dart';
-import 'package:hermes_android/core/companion/data/companion_repository.dart';
-import 'package:hermes_android/core/companion/models/companion.dart';
-import 'package:hermes_android/core/companion/models/companion_animation_state.dart';
-import 'package:hermes_android/core/companion/state/companion_controller.dart';
-import 'package:hermes_android/core/screens/companion/mascotas_screen.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/companion/companion_links.dart';
+import 'package:ylpa_console/core/companion/data/companion_preferences.dart';
+import 'package:ylpa_console/core/companion/data/companion_repository.dart';
+import 'package:ylpa_console/core/companion/models/companion.dart';
+import 'package:ylpa_console/core/companion/models/companion_animation_state.dart';
+import 'package:ylpa_console/core/companion/state/companion_controller.dart';
+import 'package:ylpa_console/core/screens/companion/mascotas_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Companion _pet(String slug, String name) => Companion(

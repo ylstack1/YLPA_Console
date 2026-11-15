@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
 
 /// [isAllowedMarkdownLinkScheme] es la allowlist que decide si un enlace
 /// tocado dentro del markdown del chat se lanza o se bloquea (hallazgo C3:

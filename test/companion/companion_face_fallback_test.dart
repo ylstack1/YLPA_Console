@@ -3,21 +3,21 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/roster/living_bot_face.dart';
-import 'package:hermes_android/core/companion/data/companion_preferences.dart';
-import 'package:hermes_android/core/companion/data/companion_repository.dart';
-import 'package:hermes_android/core/companion/models/companion_mood.dart';
-import 'package:hermes_android/core/companion/render/companion_preview.dart';
-import 'package:hermes_android/core/companion/render/companion_view.dart';
-import 'package:hermes_android/core/companion/render/spritesheet_renderer.dart';
-import 'package:hermes_android/core/companion/state/companion_controller.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/screens/companion/mascotas_screen.dart';
-import 'package:hermes_android/core/services/bot_roster_store.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/mission_profile_avatar.dart';
-import 'package:hermes_android/core/companion/render/companion_face.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/bots/ui/roster/living_bot_face.dart';
+import 'package:ylpa_console/core/companion/data/companion_preferences.dart';
+import 'package:ylpa_console/core/companion/data/companion_repository.dart';
+import 'package:ylpa_console/core/companion/models/companion_mood.dart';
+import 'package:ylpa_console/core/companion/render/companion_preview.dart';
+import 'package:ylpa_console/core/companion/render/companion_view.dart';
+import 'package:ylpa_console/core/companion/render/spritesheet_renderer.dart';
+import 'package:ylpa_console/core/companion/state/companion_controller.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/screens/companion/mascotas_screen.dart';
+import 'package:ylpa_console/core/services/bot_roster_store.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/mission_profile_avatar.dart';
+import 'package:ylpa_console/core/companion/render/companion_face.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // 1x1 opaque PNG: a real raster the avatar path decodes.

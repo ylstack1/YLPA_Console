@@ -4,11 +4,11 @@
 // reaches 4.5:1 over any surface of every preset.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/tokens.dart' show HermesChrome;
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/readable_ink.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/hermes_ui.dart';
+import 'package:ylpa_console/core/design/tokens.dart' show HermesChrome;
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/readable_ink.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/hermes_ui.dart';
 
 void main() {
   test('an ink on its tint reads at 4.5:1 over every surface', () {

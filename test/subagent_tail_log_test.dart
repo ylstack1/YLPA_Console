@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/subagent_finished_record.dart';
-import 'package:hermes_android/core/services/subagent_tail_log.dart';
+import 'package:ylpa_console/core/services/subagent_finished_record.dart';
+import 'package:ylpa_console/core/services/subagent_tail_log.dart';
 
 // The end of a real live transcript (`tools/delegation_live_log.py`), the one
 // A review screenshot rendered as a wall of text: the window starts in the

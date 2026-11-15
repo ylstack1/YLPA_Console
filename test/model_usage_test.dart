@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/model_usage.dart';
+import 'package:ylpa_console/core/models/model_usage.dart';
 
 void main() {
   const a = (provider: 'p', model: 'a');

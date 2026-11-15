@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/room/room_models.dart'
+import 'package:ylpa_console/core/bots/ui/room/room_models.dart'
     show roomMemberColor;
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/services/bot_mention_roster.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/chat/bot_mention_chips.dart';
-import 'package:hermes_android/core/widgets/chat/chat_link_card.dart';
-import 'package:hermes_android/core/widgets/chat/chat_markdown_body.dart';
-import 'package:hermes_android/core/widgets/chat/mention_chips.dart';
-import 'package:hermes_android/core/widgets/chat/user_message_text.dart';
-import 'package:hermes_android/core/widgets/mission_profile_avatar.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/services/bot_mention_roster.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/chat/bot_mention_chips.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_link_card.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_markdown_body.dart';
+import 'package:ylpa_console/core/widgets/chat/mention_chips.dart';
+import 'package:ylpa_console/core/widgets/chat/user_message_text.dart';
+import 'package:ylpa_console/core/widgets/mission_profile_avatar.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _app(
   Widget child, {

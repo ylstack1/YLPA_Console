@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:hermes_android/core/models/run_template.dart';
-import 'package:hermes_android/core/services/run_template_store.dart';
+import 'package:ylpa_console/core/models/run_template.dart';
+import 'package:ylpa_console/core/services/run_template_store.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/moa_config.dart';
+import 'package:ylpa_console/core/models/moa_config.dart';
 
 /// Respuesta REAL de GET /api/model/moa en SERVER (Hermes 0.18), como fixture.
 const _realGet = {

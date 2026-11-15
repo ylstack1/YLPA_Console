@@ -1,17 +1,17 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/bot_mode_widget_snapshot.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/models/desktop_active_session.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
-import 'package:hermes_android/core/services/bot_widget_activity.dart';
-import 'package:hermes_android/core/services/notifications/bot_mode_background.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/core/services/notifications/notification_strings.dart';
-import 'package:hermes_android/core/services/notifications/rich_notifications.dart';
-import 'package:hermes_android/core/services/notifications/room_watcher.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/bot_mode_widget_snapshot.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/models/desktop_active_session.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/services/bot_widget_activity.dart';
+import 'package:ylpa_console/core/services/notifications/bot_mode_background.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_strings.dart';
+import 'package:ylpa_console/core/services/notifications/rich_notifications.dart';
+import 'package:ylpa_console/core/services/notifications/room_watcher.dart';
 
 import '../bots/room/room_fixtures.dart';
 

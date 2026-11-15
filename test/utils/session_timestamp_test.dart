@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/session_timestamp.dart';
+import 'package:ylpa_console/core/utils/session_timestamp.dart';
 
 class _FakeSession implements SessionSortKey {
   _FakeSession(this.id, this.lastActivityAt);

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/chat/embeds/svg_sanitizer.dart';
+import 'package:ylpa_console/core/widgets/chat/embeds/svg_sanitizer.dart';
 
 const _open = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">';
 

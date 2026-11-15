@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/provider_logo.dart';
+import 'package:ylpa_console/core/widgets/provider_logo.dart';
 
 /// The colour a [ProviderLogo] actually paints with: its glyph painter's
 /// tint, or the monogram's letter and frame (which must agree).

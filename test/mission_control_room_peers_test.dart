@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/mission_control_screen.dart';
+import 'package:ylpa_console/core/screens/mission_control_screen.dart';
 
 void main() {
   test('peer connections are probed at the same time', () async {

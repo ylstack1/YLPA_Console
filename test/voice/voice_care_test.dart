@@ -3,16 +3,16 @@ import 'dart:ui' show Locale;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/session/voice_app_settings.dart';
-import 'package:hermes_android/core/services/voice/session/voice_care.dart';
-import 'package:hermes_android/core/services/voice/session/voice_care_text.dart';
-import 'package:hermes_android/core/services/voice/session/voice_entry_guard.dart';
-import 'package:hermes_android/core/services/voice/stt_engine.dart';
-import 'package:hermes_android/core/services/voice/voice_service.dart'
+import 'package:ylpa_console/core/services/voice/session/voice_app_settings.dart';
+import 'package:ylpa_console/core/services/voice/session/voice_care.dart';
+import 'package:ylpa_console/core/services/voice/session/voice_care_text.dart';
+import 'package:ylpa_console/core/services/voice/session/voice_entry_guard.dart';
+import 'package:ylpa_console/core/services/voice/stt_engine.dart';
+import 'package:ylpa_console/core/services/voice/voice_service.dart'
     show SttCheck, SttStatus;
-import 'package:hermes_android/core/services/voice/voice_settings.dart'
+import 'package:ylpa_console/core/services/voice/voice_settings.dart'
     show SttEngineKind;
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 /// A system recognizer whose error callback the test can call, as the
 /// platform does while it listens.

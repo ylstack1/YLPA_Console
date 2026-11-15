@@ -6,13 +6,13 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter/foundation.dart' show ValueListenable;
 
-import 'package:hermes_android/core/design/modal.dart' show releaseTextFocusIfKeyboardHidden;
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/models/activity_snapshot.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/floating_chat_header.dart';
-import 'package:hermes_android/core/widgets/pill_morph.dart';
-import 'package:hermes_android/core/widgets/running_work.dart';
+import 'package:ylpa_console/core/design/modal.dart' show releaseTextFocusIfKeyboardHidden;
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/floating_chat_header.dart';
+import 'package:ylpa_console/core/widgets/pill_morph.dart';
+import 'package:ylpa_console/core/widgets/running_work.dart';
 
 /// The card stops growing here (about five rows under its first line) and
 /// scrolls what is left inside.

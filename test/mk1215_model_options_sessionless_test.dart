@@ -8,12 +8,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-import 'package:hermes_android/core/models/desktop_model_catalog.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/compression_restore_store.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/model_catalog_cache.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/desktop_model_catalog.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/compression_restore_store.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/model_catalog_cache.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 import 'support/mk1215_scripted_gateway_channel.dart';
 import 'support/rpc_frame_helpers.dart';

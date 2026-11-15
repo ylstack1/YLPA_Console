@@ -2,15 +2,15 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/kanban.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/models/kanban.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart' as sqflite;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:hermes_android/core/services/notifications/background_listener.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/notifications/background_listener.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
 
 KanbanTask _kanbanTask(String id, String status) =>
     KanbanTask(id: id, title: 'Task $id', body: '', status: status);

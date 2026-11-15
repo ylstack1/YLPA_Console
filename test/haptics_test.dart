@@ -6,10 +6,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/feedback/haptics.dart';
-import 'package:hermes_android/core/screens/look_feel_screen.dart';
-import 'package:hermes_android/core/theme/look_feel.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/feedback/haptics.dart';
+import 'package:ylpa_console/core/screens/look_feel_screen.dart';
+import 'package:ylpa_console/core/theme/look_feel.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The ticks the platform was asked for, by name.

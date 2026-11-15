@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/floating.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/utils/approval_display.dart';
-import 'package:hermes_android/core/services/approval_response.dart';
-import 'package:hermes_android/core/widgets/chat_approval_dock.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/floating.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/utils/approval_display.dart';
+import 'package:ylpa_console/core/services/approval_response.dart';
+import 'package:ylpa_console/core/widgets/chat_approval_dock.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const request = <String, dynamic>{
   'request_id': 'dock-1',

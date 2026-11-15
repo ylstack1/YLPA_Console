@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/project_files.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
-import 'package:hermes_android/core/utils/chat_file_path_policy.dart';
-import 'package:hermes_android/core/widgets/chat/chat_file_loader.dart';
+import 'package:ylpa_console/core/models/project_files.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/utils/chat_file_path_policy.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_file_loader.dart';
 
 /// A gateway with a few files; every read is recorded.
 class FakeFiles implements HermesProjectFilesGateway {

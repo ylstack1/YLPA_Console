@@ -3,9 +3,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/onboarding/halloween.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_motion.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/core/screens/onboarding/halloween.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_motion.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
 
 import '../support/design_shots.dart';
 import '../support/onboarding_fakes.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/chat_stream_trace.dart';
+import 'package:ylpa_console/core/services/chat_stream_trace.dart';
 
 // F0 of the fluidity plan: the streaming trace is off unless a qa build asks
 // for it, and its debug counters (what tests read) carry numbers only.

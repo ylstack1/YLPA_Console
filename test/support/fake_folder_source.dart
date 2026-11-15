@@ -1,6 +1,6 @@
 // An in-memory server file system for the folder picker: directories only,
 // like what `SftpFolderSource` hands the UI.
-import 'package:hermes_android/core/services/herdr_folders.dart';
+import 'package:ylpa_console/core/services/herdr_folders.dart';
 
 class FakeFolderSource implements HerdrFolderSource {
   FakeFolderSource({

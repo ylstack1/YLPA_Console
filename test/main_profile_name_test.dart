@@ -4,14 +4,14 @@
 // renamed by any of it.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/services/bot_roster_store.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/agent_name_scope.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
-import 'package:hermes_android/core/services/notifications/notification_strings.dart';
-import 'package:hermes_android/core/widgets/profile_scope.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/services/bot_roster_store.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/agent_name_scope.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/services/notifications/notification_strings.dart';
+import 'package:ylpa_console/core/widgets/profile_scope.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _titled = AgentProfile(
   name: 'default',

@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/voice/conversation/gpt_live_voice_conversation_controller.dart';
-import 'package:hermes_android/core/services/voice/conversation/voice_conversation_engine.dart';
-import 'package:hermes_android/core/services/voice/session/voice_care.dart';
-import 'package:hermes_android/core/services/voice/voice_phase.dart';
-import 'package:hermes_android/core/services/voice/voice_service.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/voice/conversation/gpt_live_voice_conversation_controller.dart';
+import 'package:ylpa_console/core/services/voice/conversation/voice_conversation_engine.dart';
+import 'package:ylpa_console/core/services/voice/session/voice_care.dart';
+import 'package:ylpa_console/core/services/voice/voice_phase.dart';
+import 'package:ylpa_console/core/services/voice/voice_service.dart';
 
 /// Scripted engine: records every call in [calls] and exposes the state the
 /// coordinator reads. Used for both the chained and the live slot.

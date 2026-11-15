@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hermes_android/core/design/tokens.dart' show HermesType;
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/glass_look.dart';
-import 'package:hermes_android/core/widgets/hermes_ui.dart';
+import 'package:ylpa_console/core/design/tokens.dart' show HermesType;
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/glass_look.dart';
+import 'package:ylpa_console/core/widgets/hermes_ui.dart';
 
 void main() {
   testWidgets('settings switches use the selected theme font for both lines', (

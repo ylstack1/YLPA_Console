@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/conversation/local_voice_command_detector.dart';
+import 'package:ylpa_console/core/services/voice/conversation/local_voice_command_detector.dart';
 
 void main() {
   const detector = LocalVoiceCommandDetector();

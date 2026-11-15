@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/status_pill_sheet.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/status_pill_sheet.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _surface = ValueKey('status-sheet-test');
 const _handle = ValueKey('status-sheet-handle');

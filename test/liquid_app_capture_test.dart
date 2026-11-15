@@ -10,14 +10,14 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/glass_strip.dart';
-import 'package:hermes_android/core/design/liquid_glass.dart';
-import 'package:hermes_android/core/design/modal.dart';
-import 'package:hermes_android/core/screens/themes_screen.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/frosted_backdrop.dart';
-import 'package:hermes_android/core/widgets/hermes_app_bar.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/glass_strip.dart';
+import 'package:ylpa_console/core/design/liquid_glass.dart';
+import 'package:ylpa_console/core/design/modal.dart';
+import 'package:ylpa_console/core/screens/themes_screen.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/frosted_backdrop.dart';
+import 'package:ylpa_console/core/widgets/hermes_app_bar.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/design_shots.dart';
 

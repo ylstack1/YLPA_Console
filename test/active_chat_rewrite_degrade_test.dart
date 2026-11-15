@@ -6,12 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/models/subagent_activity.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/models/subagent_activity.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
 
 import 'support/in_memory_compression_restore_storage.dart';
 import 'support/test_api_client.dart';

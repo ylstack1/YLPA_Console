@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hermes_android/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
 
 void main() {
   testWidgets('un mensaje terminado usa una región estable sin lupa', (

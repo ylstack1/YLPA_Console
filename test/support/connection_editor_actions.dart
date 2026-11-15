@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/page.dart';
+import 'package:ylpa_console/core/design/page.dart';
 
 Future<void> revealEditorControl(WidgetTester tester, Finder control) async {
   if (control.evaluate().isEmpty) {

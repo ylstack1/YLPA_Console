@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:hermes_android/core/models/project_files.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/models/project_files.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
 
 import 'pj1215_fake_projects_gateway.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_control_center.dart';
-import 'package:hermes_android/core/models/project_move_targets.dart';
+import 'package:ylpa_console/core/models/desktop_control_center.dart';
+import 'package:ylpa_console/core/models/project_move_targets.dart';
 
 ProjectTreeSnapshot _tree(List<Map<String, dynamic>> projects) =>
     ProjectTreeSnapshot.fromJson({'projects': projects});

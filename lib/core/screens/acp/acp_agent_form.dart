@@ -88,6 +88,14 @@ class AcpAgentFormState extends State<AcpAgentForm> {
         env[key] = raw;
       }
     }
+    // cwd is rendered outside _fields when includeCwd is true; sweep it in so
+    // editors (settings) can persist the workspace path.
+    final cwdCtrl = _textControllers['__cwd'];
+    if (cwdCtrl != null) {
+      final cwd = cwdCtrl.text.trim();
+      if (cwd.isNotEmpty) env['__cwd'] = cwd;
+    }
+
     return AcpFormValues(envValues: env, secrets: secrets);
   }
 
@@ -113,13 +121,19 @@ class AcpAgentFormState extends State<AcpAgentForm> {
             _plainTile(
               controller: _textControllers.putIfAbsent(
                 '__cwd',
-                () => TextEditingController(text: '~'),
+                () => TextEditingController(),
               ),
               label: 'Working directory',
-              hint: 'Path on the machine, e.g. /home/me/project',
+              hint: 'Absolute path on the agent machine, e.g. /home/me/project',
               colors: colors,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: (v) {
+                final p = (v ?? '').trim();
+                if (p.isEmpty) return 'Required';
+                if (!p.startsWith('/') && !RegExp(r'^[A-Za-z]:').hasMatch(p)) {
+                  return 'Must be an absolute path';
+                }
+                return null;
+              },
             ),
         ],
       ),

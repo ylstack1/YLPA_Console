@@ -4,10 +4,10 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/app_lock.dart';
-import 'package:hermes_android/core/services/app_lock_sensitive_read_fence.dart';
-import 'package:hermes_android/core/services/chat_draft_store.dart';
-import 'package:hermes_android/core/services/notifications/rich_notifications.dart';
+import 'package:ylpa_console/core/services/app_lock.dart';
+import 'package:ylpa_console/core/services/app_lock_sensitive_read_fence.dart';
+import 'package:ylpa_console/core/services/chat_draft_store.dart';
+import 'package:ylpa_console/core/services/notifications/rich_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

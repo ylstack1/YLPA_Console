@@ -6,16 +6,16 @@
 // edge on every page.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/hermes_design.dart'
+import 'package:ylpa_console/core/design/hermes_design.dart'
     show HermesListGroup, HermesListRow;
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/lines.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/dock_style.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart'
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/lines.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/dock_style.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart'
     show HermesSegment, HermesSegmentedControl;
-import 'package:hermes_android/core/widgets/hermes_ui.dart'
+import 'package:ylpa_console/core/widgets/hermes_ui.dart'
     show HermesGroup, HermesNavRow;
 
 Future<void> _pump(

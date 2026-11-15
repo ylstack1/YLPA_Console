@@ -3,14 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:hermes_android/core/screens/security_info_screen.dart';
-import 'package:hermes_android/core/screens/look_feel_screen.dart';
-import 'package:hermes_android/core/screens/settings_screen.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/settings/settings_deep_link.dart';
-import 'package:hermes_android/core/settings/settings_sections.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/security_info_screen.dart';
+import 'package:ylpa_console/core/screens/look_feel_screen.dart';
+import 'package:ylpa_console/core/screens/settings_screen.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/settings/settings_deep_link.dart';
+import 'package:ylpa_console/core/settings/settings_sections.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 // Settings on a tablet: in expanded windows (>= 840dp) the categories sit in
 // a ~320dp pane on the left and the selected category's page on the right.

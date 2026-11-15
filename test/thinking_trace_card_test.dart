@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/render/companion_status_indicator.dart';
-import 'package:hermes_android/core/companion/render/companion_view.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/hermes_status_indicator.dart';
-import 'package:hermes_android/core/companion/models/companion_mood.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
-import 'package:hermes_android/core/widgets/chat_turn_activity.dart';
-import 'package:hermes_android/core/widgets/hermes_pill.dart';
-import 'package:hermes_android/core/widgets/thinking_glyph.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/companion/render/companion_status_indicator.dart';
+import 'package:ylpa_console/core/companion/render/companion_view.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/hermes_status_indicator.dart';
+import 'package:ylpa_console/core/companion/models/companion_mood.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/widgets/chat_turn_activity.dart';
+import 'package:ylpa_console/core/widgets/hermes_pill.dart';
+import 'package:ylpa_console/core/widgets/thinking_glyph.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _cardHost({
   required ThinkingTraceCard card,

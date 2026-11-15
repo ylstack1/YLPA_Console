@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/chat_markdown_body.dart';
-import 'package:hermes_android/core/widgets/chat/chat_message_frame.dart';
-import 'package:hermes_android/core/widgets/chat/chat_message_selection_area.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_markdown_body.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_message_frame.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_message_selection_area.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _host(Widget child) => MaterialApp(
   localizationsDelegates: Strings.localizationsDelegates,

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/instance_edit_screen.dart';
-import 'package:hermes_android/core/screens/onboarding/manual_setup_page.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_widgets.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/instance_edit_screen.dart';
+import 'package:ylpa_console/core/screens/onboarding/manual_setup_page.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_widgets.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/connection_editor_actions.dart';
 import 'support/onboarding_fakes.dart';

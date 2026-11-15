@@ -4,7 +4,7 @@
 // another surface's running turn (active_chat_service.dart). The end-to-end
 // behaviour is pinned in canonical_session_authority_chat_test.dart (RL*).
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
 
 void main() {
   bool decide({

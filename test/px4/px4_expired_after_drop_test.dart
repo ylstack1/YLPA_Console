@@ -9,10 +9,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hermes_android/core/models/core_read.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/mobile_oauth.dart';
-import 'package:hermes_android/core/widgets/instance_status_panel.dart';
+import 'package:ylpa_console/core/models/core_read.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/mobile_oauth.dart';
+import 'package:ylpa_console/core/widgets/instance_status_panel.dart';
 
 import '../s1/s1_fixtures.dart' show SecureChannelFake;
 import '../s2/s2_fixtures.dart';

@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/screen/screen_controller.dart';
-import 'package:hermes_android/core/screen/screen_server.dart';
-import 'package:hermes_android/core/screen/takeover_view.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/screen/screen_controller.dart';
+import 'package:ylpa_console/core/screen/screen_server.dart';
+import 'package:ylpa_console/core/screen/takeover_view.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 void main() {

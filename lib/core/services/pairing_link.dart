@@ -2,7 +2,7 @@ import '../models/connection.dart';
 
 /// Enlace de emparejado de una instancia remota: codifica host + puerto + token
 /// (y opcionalmente etiqueta, HTTPS, Dashboard y el acceso al Dashboard) en
-/// una URI `hermes://pair?...`
+/// una URI `ylpa://pair?...`
 /// que el servidor imprime como QR. La app la escanea (o se pega) y precarga la
 /// instancia, evitando teclear IP y un token largo en el móvil.
 ///
@@ -40,7 +40,7 @@ class PairingLink {
       (dashboardUser?.trim().isNotEmpty ?? false) &&
       (dashboardPassword?.isNotEmpty ?? false);
 
-  /// Construye la URI canónica `hermes://pair?host=...&port=...&token=...`.
+  /// Construye la URI canónica `ylpa://pair?host=...&port=...&token=...`.
   String build() {
     final q = <String, String>{
       'host': host,
@@ -194,7 +194,7 @@ class PairingLinkParse {
   const PairingLinkParse.invalid() : this._(PairingLinkVersion.invalid);
 }
 
-/// `hermes://pair?v=2&url=…&user=…[&pass=…][&label=…]`: a Dashboard-only
+/// `ylpa://pair?v=2&url=…&user=…[&pass=…][&label=…]`: a Dashboard-only
 /// link. It never carries Gateway data: any other key (token, host, port…) is
 /// ignored. The password lives in memory only and is excluded from
 /// [toString], [==] and [hashCode].

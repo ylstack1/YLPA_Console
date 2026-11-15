@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:hermes_android/core/bots/ui/roster/living_bot_face.dart';
-import 'package:hermes_android/core/config/feature_flags.dart';
-import 'package:hermes_android/core/services/shared_gateway_pool.dart';
-import 'package:hermes_android/core/widgets/mascot/mascot_sprite.dart';
+import 'package:ylpa_console/core/bots/ui/roster/living_bot_face.dart';
+import 'package:ylpa_console/core/config/feature_flags.dart';
+import 'package:ylpa_console/core/services/shared_gateway_pool.dart';
+import 'package:ylpa_console/core/widgets/mascot/mascot_sprite.dart';
 import 'package:sqflite/sqflite.dart' as sqflite;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 

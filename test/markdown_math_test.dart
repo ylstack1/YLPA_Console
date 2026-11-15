@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/markdown_math.dart';
+import 'package:ylpa_console/core/utils/markdown_math.dart';
 
 /// Marker that opens an inline formula span.
 const _m = kMathInlineMarker;

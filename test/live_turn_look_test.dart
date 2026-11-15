@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_task_list.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/live_turn_tokens.dart';
-import 'package:hermes_android/core/widgets/chat/live_turn_window.dart';
-import 'package:hermes_android/core/widgets/chat/turn_step_cards.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
-import 'package:hermes_android/core/widgets/chat_turn_activity.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/agent_task_list.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/live_turn_tokens.dart';
+import 'package:ylpa_console/core/widgets/chat/live_turn_window.dart';
+import 'package:ylpa_console/core/widgets/chat/turn_step_cards.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/widgets/chat_turn_activity.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 // The live turn's look approved on 9 nov 2026 (mock turno3.html, with
 // the reinforced connector): the «Trabajando» card, a window of at most four

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/live_turn_tokens.dart';
-import 'package:hermes_android/core/widgets/chat/turn_activity_pill.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
-import 'package:hermes_android/core/widgets/chat_turn_activity.dart';
-import 'package:hermes_android/core/widgets/message_avatar_header.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/live_turn_tokens.dart';
+import 'package:ylpa_console/core/widgets/chat/turn_activity_pill.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/widgets/chat_turn_activity.dart';
+import 'package:ylpa_console/core/widgets/message_avatar_header.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 // The live turn under a header with and without the profile's face: the
 // connector hangs from the card's left edge (not from the screen's), and

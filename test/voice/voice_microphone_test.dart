@@ -2,9 +2,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/stt_hermes_server.dart';
-import 'package:hermes_android/core/services/voice/voice_microphone.dart';
-import 'package:hermes_android/core/services/voice/voice_settings.dart';
+import 'package:ylpa_console/core/services/voice/stt_hermes_server.dart';
+import 'package:ylpa_console/core/services/voice/voice_microphone.dart';
+import 'package:ylpa_console/core/services/voice/voice_settings.dart';
 import 'package:record/record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

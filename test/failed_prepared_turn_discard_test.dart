@@ -5,11 +5,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:hermes_android/core/models/prepared_turn.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/chat_draft_store.dart';
-import 'package:hermes_android/core/services/session_deletion.dart';
-import 'package:hermes_android/core/services/turn_outbox_store.dart';
+import 'package:ylpa_console/core/models/prepared_turn.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/chat_draft_store.dart';
+import 'package:ylpa_console/core/services/session_deletion.dart';
+import 'package:ylpa_console/core/services/turn_outbox_store.dart';
 
 final class _BarrierSecureStorage extends FlutterSecureStorage {
   final Map<String, String> values = <String, String>{};

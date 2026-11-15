@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/data/companion_manifest_parser.dart';
-import 'package:hermes_android/core/companion/models/companion_animation_state.dart';
+import 'package:ylpa_console/core/companion/data/companion_manifest_parser.dart';
+import 'package:ylpa_console/core/companion/models/companion_animation_state.dart';
 
 const _validJson = '''
 {

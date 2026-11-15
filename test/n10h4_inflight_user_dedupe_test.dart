@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/services/session_reconciler.dart';
-import 'package:hermes_android/core/utils/chat_turn.dart';
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/services/session_reconciler.dart';
+import 'package:ylpa_console/core/utils/chat_turn.dart';
 
 /// N10h4: recovery with an empty snapshot must not paint the prompt twice
 /// (own row + `user-inflight`). Mirrors Desktop's last-user-run check in

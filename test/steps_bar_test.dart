@@ -5,14 +5,14 @@ import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/tool_steps_summary.dart';
-import 'package:hermes_android/core/widgets/chat/chat_live_icon.dart';
-import 'package:hermes_android/core/widgets/chat/turn_activity_pill.dart';
-import 'package:hermes_android/core/widgets/chat/turn_step_cards.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
-import 'package:hermes_android/core/widgets/chat/live_motion.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/tool_steps_summary.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_live_icon.dart';
+import 'package:ylpa_console/core/widgets/chat/turn_activity_pill.dart';
+import 'package:ylpa_console/core/widgets/chat/turn_step_cards.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/widgets/chat/live_motion.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Strings _s(String lang) => lookupStrings(Locale(lang));
 

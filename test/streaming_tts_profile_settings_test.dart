@@ -1,8 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/voice/voice_service.dart';
-import 'package:hermes_android/core/services/voice/voice_settings.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/voice/voice_service.dart';
+import 'package:ylpa_console/core/services/voice/voice_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

@@ -10,9 +10,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/active_profile_scope.dart';
-import 'package:hermes_android/core/services/models_snapshot.dart';
-import 'package:hermes_android/core/widgets/console_loader.dart';
+import 'package:ylpa_console/core/services/active_profile_scope.dart';
+import 'package:ylpa_console/core/services/models_snapshot.dart';
+import 'package:ylpa_console/core/widgets/console_loader.dart';
 import 'support/reasoning_tap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

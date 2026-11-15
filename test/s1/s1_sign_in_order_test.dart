@@ -3,10 +3,10 @@
 // secrets in two steps; a failed secrets write must not leave an instance that
 // still holds its password in session-token mode.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/dashboard_setup_screen.dart';
-import 'package:hermes_android/core/screens/dashboard_sign_in.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/mobile_oauth.dart';
+import 'package:ylpa_console/core/screens/dashboard_setup_screen.dart';
+import 'package:ylpa_console/core/screens/dashboard_sign_in.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/mobile_oauth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 's1_fixtures.dart';

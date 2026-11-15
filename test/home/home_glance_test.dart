@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/home/board/home_board_data.dart';
-import 'package:hermes_android/core/home/home_now.dart';
+import 'package:ylpa_console/core/home/board/home_board_data.dart';
+import 'package:ylpa_console/core/home/home_now.dart';
 
 final _now = DateTime(2026, 10, 6, 16, 30);
 

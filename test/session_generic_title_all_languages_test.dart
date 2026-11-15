@@ -1,9 +1,9 @@
 import 'dart:ui' show Locale;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/utils/session_title.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/utils/session_title.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 void main() {
   const expected = <String, (String, String, String)>{

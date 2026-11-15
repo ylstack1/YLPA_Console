@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/compaction_progress.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat_status_pill.dart';
-import 'package:hermes_android/core/widgets/session_context_usage.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/compaction_progress.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat_status_pill.dart';
+import 'package:ylpa_console/core/widgets/session_context_usage.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _contextZone = ValueKey('desktop-context-usage-status');
 const _modelZone = ValueKey('status-pill-model');

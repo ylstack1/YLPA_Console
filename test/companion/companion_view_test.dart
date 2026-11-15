@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/data/companion_preferences.dart';
-import 'package:hermes_android/core/companion/data/companion_repository.dart';
-import 'package:hermes_android/core/companion/models/companion.dart';
-import 'package:hermes_android/core/companion/models/companion_animation_state.dart';
-import 'package:hermes_android/core/companion/render/companion_view.dart';
-import 'package:hermes_android/core/companion/render/spritesheet_renderer.dart';
-import 'package:hermes_android/core/companion/state/companion_controller.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/companion/render/companion_face.dart';
+import 'package:ylpa_console/core/companion/data/companion_preferences.dart';
+import 'package:ylpa_console/core/companion/data/companion_repository.dart';
+import 'package:ylpa_console/core/companion/models/companion.dart';
+import 'package:ylpa_console/core/companion/models/companion_animation_state.dart';
+import 'package:ylpa_console/core/companion/render/companion_view.dart';
+import 'package:ylpa_console/core/companion/render/spritesheet_renderer.dart';
+import 'package:ylpa_console/core/companion/state/companion_controller.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/companion/render/companion_face.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeController extends CompanionController {

@@ -15,7 +15,7 @@ if (hasReleaseKeystore) {
 }
 
 android {
-   namespace = "com.hermesagent.hermes_android"
+   namespace = "com.ylpa.console"
    compileSdk = 36
 
    compileOptions {
@@ -26,9 +26,9 @@ android {
 
    defaultConfig {
        // Identidad pública en Play (inmutable tras la primera publicación).
-       // Propia de XPeta Lab para no colisionar con el package de Nous/Hermes.
+       // Propia de YLPA para no colisionar con el package de Nous/Hermes.
        // El namespace interno no cambia: las clases Kotlin siguen donde están.
-       applicationId = "dev.xpetalab.hermesconsole"
+       applicationId = "com.ylpa.console"
        minSdk = 24
        targetSdk = 36
        versionCode = flutter.versionCode

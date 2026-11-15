@@ -4,12 +4,12 @@
 // handling.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/browser/in_app_browser_screen.dart';
-import 'package:hermes_android/core/browser/open_web_link.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/chat_markdown_body.dart'
+import 'package:ylpa_console/core/browser/in_app_browser_screen.dart';
+import 'package:ylpa_console/core/browser/open_web_link.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_markdown_body.dart'
     show openChatMarkdownLink;
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'support/fake_webview_platform.dart';

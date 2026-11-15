@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/foreign_session.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
-import 'package:hermes_android/core/services/foreign_session_import_controller.dart';
+import 'package:ylpa_console/core/models/foreign_session.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/services/foreign_session_import_controller.dart';
 
 ForeignSessionRow _row(
   String id, {

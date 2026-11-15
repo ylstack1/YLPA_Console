@@ -6,11 +6,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/services/notifications/chat_notification_read_sync.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/core/services/notifications/rich_notifications.dart';
-import 'package:hermes_android/core/services/session_archive.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/services/notifications/chat_notification_read_sync.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/notifications/rich_notifications.dart';
+import 'package:ylpa_console/core/services/session_archive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Session _row(

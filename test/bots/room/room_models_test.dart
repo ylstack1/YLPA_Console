@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/state/bot_presence.dart';
-import 'package:hermes_android/core/bots/ui/room/room_models.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/bots/state/bot_presence.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_models.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
 
 import 'room_fixtures.dart';
 

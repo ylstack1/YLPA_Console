@@ -6,13 +6,13 @@
 // 800 × 1280 and 1280 × 800; dark and light; text at 1.0 and 1.3.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/browser/browser_tabs.dart';
-import 'package:hermes_android/core/browser/in_app_tabbed_browser.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace_host.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/browser/browser_tabs.dart';
+import 'package:ylpa_console/core/browser/in_app_tabbed_browser.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace_host.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'support/fake_webview_platform.dart';

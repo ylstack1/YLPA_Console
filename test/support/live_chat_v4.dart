@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/chat/turn_activity_pill.dart';
+import 'package:ylpa_console/core/widgets/chat/turn_activity_pill.dart';
 
 Finder get inlineActivity => find.byKey(const ValueKey('chat-inline-activity'));
 Finder get inlineLabel =>

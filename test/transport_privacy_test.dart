@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/transport_privacy.dart';
+import 'package:ylpa_console/core/utils/transport_privacy.dart';
 
 void main() {
   group('TransportPrivacy.classify · secure', () {

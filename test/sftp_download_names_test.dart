@@ -8,7 +8,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/sftp_downloads.dart';
+import 'package:ylpa_console/core/services/sftp_downloads.dart';
 
 void main() {
   group('sftpSafeFileName', () {

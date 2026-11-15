@@ -1,12 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/voice/voice_server_prefs.dart';
-import 'package:hermes_android/core/services/voice/voice_service.dart';
-import 'package:hermes_android/core/services/voice/voice_settings.dart';
-import 'package:hermes_android/core/services/voice/voice_stop_phrases.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/voice/voice_server_prefs.dart';
+import 'package:ylpa_console/core/services/voice/voice_service.dart';
+import 'package:ylpa_console/core/services/voice/voice_settings.dart';
+import 'package:ylpa_console/core/services/voice/voice_stop_phrases.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';

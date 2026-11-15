@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hermes_android/core/models/subagent_activity.dart';
-import 'package:hermes_android/core/models/subagent_steps.dart';
-import 'package:hermes_android/core/screens/subagent_detail_screen.dart';
-import 'package:hermes_android/core/services/subagent_group_visibility.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/subagent_activity_card.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/subagent_activity.dart';
+import 'package:ylpa_console/core/models/subagent_steps.dart';
+import 'package:ylpa_console/core/screens/subagent_detail_screen.dart';
+import 'package:ylpa_console/core/services/subagent_group_visibility.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/subagent_activity_card.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/inter_font.dart';
 

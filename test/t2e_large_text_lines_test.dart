@@ -2,9 +2,9 @@
 // letters at 200 % text. From 1.3× on they may take a second line.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/text_scale.dart';
-import 'package:hermes_android/core/widgets/hermes_ui.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/text_scale.dart';
+import 'package:ylpa_console/core/widgets/hermes_ui.dart';
 
 Widget _at(double scale, Widget child) => MaterialApp(
   theme: AppTheme.fromId('console'),

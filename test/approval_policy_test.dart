@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/approval_policy.dart';
-import 'package:hermes_android/core/services/command_risk.dart';
+import 'package:ylpa_console/core/services/approval_policy.dart';
+import 'package:ylpa_console/core/services/command_risk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

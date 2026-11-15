@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/tts_toolset_config.dart';
+import 'package:ylpa_console/core/services/voice/tts_toolset_config.dart';
 
 void main() {
   test('parses the TTS toolset configuration contract', () {

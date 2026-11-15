@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Hermes Console contributors
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/cron_job.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/models/cron_job.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
 import 'support/official_http_audit.dart';
 import 'package:http/http.dart' as http;
 

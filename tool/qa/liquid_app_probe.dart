@@ -6,9 +6,9 @@ import 'dart:developer' as developer;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
-import 'package:hermes_android/core/design/liquid_glass.dart';
-import 'package:hermes_android/core/widgets/frosted_backdrop.dart';
-import 'package:hermes_android/main.dart' as app;
+import 'package:ylpa_console/core/design/liquid_glass.dart';
+import 'package:ylpa_console/core/widgets/frosted_backdrop.dart';
+import 'package:ylpa_console/main.dart' as app;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

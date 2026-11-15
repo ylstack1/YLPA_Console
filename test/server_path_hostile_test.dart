@@ -1,10 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/project_move_targets.dart';
-import 'package:hermes_android/core/utils/server_path.dart';
-import 'package:hermes_android/core/utils/short_server_path.dart';
-import 'package:hermes_android/core/widgets/projects/project_files_browser.dart';
+import 'package:ylpa_console/core/models/project_move_targets.dart';
+import 'package:ylpa_console/core/utils/server_path.dart';
+import 'package:ylpa_console/core/utils/short_server_path.dart';
+import 'package:ylpa_console/core/widgets/projects/project_files_browser.dart';
 
 /// Hostile and odd server paths. None of these may throw, and a path that is
 /// accepted must stay inside its drive, share or POSIX root.

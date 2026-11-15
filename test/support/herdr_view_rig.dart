@@ -3,12 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/herdr_agents_screen.dart';
-import 'package:hermes_android/core/services/herdr_agents.dart';
-import 'package:hermes_android/core/services/herdr_harness.dart';
-import 'package:hermes_android/core/services/herdr_session_files.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/herdr_agents_screen.dart';
+import 'package:ylpa_console/core/services/herdr_agents.dart';
+import 'package:ylpa_console/core/services/herdr_harness.dart';
+import 'package:ylpa_console/core/services/herdr_session_files.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'fake_herdr_server.dart';
 

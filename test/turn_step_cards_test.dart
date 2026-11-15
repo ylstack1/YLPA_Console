@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/activity_snapshot.dart';
-import 'package:hermes_android/core/theme/hermes_tokens.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/readable_ink.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/chat/tool_steps_summary.dart';
-import 'package:hermes_android/core/widgets/chat/turn_step_cards.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/theme/hermes_tokens.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/readable_ink.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/chat/tool_steps_summary.dart';
+import 'package:ylpa_console/core/widgets/chat/turn_step_cards.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
 
 import 'support/turn_summary_host.dart';
 

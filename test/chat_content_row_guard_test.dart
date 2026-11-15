@@ -2,10 +2,10 @@
 // its error type logged (source `artifacts`); the other rows still list
 // what they share, and the previews the other calls open stay open.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/agent_preview_extractor.dart';
-import 'package:hermes_android/core/services/app_error_log.dart';
-import 'package:hermes_android/core/services/chat_content_extractor.dart';
-import 'package:hermes_android/core/services/session_reconciler.dart';
+import 'package:ylpa_console/core/services/agent_preview_extractor.dart';
+import 'package:ylpa_console/core/services/app_error_log.dart';
+import 'package:ylpa_console/core/services/chat_content_extractor.dart';
+import 'package:ylpa_console/core/services/session_reconciler.dart';
 
 import 'support/malformed_artifact_rows.dart';
 

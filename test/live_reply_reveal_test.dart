@@ -4,7 +4,7 @@ import 'package:crypto/crypto.dart' show sha256;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/chat/live_reply_reveal.dart';
+import 'package:ylpa_console/core/widgets/chat/live_reply_reveal.dart';
 
 import 'support/design_shots.dart' show loadDesignFonts;
 

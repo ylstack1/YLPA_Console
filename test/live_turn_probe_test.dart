@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_active_session.dart';
-import 'package:hermes_android/core/services/live_turn_probe.dart';
+import 'package:ylpa_console/core/models/desktop_active_session.dart';
+import 'package:ylpa_console/core/services/live_turn_probe.dart';
 
 /// conn-registry: the verdict of one `session.active_list` answer, as
 /// Desktop's `liveTurnVerdict` (apps/desktop/src/store/session-states.ts:

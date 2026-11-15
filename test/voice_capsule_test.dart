@@ -6,16 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/floating_chat_header.dart';
-import 'package:hermes_android/core/widgets/hermes_notice.dart';
-import 'package:hermes_android/core/widgets/island.dart';
-import 'package:hermes_android/core/widgets/mascot/mascot_state.dart';
-import 'package:hermes_android/core/widgets/pill_morph.dart';
-import 'package:hermes_android/core/widgets/voice_capsule.dart';
-import 'package:hermes_android/core/widgets/voice_wave.dart';
-import 'package:hermes_android/core/widgets/voice_strip.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/floating_chat_header.dart';
+import 'package:ylpa_console/core/widgets/hermes_notice.dart';
+import 'package:ylpa_console/core/widgets/island.dart';
+import 'package:ylpa_console/core/widgets/mascot/mascot_state.dart';
+import 'package:ylpa_console/core/widgets/pill_morph.dart';
+import 'package:ylpa_console/core/widgets/voice_capsule.dart';
+import 'package:ylpa_console/core/widgets/voice_wave.dart';
+import 'package:ylpa_console/core/widgets/voice_strip.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _labels = VoiceStripLabels(
   finishListening: 'Terminar de hablar',

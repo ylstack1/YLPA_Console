@@ -1,4 +1,4 @@
-import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
 import 'package:http/http.dart' as http;
 
 /// Session token every [testDashboardClient] sends: with a manual token the

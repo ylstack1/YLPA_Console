@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/profile_pet.dart';
-import 'package:hermes_android/core/services/profile_pet_service.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/profile_pet.dart';
+import 'package:ylpa_console/core/services/profile_pet_service.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 class _RecordingPetGateway implements HermesDesktopPetGateway {
   final StreamController<TuiGatewayEvent> _events =

@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/modal.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/design/modal.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
 import 'support/legacy_island_card.dart';
-import 'package:hermes_android/core/widgets/pill_morph.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/widgets/pill_morph.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 // QA 1.2.15: focused composer, system Back hides the keyboard (the field keeps
 // focus), open a sheet and close it -> the keyboard reopened by itself because

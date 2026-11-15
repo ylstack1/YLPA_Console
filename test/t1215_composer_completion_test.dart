@@ -6,15 +6,15 @@ import 'dart:io';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/command_descriptor.dart';
-import 'package:hermes_android/core/models/composer_reference.dart';
-import 'package:hermes_android/core/services/desktop_gateway_capabilities.dart';
-import 'package:hermes_android/core/services/composer_completion_scheduler.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
-import 'package:hermes_android/core/utils/large_paste.dart';
-import 'package:hermes_android/core/utils/slash_commands.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/command_descriptor.dart';
+import 'package:ylpa_console/core/models/composer_reference.dart';
+import 'package:ylpa_console/core/services/desktop_gateway_capabilities.dart';
+import 'package:ylpa_console/core/services/composer_completion_scheduler.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/utils/large_paste.dart';
+import 'package:ylpa_console/core/utils/slash_commands.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/rpc_frame_helpers.dart';
 

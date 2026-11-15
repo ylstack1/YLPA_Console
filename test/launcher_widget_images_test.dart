@@ -6,17 +6,17 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/characters/bot_character.dart';
-import 'package:hermes_android/core/characters/bot_character_store.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/services/bot_roster_store.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_images.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_raster.dart';
-import 'package:hermes_android/core/models/home_widget_snapshot.dart';
-import 'package:hermes_android/core/models/launcher_widget_chats.dart';
-import 'package:hermes_android/core/models/launcher_widget_cron.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/characters/bot_character.dart';
+import 'package:ylpa_console/core/characters/bot_character_store.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/services/bot_roster_store.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_images.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_raster.dart';
+import 'package:ylpa_console/core/models/home_widget_snapshot.dart';
+import 'package:ylpa_console/core/models/launcher_widget_chats.dart';
+import 'package:ylpa_console/core/models/launcher_widget_cron.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'launcher_widget_fixtures.dart';
 

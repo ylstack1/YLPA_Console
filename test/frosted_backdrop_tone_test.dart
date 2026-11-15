@@ -7,12 +7,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show BackdropFilterLayer;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/glass_strip.dart';
-import 'package:hermes_android/core/design/liquid_glass.dart';
-import 'package:hermes_android/core/design/smoked_glass.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/frosted_backdrop.dart';
+import 'package:ylpa_console/core/design/glass_strip.dart';
+import 'package:ylpa_console/core/design/liquid_glass.dart';
+import 'package:ylpa_console/core/design/smoked_glass.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/frosted_backdrop.dart';
 
 const _fill = ValueKey('tone-fill');
 

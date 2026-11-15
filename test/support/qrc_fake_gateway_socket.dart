@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// A Dashboard that mints tickets, or fails them with [failWith].

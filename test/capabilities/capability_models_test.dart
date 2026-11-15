@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/capability_models.dart';
+import 'package:ylpa_console/core/capabilities/capability_models.dart';
 
 CapabilityActionStatus _exit(List<String> lines) => CapabilityActionStatus(
   name: 'a',

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/room/room_header.dart';
-import 'package:hermes_android/core/bots/ui/room/room_models.dart';
-import 'package:hermes_android/core/bots/ui/room/room_widgets.dart';
-import 'package:hermes_android/core/bots/ui/roster/living_bot_face.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/floating_chat_header.dart';
-import 'package:hermes_android/core/widgets/island.dart';
-import 'package:hermes_android/core/widgets/mascot/header_mascot.dart';
-import 'package:hermes_android/core/widgets/mascot/mascot.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_header.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_models.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_widgets.dart';
+import 'package:ylpa_console/core/bots/ui/roster/living_bot_face.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/floating_chat_header.dart';
+import 'package:ylpa_console/core/widgets/island.dart';
+import 'package:ylpa_console/core/widgets/mascot/header_mascot.dart';
+import 'package:ylpa_console/core/widgets/mascot/mascot.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'bots/room/room_fixtures.dart';
 

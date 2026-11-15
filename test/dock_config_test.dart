@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/dock_config.dart';
-import 'package:hermes_android/core/services/dock_preferences_store.dart';
+import 'package:ylpa_console/core/models/dock_config.dart';
+import 'package:ylpa_console/core/services/dock_preferences_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

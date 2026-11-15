@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
 
 void main() {
   test('local create member emits exact official discriminated target', () {

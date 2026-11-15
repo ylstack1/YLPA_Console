@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 /// Gateway fake that records the side-agent and branch RPCs it receives.
 ///

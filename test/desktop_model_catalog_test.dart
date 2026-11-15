@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_model_catalog.dart';
+import 'package:ylpa_console/core/models/desktop_model_catalog.dart';
 
 void main() {
   group('DesktopModelCatalog Hermes 0.19', () {

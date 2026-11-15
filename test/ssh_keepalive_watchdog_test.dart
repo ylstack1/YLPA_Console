@@ -6,7 +6,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/ssh_keepalive.dart';
+import 'package:ylpa_console/core/services/ssh_keepalive.dart';
 
 const _interval = Duration(milliseconds: 50);
 const _timeout = Duration(milliseconds: 100);

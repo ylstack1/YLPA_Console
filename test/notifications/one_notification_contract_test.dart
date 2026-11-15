@@ -25,11 +25,11 @@ import 'dart:ui' show AppLifecycleState;
 // ignore: depend_on_referenced_packages
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/notifications/live_turn_notifications.dart';
-import 'package:hermes_android/core/services/notifications/notification_strings.dart';
-import 'package:hermes_android/core/services/notifications/rich_notifications.dart';
-import 'package:hermes_android/core/services/turn_keepalive_controller.dart';
-import 'package:hermes_android/core/services/turn_keepalive_hold.dart';
+import 'package:ylpa_console/core/services/notifications/live_turn_notifications.dart';
+import 'package:ylpa_console/core/services/notifications/notification_strings.dart';
+import 'package:ylpa_console/core/services/notifications/rich_notifications.dart';
+import 'package:ylpa_console/core/services/turn_keepalive_controller.dart';
+import 'package:ylpa_console/core/services/turn_keepalive_hold.dart';
 
 const es = NotifL10n(true);
 const key = 'conn-a/default/sess-1';

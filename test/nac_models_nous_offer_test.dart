@@ -7,7 +7,7 @@
 // connection sends nothing; an older server is told apart from a failure.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/active_profile_scope.dart';
+import 'package:ylpa_console/core/services/active_profile_scope.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 

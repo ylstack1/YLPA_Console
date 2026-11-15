@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/mission_bot_task_sheet.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/mission_bot_task_sheet.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _host({
   required MissionBotTaskSubmit onSubmit,

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/notifications/notification_mute_store.dart';
+import 'package:ylpa_console/core/services/notifications/notification_mute_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

@@ -4,12 +4,12 @@
 // once its fence closes. Work counted, not milliseconds.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/chat_stream_trace.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/utils/streaming_normalizer.dart';
-import 'package:hermes_android/core/widgets/chat/chat_markdown_body.dart';
-import 'package:hermes_android/core/widgets/chat/streaming_markdown_blocks.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/chat_stream_trace.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/utils/streaming_normalizer.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_markdown_body.dart';
+import 'package:ylpa_console/core/widgets/chat/streaming_markdown_blocks.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _app(Widget child) => MaterialApp(
   locale: const Locale('es'),

@@ -3,7 +3,7 @@
 // QA 9709 (the owner): Console plays nothing while the agent works, whatever they
 // say (`local_voice_conversation_controller_test`, «silent while it works»).
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/voice_server_prefs.dart';
+import 'package:ylpa_console/core/services/voice/voice_server_prefs.dart';
 
 void main() {
   group('voice.thinking_sound and voice.beep_volume', () {

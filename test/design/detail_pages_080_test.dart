@@ -2,8 +2,8 @@
 // Screenshots at 390×844 dark ES when DESIGN_SHOTS_DIR is set.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/hermes_design.dart';
-import 'package:hermes_android/core/screens/memory_screen.dart';
+import 'package:ylpa_console/core/design/hermes_design.dart';
+import 'package:ylpa_console/core/screens/memory_screen.dart';
 
 import '../support/design_shots.dart';
 import 'detail_single_scroll_contract_test.dart' show nestedVerticalScrollables;

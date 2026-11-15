@@ -6,8 +6,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/dashboard_address.dart';
-import 'package:hermes_android/core/services/simple_connect/hermes_server_status.dart';
+import 'package:ylpa_console/core/services/dashboard_address.dart';
+import 'package:ylpa_console/core/services/simple_connect/hermes_server_status.dart';
 
 /// Direct coverage of what Connect manually keeps from the retired network
 /// search: the address parser, the status parser, the TCP gate and the

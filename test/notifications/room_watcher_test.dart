@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/data/bot_mode_repository.dart';
-import 'package:hermes_android/core/bots/ui/room/room_prefs.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/desktop_active_session.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
-import 'package:hermes_android/core/services/notifications/room_watcher.dart';
+import 'package:ylpa_console/core/bots/data/bot_mode_repository.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_prefs.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/desktop_active_session.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/services/notifications/room_watcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../bots/room/room_fixtures.dart';

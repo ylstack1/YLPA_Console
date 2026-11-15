@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/chat/chat_markdown_body.dart'
+import 'package:ylpa_console/core/widgets/chat/chat_markdown_body.dart'
     show kChatCodeFontFamily;
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
-import 'package:hermes_android/core/widgets/interactive_prompt_card.dart'
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/widgets/interactive_prompt_card.dart'
     show blockingRequestSurface;
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 void main() {
   Widget host(Widget child) => MaterialApp(

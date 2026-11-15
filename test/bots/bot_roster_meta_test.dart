@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/state/bot_roster_meta.dart';
-import 'package:hermes_android/core/services/bot_profile_client.dart';
+import 'package:ylpa_console/core/bots/state/bot_roster_meta.dart';
+import 'package:ylpa_console/core/services/bot_profile_client.dart';
 
 import '../support/spec070_fixtures.dart';
 

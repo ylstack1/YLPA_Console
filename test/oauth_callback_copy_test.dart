@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/strings/oauth_callback_copy.dart';
+import 'package:ylpa_console/core/services/strings/oauth_callback_copy.dart';
 
 void main() {
   test('callback tables have the exact same four nonempty keys', () {

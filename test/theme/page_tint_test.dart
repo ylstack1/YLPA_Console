@@ -7,15 +7,15 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/models/dock_config.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/box_fill.dart';
-import 'package:hermes_android/core/theme/glass_look.dart';
-import 'package:hermes_android/core/theme/look_feel.dart';
-import 'package:hermes_android/core/theme/soft_tokens.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/dock_style.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/models/dock_config.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/box_fill.dart';
+import 'package:ylpa_console/core/theme/glass_look.dart';
+import 'package:ylpa_console/core/theme/look_feel.dart';
+import 'package:ylpa_console/core/theme/soft_tokens.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/dock_style.dart';
 
 HermesThemeColors _ground(LookDarkBackground background, [String? accent]) =>
     LookFeel.preset(

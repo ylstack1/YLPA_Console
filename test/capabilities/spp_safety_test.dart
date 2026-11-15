@@ -1,8 +1,8 @@
 // Masking and validation helpers of the skills / plugins / MCP screens.
 // Every secret below is an obviously fake value on example hosts.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/capability_models.dart';
-import 'package:hermes_android/core/capabilities/spp_safety.dart';
+import 'package:ylpa_console/core/capabilities/capability_models.dart';
+import 'package:ylpa_console/core/capabilities/spp_safety.dart';
 
 void main() {
   group('sppSafeEndpoint', () {

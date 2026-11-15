@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_active_session.dart';
-import 'package:hermes_android/core/services/global_activity_aggregate.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/desktop_active_session.dart';
+import 'package:ylpa_console/core/services/global_activity_aggregate.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 void main() {
   const scope = GlobalActivityScope(

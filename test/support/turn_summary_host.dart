@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hermes_android/core/models/activity_snapshot.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/turn_step_cards.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/turn_step_cards.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget turnSummaryHost(
   Widget child, {

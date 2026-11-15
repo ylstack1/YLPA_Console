@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
 
 // «Completo» (the approved v4 video): the live row names the whole command,
 // «Ejecutando uname -a». It never shows a secret: whatever names or looks

@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/herdr_agents_screen.dart';
+import 'package:ylpa_console/core/screens/herdr_agents_screen.dart';
 
 class _Channel implements SSHSession {
   _Channel(this.out);

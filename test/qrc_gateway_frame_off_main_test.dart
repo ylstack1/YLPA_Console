@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/services/json_rpc_wire.dart';
-import 'package:hermes_android/core/services/transcript_rehydrate_cost.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/services/json_rpc_wire.dart';
+import 'package:ylpa_console/core/services/transcript_rehydrate_cost.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 import 'support/qrc_fake_gateway_socket.dart';
 

@@ -5,12 +5,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/artifact_media.dart';
-import 'package:hermes_android/core/services/chat_content_extractor.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat_content_thumbnail.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
-import 'package:hermes_android/l10n/app_localizations_es.dart';
+import 'package:ylpa_console/core/services/artifact_media.dart';
+import 'package:ylpa_console/core/services/chat_content_extractor.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat_content_thumbnail.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations_es.dart';
 
 ChatContentItem _image(String name) => ChatContentItem(
   kind: ChatContentKind.image,

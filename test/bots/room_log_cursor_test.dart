@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/data/room_log_cursor.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/bots/data/room_log_cursor.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
 
 import '../support/spec070_fixtures.dart';
 

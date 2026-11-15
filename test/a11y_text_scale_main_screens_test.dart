@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/home_dashboard_screen.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
-import 'package:hermes_android/core/screens/session_list_screen.dart';
-import 'package:hermes_android/core/screens/settings_screen.dart';
+import 'package:ylpa_console/core/screens/home_dashboard_screen.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/core/screens/session_list_screen.dart';
+import 'package:ylpa_console/core/screens/settings_screen.dart';
 
 import 'support/a11y_main_screen_harness.dart';
 

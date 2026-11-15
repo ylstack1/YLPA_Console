@@ -4,13 +4,13 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/notifications/bot_face_bitmap.dart';
-import 'package:hermes_android/core/services/notifications/notification_action_drain.dart';
-import 'package:hermes_android/core/services/notifications/notification_action_ops.dart';
-import 'package:hermes_android/core/services/notifications/notification_mute_store.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/core/services/notifications/notification_strings.dart';
-import 'package:hermes_android/core/services/notifications/rich_notifications.dart';
+import 'package:ylpa_console/core/services/notifications/bot_face_bitmap.dart';
+import 'package:ylpa_console/core/services/notifications/notification_action_drain.dart';
+import 'package:ylpa_console/core/services/notifications/notification_action_ops.dart';
+import 'package:ylpa_console/core/services/notifications/notification_mute_store.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_strings.dart';
+import 'package:ylpa_console/core/services/notifications/rich_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const es = NotifL10n(true);

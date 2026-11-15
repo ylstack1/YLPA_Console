@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/feedback/feedback_policy.dart';
-import 'package:hermes_android/core/feedback/screen_help.dart';
-import 'package:hermes_android/core/screens/embed_settings_screen.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/hermes_notice.dart';
-import 'package:hermes_android/core/widgets/chat/embeds/embed_consent_store.dart';
-import 'package:hermes_android/core/widgets/chat/embeds/embed_detector.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/feedback/feedback_policy.dart';
+import 'package:ylpa_console/core/feedback/screen_help.dart';
+import 'package:ylpa_console/core/screens/embed_settings_screen.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/hermes_notice.dart';
+import 'package:ylpa_console/core/widgets/chat/embeds/embed_consent_store.dart';
+import 'package:ylpa_console/core/widgets/chat/embeds/embed_detector.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/quiet_feedback.dart';

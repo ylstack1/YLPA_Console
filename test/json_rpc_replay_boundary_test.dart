@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/json_rpc_wire.dart';
-import 'package:hermes_android/core/services/replay_batch_proof.dart';
+import 'package:ylpa_console/core/services/json_rpc_wire.dart';
+import 'package:ylpa_console/core/services/replay_batch_proof.dart';
 
 SessionGatewayEvent held(int seq, {String text = 'x'}) =>
     SessionGatewayEvent('message.delta', 'runtime-a', seq, {'text': text});

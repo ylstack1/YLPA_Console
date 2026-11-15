@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/performance_trace.dart';
+import 'package:ylpa_console/core/services/performance_trace.dart';
 
 void main() {
   test('retains a bounded, content-free trace of slow frames', () {

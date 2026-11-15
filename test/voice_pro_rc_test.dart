@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/voice_response_policy.dart';
-import 'package:hermes_android/core/services/voice/voice_service.dart';
+import 'package:ylpa_console/core/services/voice/voice_response_policy.dart';
+import 'package:ylpa_console/core/services/voice/voice_service.dart';
 
 void main() {
   group('VoiceResponsePolicy — qué se puede leer en voz', () {

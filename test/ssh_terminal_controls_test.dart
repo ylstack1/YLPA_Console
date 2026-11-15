@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/ssh_session_kind.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/hermes_tokens.dart';
-import 'package:hermes_android/core/widgets/ssh_session_kind_picker.dart';
-import 'package:hermes_android/core/widgets/ssh_terminal_controls.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/ssh_session_kind.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/hermes_tokens.dart';
+import 'package:ylpa_console/core/widgets/ssh_session_kind_picker.dart';
+import 'package:ylpa_console/core/widgets/ssh_terminal_controls.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:xterm/xterm.dart';
 
 Widget _app(

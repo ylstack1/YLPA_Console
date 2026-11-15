@@ -3,14 +3,14 @@
 // lowers a theme's level instead of the threshold, and the setting.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/ambient_backdrop.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/box_fill.dart';
-import 'package:hermes_android/core/theme/glass_look.dart';
-import 'package:hermes_android/core/theme/hermes_style.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/hermes_ui.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/ambient_backdrop.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/box_fill.dart';
+import 'package:ylpa_console/core/theme/glass_look.dart';
+import 'package:ylpa_console/core/theme/hermes_style.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/hermes_ui.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/box_edge_probe.dart';

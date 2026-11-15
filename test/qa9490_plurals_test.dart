@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 // QA 9490: Models showed "IA Core · 1 modelos". Every count string in
 // Models agrees in number with its count in both locales.

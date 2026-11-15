@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/launcher_widget_chats.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/services/launcher_widget_chats.dart';
-import 'package:hermes_android/core/services/launcher_widget_cron.dart'
+import 'package:ylpa_console/core/models/launcher_widget_chats.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/services/launcher_widget_chats.dart';
+import 'package:ylpa_console/core/services/launcher_widget_cron.dart'
     show LauncherWidgetSectionStore;
 
 class _Store implements LauncherWidgetSectionStore {

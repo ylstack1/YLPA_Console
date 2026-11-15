@@ -6,12 +6,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/chat_content_screen.dart';
-import 'package:hermes_android/core/services/app_error_log.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace_host.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/chat_content_screen.dart';
+import 'package:ylpa_console/core/services/app_error_log.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace_host.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/malformed_artifact_rows.dart';
 

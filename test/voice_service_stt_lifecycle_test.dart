@@ -10,10 +10,10 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/voice/stt_engine.dart';
-import 'package:hermes_android/core/services/voice/voice_service.dart';
-import 'package:hermes_android/core/services/voice/voice_settings.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/voice/stt_engine.dart';
+import 'package:ylpa_console/core/services/voice/voice_service.dart';
+import 'package:ylpa_console/core/services/voice/voice_settings.dart';
 
 /// Motor STT falso: cuenta paradas y liberaciones, y puede simular un fallo al
 /// liberar para comprobar que no tumba el servicio.

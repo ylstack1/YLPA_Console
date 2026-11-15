@@ -9,14 +9,14 @@
 // ignore: depend_on_referenced_packages
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/models/desktop_model_catalog.dart';
-import 'package:hermes_android/core/models/model_active_info.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/global_activity_aggregate.dart';
-import 'package:hermes_android/core/services/model_picker_loader.dart';
-import 'package:hermes_android/core/services/model_picker_prewarm.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/models/desktop_model_catalog.dart';
+import 'package:ylpa_console/core/models/model_active_info.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/global_activity_aggregate.dart';
+import 'package:ylpa_console/core/services/model_picker_loader.dart';
+import 'package:ylpa_console/core/services/model_picker_prewarm.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 import 'support/in_memory_compression_restore_storage.dart';
 

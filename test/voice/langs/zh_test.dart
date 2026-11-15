@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/voice_language.dart';
-import 'package:hermes_android/core/services/voice/speech_renderer.dart';
-import 'package:hermes_android/core/services/voice/conversation/local_voice_command_detector.dart';
-import 'package:hermes_android/core/services/voice/voice_response_policy.dart';
+import 'package:ylpa_console/core/services/voice/voice_language.dart';
+import 'package:ylpa_console/core/services/voice/speech_renderer.dart';
+import 'package:ylpa_console/core/services/voice/conversation/local_voice_command_detector.dart';
+import 'package:ylpa_console/core/services/voice/voice_response_policy.dart';
 
 void main() {
   final language = voiceLanguageFor('zh-CN');

@@ -4,8 +4,8 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/scan/scan_image_ops.dart';
-import 'package:hermes_android/core/scan/scan_platform.dart';
+import 'package:ylpa_console/core/scan/scan_image_ops.dart';
+import 'package:ylpa_console/core/scan/scan_platform.dart';
 
 const _tl = ScanPoint(0, 0);
 

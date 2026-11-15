@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/subagent_detail_screen.dart';
-import 'package:hermes_android/core/services/subagent_live_watch.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/chat_live_icon.dart';
-import 'package:hermes_android/core/widgets/chat/chat_markdown_body.dart';
-import 'package:hermes_android/core/widgets/subagent_activity_card.dart'
+import 'package:ylpa_console/core/screens/subagent_detail_screen.dart';
+import 'package:ylpa_console/core/services/subagent_live_watch.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_live_icon.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_markdown_body.dart';
+import 'package:ylpa_console/core/widgets/subagent_activity_card.dart'
     show SubagentTailView;
-import 'package:hermes_android/core/widgets/subagent_stream_view.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/widgets/subagent_stream_view.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 // The text a review screenshot showed as one raw wall: the server's live
 // transcript, its window cut in the middle of a result line, then three

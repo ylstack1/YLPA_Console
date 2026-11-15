@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/json_rpc_wire.dart';
-import 'package:hermes_android/core/services/session_authority.dart';
+import 'package:ylpa_console/core/services/json_rpc_wire.dart';
+import 'package:ylpa_console/core/services/session_authority.dart';
 
 Map<String, dynamic> _snapshotJson({
   int seq = 10,

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/kanban.dart';
+import 'package:ylpa_console/core/models/kanban.dart';
 
 void main() {
   test('detalle 0.20 conserva historial rico sin exponer stored_path', () {

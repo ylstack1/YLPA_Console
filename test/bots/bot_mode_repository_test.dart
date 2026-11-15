@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/data/bot_mode_repository.dart';
-import 'package:hermes_android/core/bots/data/gateway_socket_meter.dart';
-import 'package:hermes_android/core/bots/state/attention.dart';
-import 'package:hermes_android/core/bots/state/bot_chat_target.dart';
-import 'package:hermes_android/core/bots/state/bot_presence.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/models/desktop_active_session.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
-import 'package:hermes_android/core/services/shared_gateway_pool.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/bots/data/bot_mode_repository.dart';
+import 'package:ylpa_console/core/bots/data/gateway_socket_meter.dart';
+import 'package:ylpa_console/core/bots/state/attention.dart';
+import 'package:ylpa_console/core/bots/state/bot_chat_target.dart';
+import 'package:ylpa_console/core/bots/state/bot_presence.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/models/desktop_active_session.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/services/shared_gateway_pool.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 import '../support/spec070_fixtures.dart';
 

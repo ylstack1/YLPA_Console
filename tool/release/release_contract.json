@@ -82,7 +82,7 @@
     }
   },
   "android": {
-    "packageId": "dev.xpetalab.hermesconsole",
+    "packageId": "com.ylpa.console",
     "versionSource": "pubspec.yaml"
   },
   "channels": {

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/capability_descriptor.dart';
-import 'package:hermes_android/core/services/capability_registry.dart';
+import 'package:ylpa_console/core/models/capability_descriptor.dart';
+import 'package:ylpa_console/core/services/capability_registry.dart';
 
 void main() {
   test('versión sola jamás concede available', () {

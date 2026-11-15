@@ -5,9 +5,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/model_readiness.dart';
-import 'package:hermes_android/core/services/onboarding_arrival.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/model_readiness.dart';
+import 'package:ylpa_console/core/services/onboarding_arrival.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 

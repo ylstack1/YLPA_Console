@@ -45,4 +45,4 @@ echo "[install] Instalando $APK ($APK_SIZE) en $SERIAL..."
 adb -s "$SERIAL" install -r "$APK"
 
 echo "[install] Instalado. Para lanzar la app:"
-echo "[install]   argent run launch-app --udid $SERIAL --bundleId com.hermesagent.hermes_android"
+echo "[install]   argent run launch-app --udid $SERIAL --bundleId com.ylpa.console"

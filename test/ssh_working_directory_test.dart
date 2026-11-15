@@ -2,8 +2,8 @@
 // folder the shell is in, only as the shell itself says it: OSC 7, else the
 // title bash sets by default. Nothing is guessed.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/ssh_session_service.dart';
-import 'package:hermes_android/core/services/ssh_working_directory.dart';
+import 'package:ylpa_console/core/services/ssh_session_service.dart';
+import 'package:ylpa_console/core/services/ssh_working_directory.dart';
 import 'package:xterm/xterm.dart';
 
 void main() {

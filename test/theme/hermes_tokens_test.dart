@@ -2,15 +2,15 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/hermes_tokens.dart';
-import 'package:hermes_android/core/theme/motion.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/chat/chat_markdown_body.dart';
-import 'package:hermes_android/core/widgets/chat/chat_notch.dart';
-import 'package:hermes_android/core/widgets/floating_chat_header.dart';
-import 'package:hermes_android/core/widgets/pill_morph.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace_host.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/hermes_tokens.dart';
+import 'package:ylpa_console/core/theme/motion.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_markdown_body.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_notch.dart';
+import 'package:ylpa_console/core/widgets/floating_chat_header.dart';
+import 'package:ylpa_console/core/widgets/pill_morph.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace_host.dart';
 
 void main() {
   group('the owner’s defaults for 1.4.0', () {

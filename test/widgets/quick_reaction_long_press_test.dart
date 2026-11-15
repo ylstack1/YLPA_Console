@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/chat/chat_message_frame.dart';
-import 'package:hermes_android/core/widgets/chat/chat_message_selection_area.dart';
-import 'package:hermes_android/core/widgets/chat/quick_reaction_bar.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_message_frame.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_message_selection_area.dart';
+import 'package:ylpa_console/core/widgets/chat/quick_reaction_bar.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 /// rr1215: long-press on a message that can take a reaction opens ONE
 /// surface (quick reactions on top of the message actions). Text selection

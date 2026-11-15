@@ -17,12 +17,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/chat_notch.dart';
-import 'package:hermes_android/core/widgets/chat_control_sheet.dart';
-import 'package:hermes_android/core/widgets/pill_morph.dart';
-import 'package:hermes_android/core/widgets/status_pill_sheet.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_notch.dart';
+import 'package:ylpa_console/core/widgets/chat_control_sheet.dart';
+import 'package:ylpa_console/core/widgets/pill_morph.dart';
+import 'package:ylpa_console/core/widgets/status_pill_sheet.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _phone = Size(412, 892);
 const _frame = Duration(milliseconds: 16);

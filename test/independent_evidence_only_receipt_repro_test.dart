@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/local_transcript_store.dart';
+import 'package:ylpa_console/core/services/local_transcript_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'session_identity_peer_test.dart' as peer;

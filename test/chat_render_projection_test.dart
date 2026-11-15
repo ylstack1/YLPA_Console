@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/chat_render_projection.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/utils/chat_turn.dart';
+import 'package:ylpa_console/core/screens/chat_render_projection.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/utils/chat_turn.dart';
 
 /// Carrier canónico que Hermes persiste junto a `display_kind: process_complete`
 /// cuando termina un proceso en segundo plano.

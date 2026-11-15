@@ -6,9 +6,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/link_brand_glyphs.dart';
-import 'package:hermes_android/core/widgets/link_brand_icon.dart';
-import 'package:hermes_android/core/widgets/provider_logo.dart'
+import 'package:ylpa_console/core/widgets/link_brand_glyphs.dart';
+import 'package:ylpa_console/core/widgets/link_brand_icon.dart';
+import 'package:ylpa_console/core/widgets/provider_logo.dart'
     show parseSvgPathData;
 
 /// Bounds of the outline a glyph draws, sampled every 0.1 units along each

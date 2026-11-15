@@ -7,8 +7,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/herdr_status.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/services/herdr_status.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
 
 import 'support/fake_herdr_server.dart';
 import 'support/fake_session_files.dart';

@@ -11,22 +11,22 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:hermes_android/core/screens/chat_content_screen.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/app_lock.dart';
-import 'package:hermes_android/core/services/approval_policy.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/font_size_service.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/sftp_transfer_service.dart';
-import 'package:hermes_android/core/services/ssh_manager.dart';
-import 'package:hermes_android/core/services/ssh_session_service.dart';
-import 'package:hermes_android/core/services/turn_outbox_store.dart';
-import 'package:hermes_android/core/theme/hermes_style.dart';
-import 'package:hermes_android/core/widgets/media_viewer/media_viewer.dart';
-import 'package:hermes_android/main.dart';
+import 'package:ylpa_console/core/screens/chat_content_screen.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/app_lock.dart';
+import 'package:ylpa_console/core/services/approval_policy.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/font_size_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/sftp_transfer_service.dart';
+import 'package:ylpa_console/core/services/ssh_manager.dart';
+import 'package:ylpa_console/core/services/ssh_session_service.dart';
+import 'package:ylpa_console/core/services/turn_outbox_store.dart';
+import 'package:ylpa_console/core/theme/hermes_style.dart';
+import 'package:ylpa_console/core/widgets/media_viewer/media_viewer.dart';
+import 'package:ylpa_console/main.dart';
 import 'support/test_api_client.dart';
 
 SavedConnection _connection() => SavedConnection(

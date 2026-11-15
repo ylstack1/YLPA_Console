@@ -5,10 +5,10 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/voice/conversation/full_duplex_barge_in_monitor.dart';
-import 'package:hermes_android/core/services/voice/voice_latency_trace.dart';
-import 'package:hermes_android/core/services/voice/voice_service.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/voice/conversation/full_duplex_barge_in_monitor.dart';
+import 'package:ylpa_console/core/services/voice/voice_latency_trace.dart';
+import 'package:ylpa_console/core/services/voice/voice_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeCaptureSource implements FullDuplexCaptureSource {

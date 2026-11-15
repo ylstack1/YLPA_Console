@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/models/session_list_sort.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/models/session_list_sort.dart';
 
 Session _s(
   String id, {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/mcp_log_filter.dart';
+import 'package:ylpa_console/core/capabilities/mcp_log_filter.dart';
 
 void main() {
   const current =

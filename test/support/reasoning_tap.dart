@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/hermes_reasoning_pill.dart';
-import 'package:hermes_android/core/widgets/reasoning_squares_track.dart';
+import 'package:ylpa_console/core/widgets/hermes_reasoning_pill.dart';
+import 'package:ylpa_console/core/widgets/reasoning_squares_track.dart';
 
 /// Taps the step of [value] on the reasoning slider inside [scope].
 ///

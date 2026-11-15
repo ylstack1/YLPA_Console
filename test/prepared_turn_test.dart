@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hermes_android/core/models/attachment_draft.dart';
-import 'package:hermes_android/core/models/prepared_turn.dart';
+import 'package:ylpa_console/core/models/attachment_draft.dart';
+import 'package:ylpa_console/core/models/prepared_turn.dart';
 
 void main() {
   AttachmentDraft attachment({

@@ -36,11 +36,11 @@ import 'room_watcher.dart';
 const botModeWidgetProviders = <String>[
   // The original Hermes Console widgets are refreshed by
   // HermesHomeWidgetPublisher, not by this listener.
-  'com.hermesagent.hermes_android.HermesBotsWidgetProvider',
-  'com.hermesagent.hermes_android.HermesNeedsYouWidgetProvider',
-  'com.hermesagent.hermes_android.HermesRoomWidgetProvider',
-  'com.hermesagent.hermes_android.HermesQuickAskWidgetProvider',
-  'com.hermesagent.hermes_android.HermesStatusWidgetProvider',
+  'com.ylpa.console.HermesBotsWidgetProvider',
+  'com.ylpa.console.HermesNeedsYouWidgetProvider',
+  'com.ylpa.console.HermesRoomWidgetProvider',
+  'com.ylpa.console.HermesQuickAskWidgetProvider',
+  'com.ylpa.console.HermesStatusWidgetProvider',
 ];
 
 /// Connection whose rooms are watched: the last one the user opened, else

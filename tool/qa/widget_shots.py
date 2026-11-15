@@ -279,7 +279,7 @@ def check():
         cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
         if path.stem in CENTRED_ICONS and (abs(cx - 12) > 0.3 or abs(cy - 12) > 0.3):
             bad(path.name, f'glyph centred on ({cx:.2f}, {cy:.2f}), not (12, 12)')
-    kotlin = (ROOT / 'android/app/src/main/kotlin/com/hermesagent/hermes_android')
+    kotlin = (ROOT / 'android/app/src/main/kotlin/com/ylpa/console')
     source = ''.join(p.read_text(encoding='utf-8') for p in kotlin.glob('LauncherWidget*.kt'))
     ids = {el.get(A + 'id', '').replace('@+id/', '') for name in all_layouts() for el in layout_root(name).iter()}
     for used in sorted(set(re.findall(r'R\.id\.(lw_\w+)', source))):

@@ -3,11 +3,11 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/scan/document_scan_screen.dart';
-import 'package:hermes_android/core/scan/scan_image_ops.dart';
-import 'package:hermes_android/core/scan/scan_platform.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/scan/document_scan_screen.dart';
+import 'package:ylpa_console/core/scan/scan_image_ops.dart';
+import 'package:ylpa_console/core/scan/scan_platform.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 /// A 120 x 90 "photo": dark table with a light sheet and a dark line of text.
 ScanRgba _syntheticPhoto() {

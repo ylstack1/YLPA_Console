@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/data/companion_preferences.dart';
-import 'package:hermes_android/core/companion/data/companion_repository.dart';
-import 'package:hermes_android/core/companion/models/companion.dart';
-import 'package:hermes_android/core/companion/models/companion_animation_state.dart';
-import 'package:hermes_android/core/companion/models/companion_presence_level.dart';
-import 'package:hermes_android/core/companion/state/companion_controller.dart';
+import 'package:ylpa_console/core/companion/data/companion_preferences.dart';
+import 'package:ylpa_console/core/companion/data/companion_repository.dart';
+import 'package:ylpa_console/core/companion/models/companion.dart';
+import 'package:ylpa_console/core/companion/models/companion_animation_state.dart';
+import 'package:ylpa_console/core/companion/models/companion_presence_level.dart';
+import 'package:ylpa_console/core/companion/state/companion_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Companion _nimbus([String slug = 'nimbus']) => Companion(

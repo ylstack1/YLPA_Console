@@ -3,12 +3,12 @@
 // buttons, the header capsule and the filled round actions.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/floating.dart';
-import 'package:hermes_android/core/design/gel_surface.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart';
+import 'package:ylpa_console/core/design/floating.dart';
+import 'package:ylpa_console/core/design/gel_surface.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart';
 
 Widget _app(
   Widget child, {

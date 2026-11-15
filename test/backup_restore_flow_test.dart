@@ -7,9 +7,9 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/action_follower.dart';
-import 'package:hermes_android/core/services/backup_restore_flow.dart';
-import 'package:hermes_android/core/services/backup_zip_summary.dart';
+import 'package:ylpa_console/core/services/action_follower.dart';
+import 'package:ylpa_console/core/services/backup_restore_flow.dart';
+import 'package:ylpa_console/core/services/backup_zip_summary.dart';
 
 import 'support/fake_backup_gateway.dart';
 

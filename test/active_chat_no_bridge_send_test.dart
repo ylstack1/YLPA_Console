@@ -15,8 +15,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _Req {
@@ -36,10 +36,10 @@ int Function(Uri) _status = (_) => 404;
 String _origin() {
   final frames = StackTrace.current.toString().split('\n');
   return frames
-      .where((f) => f.contains('package:hermes_android/'))
+      .where((f) => f.contains('package:ylpa_console/'))
       .map(
         (f) => f
-            .replaceAll(RegExp(r'.*package:hermes_android/'), '')
+            .replaceAll(RegExp(r'.*package:ylpa_console/'), '')
             .replaceAll(')', ''),
       )
       .take(3)

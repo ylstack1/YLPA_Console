@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session_activity.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/session_status_tone.dart';
+import 'package:ylpa_console/core/models/session_activity.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/session_status_tone.dart';
 
 double _contrast(Color a, Color b) {
   final la = a.computeLuminance();

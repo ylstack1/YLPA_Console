@@ -4,11 +4,11 @@
 // states.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/voice_dock.dart';
-import 'package:hermes_android/core/widgets/voice_strip.dart'
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/voice_dock.dart';
+import 'package:ylpa_console/core/widgets/voice_strip.dart'
     show VoiceStripState;
-import 'package:hermes_android/core/widgets/voice_wave.dart';
+import 'package:ylpa_console/core/widgets/voice_wave.dart';
 
 const _labels = VoiceDockLabels(
   pause: 'Pausar',

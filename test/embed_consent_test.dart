@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/chat/embeds/embed_consent_store.dart';
-import 'package:hermes_android/core/widgets/chat/embeds/embed_detector.dart';
+import 'package:ylpa_console/core/widgets/chat/embeds/embed_consent_store.dart';
+import 'package:ylpa_console/core/widgets/chat/embeds/embed_detector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

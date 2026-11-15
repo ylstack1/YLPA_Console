@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:hermes_android/core/services/font_size_service.dart';
+import 'package:ylpa_console/core/services/font_size_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

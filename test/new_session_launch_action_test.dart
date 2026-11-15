@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/new_session_launch_action.dart';
+import 'package:ylpa_console/core/models/new_session_launch_action.dart';
 
 NewSessionLaunchAction action({String? requested}) => NewSessionLaunchAction(
   source: NewSessionLaunchSource.widget,

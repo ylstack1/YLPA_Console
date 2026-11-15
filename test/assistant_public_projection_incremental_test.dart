@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/utils/assistant_content.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/utils/assistant_content.dart';
 
 /// Pieces chosen to hit every branch of the Harmony/think projection:
 /// complete and split delimiters (ASCII and fullwidth bars), classic think

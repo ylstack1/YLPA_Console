@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
 
 void expectFailClosedToolCarrier(
   ChatEventInfo event,

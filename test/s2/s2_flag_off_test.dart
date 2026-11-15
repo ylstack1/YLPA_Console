@@ -5,11 +5,11 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/connection_status.dart';
-import 'package:hermes_android/core/services/mobile_oauth.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
-import 'package:hermes_android/core/widgets/dashboard_sign_in_event.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/connection_status.dart';
+import 'package:ylpa_console/core/services/mobile_oauth.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/widgets/dashboard_sign_in_event.dart';
 
 import '../s1/s1_fixtures.dart' show SecureChannelFake;
 import 's2_fixtures.dart';

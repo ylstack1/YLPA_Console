@@ -7,9 +7,9 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/app_error_log.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/native_session_store.dart';
+import 'package:ylpa_console/core/services/app_error_log.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/native_session_store.dart';
 
 import '../s1/s1_fixtures.dart' show SecureChannelFake;
 import 's2_fixtures.dart';

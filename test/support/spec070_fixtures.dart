@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/desktop_active_session.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/desktop_active_session.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
 
 /// Loads a spec 070 contract fixture (`test/fixtures/spec070/<name>.json`).
 Map<String, dynamic> spec070Fixture(String name) =>

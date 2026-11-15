@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat_surface_coordinator.dart';
-import 'package:hermes_android/core/widgets/dock.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat_surface_coordinator.dart';
+import 'package:ylpa_console/core/widgets/dock.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _host(ChatSurfaceCoordinator coordinator) => MaterialApp(
   locale: const Locale('es'),

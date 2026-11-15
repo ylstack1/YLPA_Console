@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/config/flavor.dart';
-import 'package:hermes_android/core/services/notifications/background_listener.dart';
-import 'package:hermes_android/core/services/notifications/notification_strings.dart';
+import 'package:ylpa_console/core/config/flavor.dart';
+import 'package:ylpa_console/core/services/notifications/background_listener.dart';
+import 'package:ylpa_console/core/services/notifications/notification_strings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

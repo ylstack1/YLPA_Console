@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/interactive_prompt.dart';
-import 'package:hermes_android/core/services/interactive_prompt_reducer.dart';
+import 'package:ylpa_console/core/models/interactive_prompt.dart';
+import 'package:ylpa_console/core/services/interactive_prompt_reducer.dart';
 
 InteractivePromptKey _key(String runtime, [String request = 'request-1']) =>
     InteractivePromptKey(runtimeSessionId: runtime, requestId: request);

@@ -5,15 +5,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/legacy_bridge_notices.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/official_dashboard_command.dart';
-import 'package:hermes_android/core/services/legacy_bridge_retirement.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/dashboard_password_help.dart';
-import 'package:hermes_android/core/widgets/legacy_bridge_removal_help.dart';
-import 'package:hermes_android/core/widgets/hermes_notice.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/legacy_bridge_notices.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/official_dashboard_command.dart';
+import 'package:ylpa_console/core/services/legacy_bridge_retirement.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/dashboard_password_help.dart';
+import 'package:ylpa_console/core/widgets/legacy_bridge_removal_help.dart';
+import 'package:ylpa_console/core/widgets/hermes_notice.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

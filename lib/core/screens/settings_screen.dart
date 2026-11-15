@@ -49,6 +49,9 @@ import 'about_screen.dart';
 import 'lock_screen.dart';
 import 'gateway_manager_screen.dart';
 import 'instance_edit_screen.dart';
+import '../services/secure_storage.dart';
+import 'acp/acp_hub_screen.dart';
+import '../acp/acp_instance_store.dart';
 import 'models_screen.dart';
 import 'permissions_screen.dart';
 import 'vault_screen.dart';
@@ -1690,6 +1693,23 @@ class _ConnectionCard extends StatelessWidget {
                       GatewayManagerScreen(connManager: connManager),
                 ),
               ),
+            ),
+            HermesNavRow(
+              icon: Icons.smart_toy_outlined,
+              title: 'ACP agents',
+              value: 'Any agent (OpenCode, Claude, Codex, Gemini, Qwen)',
+              onTap: () async {
+                final prefs = await SharedPreferences.getInstance();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AcpHubScreen(
+                      instanceStore: AcpInstanceStore(prefs),
+                      secureStorage: SecureStorage(),
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),

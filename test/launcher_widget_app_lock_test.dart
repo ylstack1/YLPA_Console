@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_scene.dart';
-import 'package:hermes_android/core/models/home_widget_snapshot.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_scene.dart';
+import 'package:ylpa_console/core/models/home_widget_snapshot.dart';
 
 import 'launcher_widget_fixtures.dart';
 

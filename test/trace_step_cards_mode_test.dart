@@ -4,12 +4,12 @@
 // the composer; what a running tool already left to see shows at once.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/hermes_tokens.dart' show HermesMotion;
-import 'package:hermes_android/core/widgets/chat/tool_steps_summary.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
-import 'package:hermes_android/core/widgets/message_avatar_header.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/hermes_tokens.dart' show HermesMotion;
+import 'package:ylpa_console/core/widgets/chat/tool_steps_summary.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/widgets/message_avatar_header.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _host(Widget child) => MaterialApp(
   locale: const Locale('es'),

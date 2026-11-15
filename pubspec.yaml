@@ -1,4 +1,4 @@
-name: hermes_android
+name: ylpa_console
 description: "Hermes Agent — chat with your Hermes Gateway API Server over LAN. SSE streaming, Bearer auth, session management."
 publish_to: 'none'
 version: 1.4.0+9812

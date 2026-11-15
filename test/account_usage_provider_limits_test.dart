@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/home/board/home_limits.dart';
-import 'package:hermes_android/core/models/account_usage_limits.dart';
-import 'package:hermes_android/core/models/model_provider.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/account_limits_section.dart';
-import 'package:hermes_android/core/widgets/chat_status_pill.dart'
+import 'package:ylpa_console/core/home/board/home_limits.dart';
+import 'package:ylpa_console/core/models/account_usage_limits.dart';
+import 'package:ylpa_console/core/models/model_provider.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/account_limits_section.dart';
+import 'package:ylpa_console/core/widgets/chat_status_pill.dart'
     show SubscriptionLimitLevel;
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/account_usage_fixtures.dart' as fx;
 

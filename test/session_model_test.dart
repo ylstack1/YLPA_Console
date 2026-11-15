@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/services/run_registry.dart';
-import 'package:hermes_android/core/utils/chat_turn.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/services/run_registry.dart';
+import 'package:ylpa_console/core/utils/chat_turn.dart';
 
 void main() {
   group('timestamps: identidad canónica y orden estable (#2)', () {

@@ -2,7 +2,7 @@
 // tabs. Closing one never leaves the browser; the agent's page goes to its
 // own tab, never to one of the user's; at most three pages are alive.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/browser/browser_tabs.dart';
+import 'package:ylpa_console/core/browser/browser_tabs.dart';
 
 final _a = Uri.parse('https://boletin.ejemplo.dev/semana-43');
 final _b = Uri.parse('https://docs.ejemplo.dev/instalar');

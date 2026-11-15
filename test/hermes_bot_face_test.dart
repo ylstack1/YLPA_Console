@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/hermes_bot_face.dart';
+import 'package:ylpa_console/core/widgets/hermes_bot_face.dart';
 
 typedef _ReferenceCase = ({String seed, String? kind, String fixture});
 

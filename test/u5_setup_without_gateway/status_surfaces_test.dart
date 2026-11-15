@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/gateway_manager_screen.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/widgets/instance_status_panel.dart';
+import 'package:ylpa_console/core/screens/gateway_manager_screen.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/widgets/instance_status_panel.dart';
 import 'package:http/http.dart' as http;
 
 import '../support/desktop_chat_socket.dart';

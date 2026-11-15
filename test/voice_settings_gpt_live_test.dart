@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/live/voice_chat_mode_store.dart';
-import 'package:hermes_android/core/services/voice/live/voice_live_protocol.dart';
-import 'package:hermes_android/core/services/voice/voice_settings.dart';
+import 'package:ylpa_console/core/services/voice/live/voice_chat_mode_store.dart';
+import 'package:ylpa_console/core/services/voice/live/voice_live_protocol.dart';
+import 'package:ylpa_console/core/services/voice/voice_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

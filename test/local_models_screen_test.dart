@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/local_models_screen.dart';
-import 'package:hermes_android/core/services/local_models_client.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/local_models_screen.dart';
+import 'package:ylpa_console/core/services/local_models_client.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/fake_local_models_server.dart';
 import 'support/provider_logo_probe.dart';

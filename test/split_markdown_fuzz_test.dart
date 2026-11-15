@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
 import 'package:markdown/markdown.dart' as md;
 
 /// El troceado reparte una respuesta en varios MarkdownBody. Si una parte

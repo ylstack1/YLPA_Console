@@ -2,9 +2,9 @@
 // page on the design primitives. Screenshots: DESIGN_SHOTS_DIR.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/about_screen.dart';
-import 'package:hermes_android/core/services/install_source.dart';
-import 'package:hermes_android/core/widgets/install_source_section.dart';
+import 'package:ylpa_console/core/screens/about_screen.dart';
+import 'package:ylpa_console/core/services/install_source.dart';
+import 'package:ylpa_console/core/widgets/install_source_section.dart';
 
 import '../support/design_shots.dart';
 import 'detail_single_scroll_contract_test.dart' show nestedVerticalScrollables;

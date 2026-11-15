@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

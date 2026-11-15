@@ -2,13 +2,13 @@ import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/screens/gateway_manager_screen.dart';
-import 'package:hermes_android/core/screens/instance_edit_screen.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
-import 'package:hermes_android/core/services/pairing_link.dart';
-import 'package:hermes_android/core/widgets/instance_kind_picker.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/screens/gateway_manager_screen.dart';
+import 'package:ylpa_console/core/screens/instance_edit_screen.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/core/services/pairing_link.dart';
+import 'package:ylpa_console/core/widgets/instance_kind_picker.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/connection_editor_actions.dart';
 import 'support/onboarding_fakes.dart';

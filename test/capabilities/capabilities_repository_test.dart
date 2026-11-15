@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/capabilities_repository.dart';
-import 'package:hermes_android/core/capabilities/capability_models.dart';
-import 'package:hermes_android/core/capabilities/connector_policy.dart';
-import 'package:hermes_android/core/capabilities/mcp_runtime_status.dart';
-import 'package:hermes_android/core/services/connection_manager.dart'
+import 'package:ylpa_console/core/capabilities/capabilities_repository.dart';
+import 'package:ylpa_console/core/capabilities/capability_models.dart';
+import 'package:ylpa_console/core/capabilities/connector_policy.dart';
+import 'package:ylpa_console/core/capabilities/mcp_runtime_status.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart'
     show DashboardHttpException;
-import 'package:hermes_android/core/services/tui_gateway_client.dart'
+import 'package:ylpa_console/core/services/tui_gateway_client.dart'
     show TuiGatewayRpcError, TuiGatewayRpcFailureKind;
 
 class FakeRest implements CapabilitiesRest {

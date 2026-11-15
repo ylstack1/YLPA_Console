@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/artifact_viewer/artifact_html_policy.dart';
+import 'package:ylpa_console/core/widgets/artifact_viewer/artifact_html_policy.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 

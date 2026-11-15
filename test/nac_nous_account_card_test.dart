@@ -6,10 +6,10 @@
 // layout that holds at 2x in every language and theme.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/oauth_account.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/nous_account_card.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/oauth_account.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/nous_account_card.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 OAuthAccount _nous({
   bool connected = false,

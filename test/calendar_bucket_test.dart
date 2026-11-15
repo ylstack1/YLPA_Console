@@ -2,7 +2,7 @@
 // human day ends at 04:00 local, then today → yesterday → this week → last
 // week → this month → month → month + year.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/calendar_bucket.dart';
+import 'package:ylpa_console/core/models/calendar_bucket.dart';
 
 double _at(int y, int m, int d, [int h = 12, int min = 0]) =>
     DateTime(y, m, d, h, min).millisecondsSinceEpoch / 1000;

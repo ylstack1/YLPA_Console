@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/browser/agent_browser_bridge.dart';
-import 'package:hermes_android/core/browser/agent_preview_act.dart';
-import 'package:hermes_android/core/browser/agent_preview_protocol.dart';
-import 'package:hermes_android/core/browser/hermes_preview_engine.g.dart';
+import 'package:ylpa_console/core/browser/agent_browser_bridge.dart';
+import 'package:ylpa_console/core/browser/agent_preview_act.dart';
+import 'package:ylpa_console/core/browser/agent_preview_protocol.dart';
+import 'package:ylpa_console/core/browser/hermes_preview_engine.g.dart';
 
 /// A chat screen: on screen or not, recording the browsers it was asked to
 /// open.

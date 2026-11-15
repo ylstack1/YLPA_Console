@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/motion.dart';
-import 'package:hermes_android/core/widgets/motion_entrance.dart';
+import 'package:ylpa_console/core/theme/motion.dart';
+import 'package:ylpa_console/core/widgets/motion_entrance.dart';
 
 void main() {
   Widget host({required bool disableAnimations}) => MediaQuery(

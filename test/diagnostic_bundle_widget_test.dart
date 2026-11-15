@@ -7,12 +7,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:hermes_android/core/services/app_error_log.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/diagnostic_bundle_service.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/diagnostic_bundle_tile.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/app_error_log.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/diagnostic_bundle_service.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/diagnostic_bundle_tile.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 class _FakeController extends DiagnosticBundleController {
   _FakeController(ConnectionManager manager) : super(manager: manager) {

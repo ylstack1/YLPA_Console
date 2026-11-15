@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/approval_display.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/utils/approval_display.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 void main() {
   final strings = lookupStrings(const Locale('es'));

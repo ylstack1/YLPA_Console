@@ -4,10 +4,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/motion.dart';
-import 'package:hermes_android/core/widgets/generated_image_card.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/motion.dart';
+import 'package:ylpa_console/core/widgets/generated_image_card.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 /// PNG 1x1 válido (mínimo) para el estado "ready" sin assets externos.
 final Uint8List _tinyPng = Uint8List.fromList(<int>[

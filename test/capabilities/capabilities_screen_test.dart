@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/capabilities_repository.dart';
-import 'package:hermes_android/core/capabilities/capabilities_screen.dart';
-import 'package:hermes_android/core/capabilities/capability_detail_screen.dart';
-import 'package:hermes_android/core/capabilities/connector_detail_screen.dart';
-import 'package:hermes_android/core/services/connection_manager.dart'
+import 'package:ylpa_console/core/capabilities/capabilities_repository.dart';
+import 'package:ylpa_console/core/capabilities/capabilities_screen.dart';
+import 'package:ylpa_console/core/capabilities/capability_detail_screen.dart';
+import 'package:ylpa_console/core/capabilities/connector_detail_screen.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart'
     show DashboardHttpException;
-import 'package:hermes_android/core/services/tui_gateway_client.dart'
+import 'package:ylpa_console/core/services/tui_gateway_client.dart'
     show TuiGatewayRpcError, TuiGatewayRpcFailureKind;
 
 import '../support/inter_font.dart';

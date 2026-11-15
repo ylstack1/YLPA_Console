@@ -5,11 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hermes_android/core/design/content.dart';
-import 'package:hermes_android/core/design/modal.dart';
-import 'package:hermes_android/core/screens/instance_edit_screen.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/content.dart';
+import 'package:ylpa_console/core/design/modal.dart';
+import 'package:ylpa_console/core/screens/instance_edit_screen.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'support/connection_editor_actions.dart';
 
 void main() {

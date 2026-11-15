@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/services/prompt_client_surface.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/services/prompt_client_surface.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 /// Desktop gateway double that records every submit with the surface metadata
 /// and lets a test script the server events of the owner chat.

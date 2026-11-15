@@ -4,7 +4,7 @@
 // leaves around a table). Only the paragraph at each edge counts.
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hermes_android/core/widgets/chat/streaming_markdown_blocks.dart';
+import 'package:ylpa_console/core/widgets/chat/streaming_markdown_blocks.dart';
 
 const String _table =
     '| Servicio | Estado |\n'

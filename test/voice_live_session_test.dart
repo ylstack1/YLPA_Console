@@ -3,10 +3,10 @@ import 'dart:async';
 // ignore: depend_on_referenced_packages
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/live/live_rtc_transport.dart';
-import 'package:hermes_android/core/services/voice/live/voice_live_api.dart';
-import 'package:hermes_android/core/services/voice/live/voice_live_protocol.dart';
-import 'package:hermes_android/core/services/voice/live/voice_live_session.dart';
+import 'package:ylpa_console/core/services/voice/live/live_rtc_transport.dart';
+import 'package:ylpa_console/core/services/voice/live/voice_live_api.dart';
+import 'package:ylpa_console/core/services/voice/live/voice_live_protocol.dart';
+import 'package:ylpa_console/core/services/voice/live/voice_live_session.dart';
 
 import 'support/voice_live_fakes.dart';
 

@@ -12,15 +12,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_model_catalog.dart';
-import 'package:hermes_android/core/models/model_active_info.dart';
-import 'package:hermes_android/core/models/model_provider.dart';
-import 'package:hermes_android/core/models/oauth_account.dart';
-import 'package:hermes_android/core/services/active_profile_scope.dart';
-import 'package:hermes_android/core/services/model_catalog_cache.dart';
-import 'package:hermes_android/core/services/model_picker_loader.dart';
-import 'package:hermes_android/core/services/models_snapshot.dart';
-import 'package:hermes_android/core/widgets/console_loader.dart';
+import 'package:ylpa_console/core/models/desktop_model_catalog.dart';
+import 'package:ylpa_console/core/models/model_active_info.dart';
+import 'package:ylpa_console/core/models/model_provider.dart';
+import 'package:ylpa_console/core/models/oauth_account.dart';
+import 'package:ylpa_console/core/services/active_profile_scope.dart';
+import 'package:ylpa_console/core/services/model_catalog_cache.dart';
+import 'package:ylpa_console/core/services/model_picker_loader.dart';
+import 'package:ylpa_console/core/services/models_snapshot.dart';
+import 'package:ylpa_console/core/widgets/console_loader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/models_server.dart';

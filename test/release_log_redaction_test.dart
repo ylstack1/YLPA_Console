@@ -5,7 +5,7 @@
 // builds keep the full text.
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/release_log.dart';
+import 'package:ylpa_console/core/services/release_log.dart';
 
 void main() {
   test('URLs, IPs, mail addresses and long tokens are masked', () {

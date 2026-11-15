@@ -1,5 +1,5 @@
-import 'package:hermes_android/core/home/launcher/launcher_widget_palette.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_geometry.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_palette.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_geometry.dart';
 // Legibility of the content boxes (cards, groups, panels, list sections and
 // their rows, the search field, the notices): a SOLID body a visible step
 // from the page, text inks that read on it in every theme, and sizes no
@@ -7,17 +7,17 @@ import 'package:hermes_android/core/home/launcher/launcher_widget_geometry.dart'
 // measurement table (support/legibility_probe.dart).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/ambient_backdrop.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/home/board/home_board_kit.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/box_fill.dart';
-import 'package:hermes_android/core/theme/glass_look.dart';
-import 'package:hermes_android/core/theme/hermes_style.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart';
-import 'package:hermes_android/core/widgets/hermes_ui.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/ambient_backdrop.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/home/board/home_board_kit.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/box_fill.dart';
+import 'package:ylpa_console/core/theme/glass_look.dart';
+import 'package:ylpa_console/core/theme/hermes_style.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart';
+import 'package:ylpa_console/core/widgets/hermes_ui.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/legibility_probe.dart';
 

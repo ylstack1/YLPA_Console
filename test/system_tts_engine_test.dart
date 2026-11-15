@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hermes_android/core/services/voice/tts_engine.dart';
+import 'package:ylpa_console/core/services/voice/tts_engine.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

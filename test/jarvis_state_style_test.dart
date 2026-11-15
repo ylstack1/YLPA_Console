@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/voice_phase.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/jarvis_state_style.dart';
+import 'package:ylpa_console/core/services/voice/voice_phase.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/jarvis_state_style.dart';
 
 void main() {
   // Tokens de prueba con colores bien distintos para verificar el mapeo sin

@@ -2,11 +2,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/floating.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/lines.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/design/floating.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/lines.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
 
 /// CIE L* of [color] (perceptual lightness, 0–100).
 double _lightness(Color color) {

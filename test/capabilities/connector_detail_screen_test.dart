@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/capability_models.dart';
-import 'package:hermes_android/core/capabilities/connector_detail_screen.dart';
-import 'package:hermes_android/core/design/hermes_design.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart'
+import 'package:ylpa_console/core/capabilities/capability_models.dart';
+import 'package:ylpa_console/core/capabilities/connector_detail_screen.dart';
+import 'package:ylpa_console/core/design/hermes_design.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart'
     show TuiGatewayRpcError;
 
 import '../support/inter_font.dart';

@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/l10n/app_localizations_en.dart';
-import 'package:hermes_android/l10n/app_localizations_es.dart';
-import 'package:hermes_android/l10n/app_localizations_pt.dart';
+import 'package:ylpa_console/l10n/app_localizations_en.dart';
+import 'package:ylpa_console/l10n/app_localizations_es.dart';
+import 'package:ylpa_console/l10n/app_localizations_pt.dart';
 
 Map<String, Object?> _readCatalog(String path) =>
     jsonDecode(File(path).readAsStringSync()) as Map<String, Object?>;

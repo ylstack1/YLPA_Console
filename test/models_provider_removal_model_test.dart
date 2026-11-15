@@ -5,11 +5,11 @@
 // card holds, the profile's exclusion list, which catalog rows that list
 // reaches, and the chat picker's own copy of the catalog.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/model_active_info.dart';
-import 'package:hermes_android/core/models/model_provider.dart';
-import 'package:hermes_android/core/models/provider_exclusions.dart';
-import 'package:hermes_android/core/models/provider_key_groups.dart';
-import 'package:hermes_android/core/services/model_picker_loader.dart';
+import 'package:ylpa_console/core/models/model_active_info.dart';
+import 'package:ylpa_console/core/models/model_provider.dart';
+import 'package:ylpa_console/core/models/provider_exclusions.dart';
+import 'package:ylpa_console/core/models/provider_key_groups.dart';
+import 'package:ylpa_console/core/services/model_picker_loader.dart';
 
 Map<String, dynamic> _var(
   String provider, {

@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:hermes_android/core/services/voice/live/live_rtc_transport.dart';
-import 'package:hermes_android/core/services/voice/live/voice_live_api.dart';
-import 'package:hermes_android/core/services/voice/live/voice_live_protocol.dart';
+import 'package:ylpa_console/core/services/voice/live/live_rtc_transport.dart';
+import 'package:ylpa_console/core/services/voice/live/voice_live_api.dart';
+import 'package:ylpa_console/core/services/voice/live/voice_live_protocol.dart';
 
 /// Scripted [LiveRtcTransport]. Every call is appended to [log] (shared with
 /// [FakeVoiceLiveApi] so tests can assert the cross-component order).

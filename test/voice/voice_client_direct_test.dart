@@ -6,8 +6,8 @@ import 'dart:io';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/voice/voice_client_direct.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/voice/voice_client_direct.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 

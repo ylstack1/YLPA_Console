@@ -5,17 +5,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/attachment_draft.dart';
-import 'package:hermes_android/core/services/attachment_uploader.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/generated_media_service.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/attachment_card.dart';
-import 'package:hermes_android/core/widgets/attachment_history_preview.dart';
-import 'package:hermes_android/core/widgets/generated_video_card.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
-import 'package:hermes_android/l10n/app_localizations_en.dart';
-import 'package:hermes_android/l10n/app_localizations_es.dart';
+import 'package:ylpa_console/core/models/attachment_draft.dart';
+import 'package:ylpa_console/core/services/attachment_uploader.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/generated_media_service.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/attachment_card.dart';
+import 'package:ylpa_console/core/widgets/attachment_history_preview.dart';
+import 'package:ylpa_console/core/widgets/generated_video_card.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations_en.dart';
+import 'package:ylpa_console/l10n/app_localizations_es.dart';
 
 import 'support/fake_video_player_platform.dart';
 

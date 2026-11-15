@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/hatch/hatch_provider.dart';
-import 'package:hermes_android/core/companion/hatch/hermes_hatch_provider.dart';
-import 'package:hermes_android/core/companion/hatch/mock_hatch_provider.dart';
+import 'package:ylpa_console/core/companion/hatch/hatch_provider.dart';
+import 'package:ylpa_console/core/companion/hatch/hermes_hatch_provider.dart';
+import 'package:ylpa_console/core/companion/hatch/mock_hatch_provider.dart';
 
 void main() {
   group('MockHatchProvider', () {

@@ -3,16 +3,16 @@
 // la app, two taps at most (the row, then the screen of that part).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/about_screen.dart';
-import 'package:hermes_android/core/screens/app_settings_screen.dart';
-import 'package:hermes_android/core/screens/gateway_manager_screen.dart';
-import 'package:hermes_android/core/screens/notification_settings_screen.dart';
-import 'package:hermes_android/core/screens/settings_screen.dart';
-import 'package:hermes_android/core/screens/tools_hub_screen.dart';
-import 'package:hermes_android/core/screens/voice_settings_screen.dart';
-import 'package:hermes_android/core/services/ssh_profile_presence.dart';
-import 'package:hermes_android/core/settings/settings_sections.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/about_screen.dart';
+import 'package:ylpa_console/core/screens/app_settings_screen.dart';
+import 'package:ylpa_console/core/screens/gateway_manager_screen.dart';
+import 'package:ylpa_console/core/screens/notification_settings_screen.dart';
+import 'package:ylpa_console/core/screens/settings_screen.dart';
+import 'package:ylpa_console/core/screens/tools_hub_screen.dart';
+import 'package:ylpa_console/core/screens/voice_settings_screen.dart';
+import 'package:ylpa_console/core/services/ssh_profile_presence.dart';
+import 'package:ylpa_console/core/settings/settings_sections.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/nav_harness.dart';
 

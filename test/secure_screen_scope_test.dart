@@ -6,7 +6,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/secure_screen_scope.dart';
+import 'package:ylpa_console/core/widgets/secure_screen_scope.dart';
 
 void main() {
   testWidgets('holds the scope while mounted and releases it once', (

@@ -1,7 +1,7 @@
-import 'package:hermes_android/core/models/bot_visual_identity.dart';
-import 'package:hermes_android/core/services/bot_profile_client.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/bot_visual_identity.dart';
+import 'package:ylpa_console/core/services/bot_profile_client.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 import 'profile_model_fakes.dart';
 

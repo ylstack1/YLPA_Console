@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/voice_disclosure_dialog.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/widgets/voice_disclosure_dialog.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 /// The direct-voice consent is a decision dialog: it goes through
 /// `showHermesDialog` (design-system contract, spec 080), whose actions stay

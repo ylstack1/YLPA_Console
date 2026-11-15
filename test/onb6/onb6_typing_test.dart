@@ -4,9 +4,9 @@
 // ONB6: the setup command types itself in at most 600 ms. Synthetic fixtures.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_widgets.dart';
-import 'package:hermes_android/core/services/hermes_setup_commands.dart';
-import 'package:hermes_android/core/services/official_dashboard_command.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_widgets.dart';
+import 'package:ylpa_console/core/services/hermes_setup_commands.dart';
+import 'package:ylpa_console/core/services/official_dashboard_command.dart';
 
 final String _windows = dashboardSetupCommand(SetupHostSystem.windows);
 

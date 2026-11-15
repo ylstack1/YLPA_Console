@@ -3,8 +3,8 @@
 // tocar tablas a medias (streaming) ni contenido sin tablas.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/markdown_table.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/markdown_table.dart';
 
 void main() {
   group('splitAnswerTables', () {

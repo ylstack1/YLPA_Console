@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart' show StringCharacters;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/frame_stream_reveal.dart';
+import 'package:ylpa_console/core/utils/frame_stream_reveal.dart';
 
 void main() {
   test('cached tail boundaries remain valid after long-prefix compaction', () {

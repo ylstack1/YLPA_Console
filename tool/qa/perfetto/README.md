@@ -1,6 +1,6 @@
 # Harness Perfetto de voz (qaProfile)
 
-Este harness captura rendimiento de `dev.xpetalab.hermesconsole.qa` sin
+Este harness captura rendimiento de `com.ylpa.console.qa` sin
 instalar APK, reiniciar el Pixel, forzar la parada de la app ni alterar los
 baselines globales del dispositivo. No ejecuta `batterystats reset`, `gfxinfo
 reset`, `battery unplug` ni recoge logcat. La traza contiene eventos de

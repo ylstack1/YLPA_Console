@@ -15,9 +15,9 @@ library;
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/interactive_prompt.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/utils/chat_turn.dart';
+import 'package:ylpa_console/core/models/interactive_prompt.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/utils/chat_turn.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/real_gateway.dart';

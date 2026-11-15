@@ -2,17 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/voice/conversation/chat_recognizer_prewarm.dart';
-import 'package:hermes_android/core/services/voice/conversation/native_voice.dart';
-import 'package:hermes_android/core/services/voice/device_memory_profile.dart';
-import 'package:hermes_android/core/services/voice/stt_engine.dart';
-import 'package:hermes_android/core/services/voice/stt_sherpa.dart'
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/voice/conversation/chat_recognizer_prewarm.dart';
+import 'package:ylpa_console/core/services/voice/conversation/native_voice.dart';
+import 'package:ylpa_console/core/services/voice/device_memory_profile.dart';
+import 'package:ylpa_console/core/services/voice/stt_engine.dart';
+import 'package:ylpa_console/core/services/voice/stt_sherpa.dart'
     show SherpaModelKind;
-import 'package:hermes_android/core/services/voice/tts_engine.dart';
-import 'package:hermes_android/core/services/voice/voice_service.dart';
-import 'package:hermes_android/core/services/voice/voice_settings.dart';
+import 'package:ylpa_console/core/services/voice/tts_engine.dart';
+import 'package:ylpa_console/core/services/voice/voice_service.dart';
+import 'package:ylpa_console/core/services/voice/voice_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// This phone's recogniser: it can be loaded without a capture.

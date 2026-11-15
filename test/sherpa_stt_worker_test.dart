@@ -5,10 +5,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/sherpa_stt_worker.dart';
-import 'package:hermes_android/core/services/voice/stt_engine.dart';
-import 'package:hermes_android/core/services/voice/stt_sherpa.dart';
-import 'package:hermes_android/core/services/voice/voice_latency_trace.dart';
+import 'package:ylpa_console/core/services/voice/sherpa_stt_worker.dart';
+import 'package:ylpa_console/core/services/voice/stt_engine.dart';
+import 'package:ylpa_console/core/services/voice/stt_sherpa.dart';
+import 'package:ylpa_console/core/services/voice/voice_latency_trace.dart';
 import 'package:record/record.dart';
 
 class _FakeManager extends SherpaSttModelManager {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/operation_policy.dart';
+import 'package:ylpa_console/core/services/operation_policy.dart';
 
 void main() {
   test('unknown nunca habilita una mutación', () {

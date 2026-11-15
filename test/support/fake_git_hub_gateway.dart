@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:hermes_android/core/models/desktop_control_center.dart'
+import 'package:ylpa_console/core/models/desktop_control_center.dart'
     show ProjectGitBaseBranch, ProjectGitBranch, ProjectWorktreeResult;
-import 'package:hermes_android/core/models/git_hub.dart';
-import 'package:hermes_android/core/models/git_review.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
-import 'package:hermes_android/core/services/git_hub_gateway.dart';
-import 'package:hermes_android/core/services/session_pull_requests.dart'
+import 'package:ylpa_console/core/models/git_hub.dart';
+import 'package:ylpa_console/core/models/git_review.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/services/git_hub_gateway.dart';
+import 'package:ylpa_console/core/services/session_pull_requests.dart'
     show PullRequestInfo, PullRequestList;
 
 import 'fake_git_review_gateway.dart';

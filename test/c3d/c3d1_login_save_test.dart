@@ -5,9 +5,9 @@
 // it is the simple form and signs nothing in by itself; Edit never signs in.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/dashboard_setup_screen.dart';
-import 'package:hermes_android/core/screens/instance_edit_screen.dart';
-import 'package:hermes_android/core/services/onboarding_arrival.dart';
+import 'package:ylpa_console/core/screens/dashboard_setup_screen.dart';
+import 'package:ylpa_console/core/screens/instance_edit_screen.dart';
+import 'package:ylpa_console/core/services/onboarding_arrival.dart';
 
 import '../support/onboarding_fakes.dart';
 import 'c3d_support.dart';

@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/activity_snapshot.dart';
-import 'package:hermes_android/core/screens/turn_activity_memory.dart';
-import 'package:hermes_android/core/services/session_reconciler.dart'
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/screens/turn_activity_memory.dart';
+import 'package:ylpa_console/core/services/session_reconciler.dart'
     show assistantActivityTraceKey;
-import 'package:hermes_android/core/models/session_activity.dart';
-import 'package:hermes_android/core/models/subagent_activity.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/chat_pinned_prompt_header.dart';
-import 'package:hermes_android/core/widgets/chat/chat_queue_chip.dart';
-import 'package:hermes_android/core/widgets/chat/tool_steps_summary.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
-import 'package:hermes_android/core/widgets/chat_turn_activity.dart';
-import 'package:hermes_android/core/widgets/subagent_activity_card.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/session_activity.dart';
+import 'package:ylpa_console/core/models/subagent_activity.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_pinned_prompt_header.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_queue_chip.dart';
+import 'package:ylpa_console/core/widgets/chat/tool_steps_summary.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/core/widgets/chat_turn_activity.dart';
+import 'package:ylpa_console/core/widgets/subagent_activity_card.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 final _start = DateTime(2026, 11, 6);
 final _now = _start.add(const Duration(seconds: 18));

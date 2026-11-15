@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/json_rpc_wire.dart';
+import 'package:ylpa_console/core/services/json_rpc_wire.dart';
 
 void main() {
   JsonRpcWireFrame decode(String text) =>

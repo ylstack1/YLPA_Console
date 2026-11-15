@@ -2,10 +2,10 @@
 // ignore: depend_on_referenced_packages
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/home_widget_snapshot.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/home_widget_publisher.dart';
+import 'package:ylpa_console/core/models/home_widget_snapshot.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/home_widget_publisher.dart';
 
 /// Counts launcher redraw requests, which is what Android logs as
 /// `AppWidgetServiceImpl: Trying to notify widget update`.

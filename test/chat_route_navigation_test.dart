@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/navigation/chat_route.dart';
+import 'package:ylpa_console/core/navigation/chat_route.dart';
 
 class _RouteProbe extends StatelessWidget {
   const _RouteProbe(this.label, {this.onOpen});

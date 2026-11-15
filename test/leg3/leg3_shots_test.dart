@@ -7,9 +7,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/onboarding/manual_setup_page.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/screens/onboarding/manual_setup_page.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
 
 import '../onb2q/hermes_shaped_server.dart';
 import '../support/design_shots.dart';

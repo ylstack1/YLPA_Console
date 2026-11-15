@@ -2,9 +2,9 @@ import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat_prompt_sheet.dart';
-import 'package:hermes_android/core/widgets/console_loader.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat_prompt_sheet.dart';
+import 'package:ylpa_console/core/widgets/console_loader.dart';
 
 Widget _host(
   ValueNotifier<ChatPromptSheetModel> model, {

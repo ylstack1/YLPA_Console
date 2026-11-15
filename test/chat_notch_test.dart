@@ -3,11 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/pill_morph.dart';
-import 'package:hermes_android/core/services/global_activity_aggregate.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/chat_notch.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/widgets/pill_morph.dart';
+import 'package:ylpa_console/core/services/global_activity_aggregate.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_notch.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 // Chat notch (owner design, GUIA-CHAT §5 and §9; notch «mínimo 7» in 1.4.0):
 // a small glass tab above the composer opens the "Esta conversación" sheet,

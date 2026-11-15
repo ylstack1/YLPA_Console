@@ -10,8 +10,8 @@ import 'dart:ui' show AppLifecycleState;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/turn_keepalive_controller.dart';
-import 'package:hermes_android/core/services/turn_keepalive_hold.dart';
+import 'package:ylpa_console/core/services/turn_keepalive_controller.dart';
+import 'package:ylpa_console/core/services/turn_keepalive_hold.dart';
 
 class _FakePlatform implements TurnKeepAlivePlatform {
   final calls = <String>[];

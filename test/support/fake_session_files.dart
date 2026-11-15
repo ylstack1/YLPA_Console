@@ -3,7 +3,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:hermes_android/core/services/herdr_session_files.dart';
+import 'package:ylpa_console/core/services/herdr_session_files.dart';
 
 class FakeSessionFiles implements HerdrSessionFiles {
   FakeSessionFiles({this.homePath = '/home/demo'});

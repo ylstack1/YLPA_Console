@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/characters/bot_motion.dart';
-import 'package:hermes_android/core/widgets/hermes_bot_face.dart';
+import 'package:ylpa_console/core/characters/bot_motion.dart';
+import 'package:ylpa_console/core/widgets/hermes_bot_face.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

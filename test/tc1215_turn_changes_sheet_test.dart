@@ -4,13 +4,13 @@
 // edit_file diffs), aggregated per path.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/tool_output.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/utils/unified_diff.dart';
-import 'package:hermes_android/core/widgets/chat/tool_output_cards.dart';
-import 'package:hermes_android/core/widgets/chat/turn_changes_sheet.dart';
-import 'package:hermes_android/core/widgets/projects/project_file_icons.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/tool_output.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/utils/unified_diff.dart';
+import 'package:ylpa_console/core/widgets/chat/tool_output_cards.dart';
+import 'package:ylpa_console/core/widgets/chat/turn_changes_sheet.dart';
+import 'package:ylpa_console/core/widgets/projects/project_file_icons.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 ToolOutputRecord _edit(String id, String path, String diff) =>
     ToolOutputRecord(toolId: id, name: 'patch', files: [FileDiff(path, diff)]);

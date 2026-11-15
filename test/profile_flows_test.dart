@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/bot_create_screen.dart';
-import 'package:hermes_android/core/screens/profiles_screen.dart';
-import 'package:hermes_android/core/services/bot_roster_store.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/screens/bot_create_screen.dart';
+import 'package:ylpa_console/core/screens/profiles_screen.dart';
+import 'package:ylpa_console/core/services/bot_roster_store.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
 
 import 'support/bot_roster_fakes.dart';
 

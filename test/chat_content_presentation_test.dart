@@ -1,8 +1,8 @@
 // What «Artefactos» says about each item: the type of a file, where it
 // lives, and the files grouped by type.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/chat_content_extractor.dart';
-import 'package:hermes_android/core/services/chat_content_presentation.dart';
+import 'package:ylpa_console/core/services/chat_content_extractor.dart';
+import 'package:ylpa_console/core/services/chat_content_presentation.dart';
 
 ChatContentItem _file(String value, {String? label}) => ChatContentItem(
   kind: ChatContentKind.file,

@@ -4,8 +4,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/platform/native_appearance.dart';
-import 'package:hermes_android/core/widgets/startup_handoff.dart';
+import 'package:ylpa_console/core/services/platform/native_appearance.dart';
+import 'package:ylpa_console/core/widgets/startup_handoff.dart';
 
 Color _xmlColor(String path) {
   final xml = File(path).readAsStringSync();

@@ -4,8 +4,8 @@
 // not parsed at all, and a measured reply is not measured again.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/chat_markdown_body.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_markdown_body.dart';
 
 Future<double> _indent(WidgetTester tester, String data) async {
   late double indent;

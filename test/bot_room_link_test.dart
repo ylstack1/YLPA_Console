@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/bot_room_link.dart';
+import 'package:ylpa_console/core/services/bot_room_link.dart';
 import 'botmode_parity_model_test.dart' show parityRoom;
 
 Map<String, dynamic> _catalog() => {

@@ -5,11 +5,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/dock_config.dart';
-import 'package:hermes_android/core/screens/app_settings_screen.dart';
-import 'package:hermes_android/core/services/notifications/notification_action_drain.dart';
-import 'package:hermes_android/core/shell/gesture_dock_state.dart';
-import 'package:hermes_android/core/widgets/dock_shortcuts.dart';
+import 'package:ylpa_console/core/models/dock_config.dart';
+import 'package:ylpa_console/core/screens/app_settings_screen.dart';
+import 'package:ylpa_console/core/services/notifications/notification_action_drain.dart';
+import 'package:ylpa_console/core/shell/gesture_dock_state.dart';
+import 'package:ylpa_console/core/widgets/dock_shortcuts.dart';
 
 import '../support/nav_harness.dart';
 

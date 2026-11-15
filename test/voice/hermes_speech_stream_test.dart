@@ -4,10 +4,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/voice/hermes_pcm_stream.dart';
-import 'package:hermes_android/core/services/voice/hermes_speech_stream.dart';
-import 'package:hermes_android/core/services/voice/voice_latency_trace.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/voice/hermes_pcm_stream.dart';
+import 'package:ylpa_console/core/services/voice/hermes_speech_stream.dart';
+import 'package:ylpa_console/core/services/voice/voice_latency_trace.dart';
 
 class _FakeSpeechSocket implements HermesSpeechSocket {
   _FakeSpeechSocket({bool ready = true}) {

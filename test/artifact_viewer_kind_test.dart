@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/artifact_viewer_kind.dart';
+import 'package:ylpa_console/core/services/artifact_viewer_kind.dart';
 
 void main() {
   ArtifactViewerKind kind(String name, [String mime = '']) =>

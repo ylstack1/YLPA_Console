@@ -6,9 +6,9 @@
 // hue, lighter or darker.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/hermes_design.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/design/hermes_design.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
 
 List<Color> _worst(HermesChrome chrome, {Color? tint}) {
   final veil = chrome.opaque.withValues(alpha: chrome.dark ? 0.80 : 0.84);

@@ -3,17 +3,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/characters/bot_character.dart';
-import 'package:hermes_android/core/characters/bot_character_store.dart';
-import 'package:hermes_android/core/characters/character_ai_request.dart';
-import 'package:hermes_android/core/characters/character_library.dart';
-import 'package:hermes_android/core/characters/studio_catalog.dart';
-import 'package:hermes_android/core/characters/studio_painter.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/screens/characters/character_editor_screen.dart';
-import 'package:hermes_android/core/screens/characters/studio_ask_agent.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/characters/bot_character.dart';
+import 'package:ylpa_console/core/characters/bot_character_store.dart';
+import 'package:ylpa_console/core/characters/character_ai_request.dart';
+import 'package:ylpa_console/core/characters/character_library.dart';
+import 'package:ylpa_console/core/characters/studio_catalog.dart';
+import 'package:ylpa_console/core/characters/studio_painter.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/screens/characters/character_editor_screen.dart';
+import 'package:ylpa_console/core/screens/characters/studio_ask_agent.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // "Generate with AI" of the character editor: the request that is written,

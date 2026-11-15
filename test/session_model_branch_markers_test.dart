@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
+import 'package:ylpa_console/core/models/session.dart';
 
 Map<String, dynamic> _row(Map<String, dynamic> extra) => {
   'id': 's1',

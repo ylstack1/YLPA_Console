@@ -2,14 +2,14 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/data/bot_mode_repository.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/models/desktop_active_session.dart';
-import 'package:hermes_android/core/services/bot_roster_cache.dart';
-import 'package:hermes_android/core/services/bot_roster_store.dart';
-import 'package:hermes_android/core/services/notifications/bot_face_bitmap.dart';
-import 'package:hermes_android/core/services/notifications/bot_mode_background.dart';
+import 'package:ylpa_console/core/bots/data/bot_mode_repository.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/models/desktop_active_session.dart';
+import 'package:ylpa_console/core/services/bot_roster_cache.dart';
+import 'package:ylpa_console/core/services/bot_roster_store.dart';
+import 'package:ylpa_console/core/services/notifications/bot_face_bitmap.dart';
+import 'package:ylpa_console/core/services/notifications/bot_mode_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final connection = SavedConnection(

@@ -38,7 +38,9 @@ class _AcpAddAgentScreenState extends State<AcpAddAgentScreen> {
 
   final _formKey = GlobalKey<AcpAgentFormState>();
   bool _testing = false;
-  final _cwdController = TextEditingController(text: '~');
+  /// Working directory on the agent machine — the user sets this per agent;
+  /// it is never hardcoded. Must be an absolute path (OpenCode requires it).
+  final _cwdController = TextEditingController();
 
   @override
   void dispose() {
@@ -295,6 +297,7 @@ class _AcpAddAgentScreenState extends State<AcpAddAgentScreen> {
             AcpAgentForm(
               key: _formKey,
               manifest: manifest,
+              includeCwd: false, // cwd is collected via _cwdController above
             ),
             const SizedBox(height: HermesSpace.x4),
             _bridgeCommandCard(manifest, colors),

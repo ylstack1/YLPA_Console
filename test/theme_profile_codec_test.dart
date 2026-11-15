@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/theme_profile.dart';
-import 'package:hermes_android/core/theme/theme_profile_codec.dart';
+import 'package:ylpa_console/core/theme/theme_profile.dart';
+import 'package:ylpa_console/core/theme/theme_profile_codec.dart';
 
 import 'support/theme_profile_fixtures.dart';
 

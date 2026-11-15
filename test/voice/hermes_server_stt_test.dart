@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/stt_hermes_server.dart';
+import 'package:ylpa_console/core/services/voice/stt_hermes_server.dart';
 import 'package:record/record.dart';
 import 'package:whisper_ggml_plus/whisper_ggml_plus.dart';
 

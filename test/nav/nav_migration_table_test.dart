@@ -4,10 +4,10 @@
 // table and checks that every old entry is reachable from where it moved.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/profile/profile_hub_screen.dart';
-import 'package:hermes_android/core/screens/app_settings_screen.dart';
-import 'package:hermes_android/core/services/ssh_profile_presence.dart';
-import 'package:hermes_android/core/shell/gesture_dock_state.dart';
+import 'package:ylpa_console/core/bots/ui/profile/profile_hub_screen.dart';
+import 'package:ylpa_console/core/screens/app_settings_screen.dart';
+import 'package:ylpa_console/core/services/ssh_profile_presence.dart';
+import 'package:ylpa_console/core/shell/gesture_dock_state.dart';
 
 import '../support/nav_harness.dart';
 

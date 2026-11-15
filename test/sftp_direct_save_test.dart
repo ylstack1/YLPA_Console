@@ -12,11 +12,11 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/save_to_device.dart';
-import 'package:hermes_android/core/services/secure_storage.dart';
-import 'package:hermes_android/core/services/sftp_transfer_service.dart';
-import 'package:hermes_android/core/services/ssh_manager.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/save_to_device.dart';
+import 'package:ylpa_console/core/services/secure_storage.dart';
+import 'package:ylpa_console/core/services/sftp_transfer_service.dart';
+import 'package:ylpa_console/core/services/ssh_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _channel = MethodChannel('hermes/save_to_device');

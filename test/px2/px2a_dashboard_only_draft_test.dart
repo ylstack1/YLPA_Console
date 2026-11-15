@@ -7,7 +7,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/connection.dart';
+import 'package:ylpa_console/core/models/connection.dart';
 import 'package:http/http.dart' as http;
 
 import '../c3d/c3d_support.dart';

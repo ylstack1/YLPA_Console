@@ -12,19 +12,19 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:hermes_android/core/design/glass_strip.dart';
-import 'package:hermes_android/core/design/smoked_glass.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/models/dock_config.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/box_fill.dart';
-import 'package:hermes_android/core/theme/glass_look.dart';
-import 'package:hermes_android/core/theme/lines.dart';
-import 'package:hermes_android/core/theme/look_feel.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/dock_style.dart';
-import 'package:hermes_android/core/widgets/frosted_backdrop.dart';
-import 'package:hermes_android/core/widgets/hermes_app_bar.dart';
+import 'package:ylpa_console/core/design/glass_strip.dart';
+import 'package:ylpa_console/core/design/smoked_glass.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/models/dock_config.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/box_fill.dart';
+import 'package:ylpa_console/core/theme/glass_look.dart';
+import 'package:ylpa_console/core/theme/lines.dart';
+import 'package:ylpa_console/core/theme/look_feel.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/dock_style.dart';
+import 'package:ylpa_console/core/widgets/frosted_backdrop.dart';
+import 'package:ylpa_console/core/widgets/hermes_app_bar.dart';
 
 /// What a pair is for, and the ratio it has to reach.
 enum PairKind {

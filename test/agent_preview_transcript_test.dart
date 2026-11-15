@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/agent_preview_extractor.dart';
-import 'package:hermes_android/core/services/session_reconciler.dart';
+import 'package:ylpa_console/core/services/agent_preview_extractor.dart';
+import 'package:ylpa_console/core/services/session_reconciler.dart';
 
 /// A chat's transcript is not the raw rows: it goes through
 /// [coalesceAssistantTurnsNewestFirst], which keeps no tool arguments.

@@ -4,13 +4,13 @@
 // the Dashboard sign-in goes through the local end of the tunnel.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/onboarding/manual_connect_page.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_widgets.dart';
-import 'package:hermes_android/core/services/native_password_login.dart';
-import 'package:hermes_android/core/services/ssh_dashboard_tunnel.dart';
-import 'package:hermes_android/core/services/ssh_manager.dart';
-import 'package:hermes_android/core/services/ssh_tunnel_connector.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/onboarding/manual_connect_page.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_widgets.dart';
+import 'package:ylpa_console/core/services/native_password_login.dart';
+import 'package:ylpa_console/core/services/ssh_dashboard_tunnel.dart';
+import 'package:ylpa_console/core/services/ssh_manager.dart';
+import 'package:ylpa_console/core/services/ssh_tunnel_connector.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import '../support/onboarding_fakes.dart';
 

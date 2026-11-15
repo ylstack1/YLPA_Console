@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/cron_job.dart';
-import 'package:hermes_android/core/services/profile_chat_mode.dart';
+import 'package:ylpa_console/core/models/cron_job.dart';
+import 'package:ylpa_console/core/services/profile_chat_mode.dart';
 
 import 'support/fake_dashboard_sessions.dart';
 import 'support/test_api_client.dart';

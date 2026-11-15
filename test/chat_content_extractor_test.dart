@@ -4,7 +4,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/chat_content_extractor.dart';
+import 'package:ylpa_console/core/services/chat_content_extractor.dart';
 
 List<ChatContentItem> _collect(List<Map<String, dynamic>> chronological) =>
     collectChatContent(chronological.reversed.toList());

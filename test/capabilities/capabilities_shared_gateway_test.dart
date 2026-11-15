@@ -2,9 +2,9 @@
 // opening its own WebSocket per visit, and gives it back when it closes.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/capabilities_screen.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/services/shared_gateway_pool.dart';
+import 'package:ylpa_console/core/capabilities/capabilities_screen.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/services/shared_gateway_pool.dart';
 
 import '../support/inter_font.dart';
 import 'capabilities_fakes.dart';

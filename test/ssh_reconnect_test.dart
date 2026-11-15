@@ -4,7 +4,7 @@ import 'dart:async';
 // ignore: depend_on_referenced_packages
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/ssh_reconnect.dart';
+import 'package:ylpa_console/core/services/ssh_reconnect.dart';
 
 /// Scripted attempts: each call takes the next outcome (the last repeats)
 /// and records the fake time it ran at.

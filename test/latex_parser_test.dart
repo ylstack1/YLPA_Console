@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/latex/latex_ast.dart';
-import 'package:hermes_android/core/utils/latex/latex_parser.dart';
+import 'package:ylpa_console/core/utils/latex/latex_ast.dart';
+import 'package:ylpa_console/core/utils/latex/latex_parser.dart';
 
 String _dbg(String source) => parseLatex(source).debug;
 

@@ -8,7 +8,7 @@
 // saved or removed unless the server says so.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/active_profile_scope.dart';
+import 'package:ylpa_console/core/services/active_profile_scope.dart';
 
 import 'support/models_server.dart';
 

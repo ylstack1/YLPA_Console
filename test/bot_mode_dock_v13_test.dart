@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/dock.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/dock.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 /// Monta el dock unificado con el perfil "Bots" tal y como lo monta Mission
 /// Control: sus mismas acciones, sus mismas dos órbitas de creación y el

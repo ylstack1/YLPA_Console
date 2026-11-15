@@ -3,9 +3,9 @@
 // «Cargando…».
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/loading_skeleton.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/loading_skeleton.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _app(Widget child, ThemeData theme) => MaterialApp(
   theme: theme,

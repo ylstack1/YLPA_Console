@@ -7,10 +7,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/git_review.dart';
-import 'package:hermes_android/core/services/git_review_controller.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat_control_sheet.dart';
+import 'package:ylpa_console/core/models/git_review.dart';
+import 'package:ylpa_console/core/services/git_review_controller.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat_control_sheet.dart';
 
 import 'support/fake_git_review_gateway.dart';
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/conversation/streaming_narration_queue.dart';
+import 'package:ylpa_console/core/services/voice/conversation/streaming_narration_queue.dart';
 
 void main() {
   StreamingNarrationQueue queue() => StreamingNarrationQueue(language: 'es');

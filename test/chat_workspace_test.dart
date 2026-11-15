@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

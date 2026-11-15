@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_active_session.dart';
+import 'package:ylpa_console/core/models/desktop_active_session.dart';
 
 void main() {
   test(

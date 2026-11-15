@@ -9,7 +9,7 @@
 //  4. BridgeClient.chatSimple no incluye tools (regresión desde TASK-019).
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/connection.dart';
+import 'package:ylpa_console/core/models/connection.dart';
 
 void main() {
   // =========================================================

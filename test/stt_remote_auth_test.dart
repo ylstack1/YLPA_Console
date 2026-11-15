@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/stt_remote.dart';
+import 'package:ylpa_console/core/services/voice/stt_remote.dart';
 
 typedef _SocketHandler =
     void Function(int connection, Uri requestUri, WebSocket socket);

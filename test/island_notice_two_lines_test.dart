@@ -8,11 +8,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/floating_chat_header.dart';
-import 'package:hermes_android/core/widgets/hermes_notice.dart';
-import 'package:hermes_android/core/widgets/island.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/floating_chat_header.dart';
+import 'package:ylpa_console/core/widgets/hermes_notice.dart';
+import 'package:ylpa_console/core/widgets/island.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _title = 'Ya no necesitas el bridge';
 const _body = 'Console habla ahora directamente con Hermes.';

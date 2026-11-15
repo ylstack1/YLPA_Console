@@ -21,7 +21,7 @@
     {"name": "android.permission.VIBRATE"},
     {"name": "android.permission.WAKE_LOCK"},
     {"name": "android.permission.WRITE_EXTERNAL_STORAGE", "maxSdkVersion": 28},
-    {"name": "dev.xpetalab.hermesconsole.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"}
+    {"name": "com.ylpa.console.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"}
   ],
   "forbiddenPermissions": [
     "android.permission.QUERY_ALL_PACKAGES",
@@ -32,8 +32,8 @@
     "com.termux.permission.RUN_COMMAND"
   ],
   "foregroundServices": [
-    {"name": "com.hermesagent.hermes_android.HermesExternalDataSyncService", "types": ["dataSync"]},
-    {"name": "com.hermesagent.hermes_android.HermesTurnKeepAliveService", "types": ["dataSync"]},
+    {"name": "com.ylpa.console.HermesExternalDataSyncService", "types": ["dataSync"]},
+    {"name": "com.ylpa.console.HermesTurnKeepAliveService", "types": ["dataSync"]},
     {"name": "com.pravera.flutter_foreground_task.service.ForegroundService", "types": ["dataSync", "mediaPlayback", "microphone", "remoteMessaging"]}
   ],
   "packageQueries": []

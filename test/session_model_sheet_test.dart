@@ -4,20 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/tokens.dart' show HermesChrome;
-import 'package:hermes_android/core/models/desktop_session_config.dart';
-import 'package:hermes_android/core/models/model_favorites.dart';
-import 'package:hermes_android/core/models/model_provider.dart';
-import 'package:hermes_android/core/models/provider_usage.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/pill_morph.dart';
-import 'package:hermes_android/core/widgets/reasoning_squares_track.dart';
-import 'package:hermes_android/core/widgets/session_model_sheet.dart';
-import 'package:hermes_android/core/widgets/status_pill_sheet.dart';
-import 'package:hermes_android/core/widgets/subscription_limit_block.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
-import 'package:hermes_android/l10n/app_localizations_es.dart';
+import 'package:ylpa_console/core/design/tokens.dart' show HermesChrome;
+import 'package:ylpa_console/core/models/desktop_session_config.dart';
+import 'package:ylpa_console/core/models/model_favorites.dart';
+import 'package:ylpa_console/core/models/model_provider.dart';
+import 'package:ylpa_console/core/models/provider_usage.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/pill_morph.dart';
+import 'package:ylpa_console/core/widgets/reasoning_squares_track.dart';
+import 'package:ylpa_console/core/widgets/session_model_sheet.dart';
+import 'package:ylpa_console/core/widgets/status_pill_sheet.dart';
+import 'package:ylpa_console/core/widgets/subscription_limit_block.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations_es.dart';
 
 const _anthropic = ModelProvider(
   slug: 'anthropic',

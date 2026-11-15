@@ -24,7 +24,7 @@ at the end of this document.
 - **Website**: https://hermes.xpetalab.dev
 - **Privacy policy**: https://hermes.xpetalab.dev/en/privacy (English) and
   https://hermes.xpetalab.dev/privacy (Spanish)
-- **Package**: `dev.xpetalab.hermesconsole`
+- **Package**: `com.ylpa.console`
 
 The launcher name of the app is "Console"; the registered store title keeps
 "Hermes Console" because that is the name the listing and package already have.

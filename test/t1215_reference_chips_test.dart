@@ -1,13 +1,13 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/composer_reference.dart';
-import 'package:hermes_android/core/models/reference_directive.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/user_message_text.dart';
-import 'package:hermes_android/core/widgets/inline_message_editor.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/composer_reference.dart';
+import 'package:ylpa_console/core/models/reference_directive.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/user_message_text.dart';
+import 'package:ylpa_console/core/widgets/inline_message_editor.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 TextEditingValue _caretAtEnd(String text) => TextEditingValue(
   text: text,

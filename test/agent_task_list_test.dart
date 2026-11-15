@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/agent_task_list.dart';
+import 'package:ylpa_console/core/models/agent_task_list.dart';
 
 // Real-shaped payloads: `todo.updated` / `session.resume.todo_state` carry the
 // full snapshot `{todos: [{id, content, status, parent?}], revision}` (see

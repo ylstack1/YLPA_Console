@@ -6,24 +6,24 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/hermes_design.dart'
+import 'package:ylpa_console/core/design/hermes_design.dart'
     show HermesListGroup;
-import 'package:hermes_android/core/screens/about_screen.dart';
-import 'package:hermes_android/core/screens/app_settings_screen.dart';
-import 'package:hermes_android/core/screens/notification_settings_screen.dart';
-import 'package:hermes_android/core/screens/settings_screen.dart';
-import 'package:hermes_android/core/screens/tools_hub_screen.dart';
-import 'package:hermes_android/core/screens/voice_settings_screen.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/message_reaction_prefs.dart';
-import 'package:hermes_android/core/services/motion_prefs.dart';
-import 'package:hermes_android/core/services/pinned_prompt_prefs.dart';
-import 'package:hermes_android/core/settings/settings_deep_link.dart';
-import 'package:hermes_android/core/settings/settings_sections.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/hermes_ui.dart'
+import 'package:ylpa_console/core/screens/about_screen.dart';
+import 'package:ylpa_console/core/screens/app_settings_screen.dart';
+import 'package:ylpa_console/core/screens/notification_settings_screen.dart';
+import 'package:ylpa_console/core/screens/settings_screen.dart';
+import 'package:ylpa_console/core/screens/tools_hub_screen.dart';
+import 'package:ylpa_console/core/screens/voice_settings_screen.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/message_reaction_prefs.dart';
+import 'package:ylpa_console/core/services/motion_prefs.dart';
+import 'package:ylpa_console/core/services/pinned_prompt_prefs.dart';
+import 'package:ylpa_console/core/settings/settings_deep_link.dart';
+import 'package:ylpa_console/core/settings/settings_sections.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/hermes_ui.dart'
     show HermesGroup, HermesPanel;
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/nav_harness.dart';

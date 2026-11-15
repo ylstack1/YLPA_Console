@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/room/room_mentions.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_mentions.dart';
 
 void main() {
   const members = ['Alice', 'bob', 'ops:west'];

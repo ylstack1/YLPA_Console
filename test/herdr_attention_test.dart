@@ -4,12 +4,12 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/herdr_agents.dart';
-import 'package:hermes_android/core/services/herdr_attention.dart';
-import 'package:hermes_android/core/services/herdr_flat_list.dart';
-import 'package:hermes_android/core/services/herdr_session_files.dart';
-import 'package:hermes_android/core/services/herdr_status.dart';
-import 'package:hermes_android/core/services/herdr_transcript.dart';
+import 'package:ylpa_console/core/services/herdr_agents.dart';
+import 'package:ylpa_console/core/services/herdr_attention.dart';
+import 'package:ylpa_console/core/services/herdr_flat_list.dart';
+import 'package:ylpa_console/core/services/herdr_session_files.dart';
+import 'package:ylpa_console/core/services/herdr_status.dart';
+import 'package:ylpa_console/core/services/herdr_transcript.dart';
 
 import 'support/fake_session_files.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/chat/live_reply_reveal.dart';
+import 'package:ylpa_console/core/widgets/chat/live_reply_reveal.dart';
 
 // Like pm1215, keep the source/build work distinct from subsequent frames.
 // These wall-clock pump samples are a CPU regression budget, not Fold GPU fps.

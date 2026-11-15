@@ -1,7 +1,7 @@
 // The read-only look for code agents running without Herdr.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/agent_processes.dart';
-import 'package:hermes_android/core/services/herdr_status.dart';
+import 'package:ylpa_console/core/services/agent_processes.dart';
+import 'package:ylpa_console/core/services/herdr_status.dart';
 
 void main() {
   test('the command is one constant, read-only, with no arguments to fill', () {

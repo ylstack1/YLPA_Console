@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/hermes_pcm_stream.dart';
+import 'package:ylpa_console/core/services/voice/hermes_pcm_stream.dart';
 
 Map<String, Object> _successfulWrite(MethodCall call) {
   final pcm = (call.arguments as Map)['pcm'] as Uint8List;

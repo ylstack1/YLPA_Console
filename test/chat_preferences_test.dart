@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/chat_preferences.dart';
-import 'package:hermes_android/core/services/chat_preference_store.dart';
+import 'package:ylpa_console/core/models/chat_preferences.dart';
+import 'package:ylpa_console/core/services/chat_preference_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

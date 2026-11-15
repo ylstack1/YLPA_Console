@@ -2,7 +2,7 @@
 // `getSessionMessages(id, profile, {limit, offset, order: 'oldest',
 // includeCompacted: true})`, with inline images off and a byte bound.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
 
 final class _Recording extends DashboardClient {
   _Recording() : super(host: '127.0.0.1', port: 1, manualToken: 'unused');

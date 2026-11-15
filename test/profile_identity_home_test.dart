@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/roster/living_bot_face.dart';
-import 'package:hermes_android/core/companion/data/companion_preferences.dart';
-import 'package:hermes_android/core/companion/data/companion_repository.dart';
-import 'package:hermes_android/core/companion/models/companion.dart';
-import 'package:hermes_android/core/companion/models/companion_animation_state.dart';
-import 'package:hermes_android/core/companion/models/companion_presence_level.dart';
-import 'package:hermes_android/core/companion/render/spritesheet_renderer.dart';
-import 'package:hermes_android/core/companion/state/companion_controller.dart';
-import 'package:hermes_android/core/home/board/home_board_data.dart';
-import 'package:hermes_android/core/home/board/home_board_tiles.dart';
-import 'package:hermes_android/core/models/profile_identity.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/mission_profile_avatar.dart';
-import 'package:hermes_android/core/widgets/profile_face.dart';
-import 'package:hermes_android/core/widgets/profile_pet_avatar.dart';
+import 'package:ylpa_console/core/bots/ui/roster/living_bot_face.dart';
+import 'package:ylpa_console/core/companion/data/companion_preferences.dart';
+import 'package:ylpa_console/core/companion/data/companion_repository.dart';
+import 'package:ylpa_console/core/companion/models/companion.dart';
+import 'package:ylpa_console/core/companion/models/companion_animation_state.dart';
+import 'package:ylpa_console/core/companion/models/companion_presence_level.dart';
+import 'package:ylpa_console/core/companion/render/spritesheet_renderer.dart';
+import 'package:ylpa_console/core/companion/state/companion_controller.dart';
+import 'package:ylpa_console/core/home/board/home_board_data.dart';
+import 'package:ylpa_console/core/home/board/home_board_tiles.dart';
+import 'package:ylpa_console/core/models/profile_identity.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/mission_profile_avatar.dart';
+import 'package:ylpa_console/core/widgets/profile_face.dart';
+import 'package:ylpa_console/core/widgets/profile_pet_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Companion _pet(String slug) => Companion(

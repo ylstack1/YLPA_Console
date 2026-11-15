@@ -1,8 +1,8 @@
 import 'dart:ui' show Locale;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/provider_auth_failure.dart';
-import 'package:hermes_android/core/widgets/provider_reauth.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/provider_auth_failure.dart';
+import 'package:ylpa_console/core/widgets/provider_reauth.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 void main() {
   const compaction = ProviderAuthFailure(

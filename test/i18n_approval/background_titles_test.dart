@@ -2,9 +2,9 @@
 import 'dart:ui' show Locale;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/notifications/background_listener.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/notifications/background_listener.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 /// i18n-approval (emulator QA H5): a cron run the server leaves untitled is
 /// named «Tarea programada» by [Session.displayTitle], the Spanish source

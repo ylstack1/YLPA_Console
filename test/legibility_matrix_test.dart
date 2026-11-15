@@ -6,8 +6,8 @@
 // their own floors, a disabled label at 3:1. One failing pair fails the
 // test and names itself; the table it prints is the inventory.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/glass_look.dart';
-import 'package:hermes_android/core/theme/hermes_style.dart';
+import 'package:ylpa_console/core/theme/glass_look.dart';
+import 'package:ylpa_console/core/theme/hermes_style.dart';
 
 import 'support/legibility_matrix.dart';
 

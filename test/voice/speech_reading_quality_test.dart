@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/speech_renderer.dart';
+import 'package:ylpa_console/core/services/voice/speech_renderer.dart';
 
 /// Spec 048 — regresiones de calidad de lectura encontradas escuchando la QA
 /// en el Pixel (2026-07-24). Cada caso fue basura audible real.

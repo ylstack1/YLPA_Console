@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_profile_codec.dart';
-import 'package:hermes_android/main.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_profile_codec.dart';
+import 'package:ylpa_console/main.dart';
 
 void main() {
   test(

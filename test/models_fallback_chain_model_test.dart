@@ -4,7 +4,7 @@
 // The chain rules of Desktop's `fallback-models-field.tsx`
 // (`normalizeEntries`, `completeEntries`, and its row edits).
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/fallback_chain.dart';
+import 'package:ylpa_console/core/models/fallback_chain.dart';
 
 void main() {
   const routed = <String, dynamic>{

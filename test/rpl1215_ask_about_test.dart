@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/chat_ask_about.dart';
+import 'package:ylpa_console/core/utils/chat_ask_about.dart';
 
 void main() {
   group('ask about this quote', () {

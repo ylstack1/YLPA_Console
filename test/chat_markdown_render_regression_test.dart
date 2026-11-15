@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart';
-import 'package:hermes_android/core/services/session_reconciler.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/utils/streaming_normalizer.dart';
-import 'package:hermes_android/core/widgets/chat/chat_inline_chips.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/services/session_reconciler.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/utils/streaming_normalizer.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_inline_chips.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 TextSpan _markdownSpanContaining(WidgetTester tester, String text) {
   for (final widget in tester.widgetList<RichText>(find.byType(RichText))) {

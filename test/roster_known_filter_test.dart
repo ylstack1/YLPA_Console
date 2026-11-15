@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_active_session.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/services/global_activity_aggregate.dart';
-import 'package:hermes_android/core/services/roster_known_filter.dart';
+import 'package:ylpa_console/core/models/desktop_active_session.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/services/global_activity_aggregate.dart';
+import 'package:ylpa_console/core/services/roster_known_filter.dart';
 
 DesktopActiveSession _row(String stored, [String status = 'running']) =>
     DesktopActiveSession(

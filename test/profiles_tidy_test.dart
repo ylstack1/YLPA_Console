@@ -2,16 +2,16 @@
 // an action of the top bar, and each row ends in one menu.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/profile/profile_model_picker.dart';
-import 'package:hermes_android/core/config/feature_flags.dart';
-import 'package:hermes_android/core/design/list.dart' show HermesListRow;
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/screens/profile_editor_screen.dart';
-import 'package:hermes_android/core/screens/profiles_screen.dart';
-import 'package:hermes_android/core/services/bot_roster_store.dart';
-import 'package:hermes_android/core/services/profile_pet_service.dart';
-import 'package:hermes_android/core/shell/gesture_dock_state.dart';
-import 'package:hermes_android/core/widgets/hermes_app_bar.dart';
+import 'package:ylpa_console/core/bots/ui/profile/profile_model_picker.dart';
+import 'package:ylpa_console/core/config/feature_flags.dart';
+import 'package:ylpa_console/core/design/list.dart' show HermesListRow;
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/screens/profile_editor_screen.dart';
+import 'package:ylpa_console/core/screens/profiles_screen.dart';
+import 'package:ylpa_console/core/services/bot_roster_store.dart';
+import 'package:ylpa_console/core/services/profile_pet_service.dart';
+import 'package:ylpa_console/core/shell/gesture_dock_state.dart';
+import 'package:ylpa_console/core/widgets/hermes_app_bar.dart';
 
 import 'support/bot_roster_fakes.dart';
 import 'support/profile_model_fakes.dart';

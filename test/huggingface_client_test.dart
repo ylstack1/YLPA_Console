@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:hermes_android/core/services/huggingface_client.dart';
+import 'package:ylpa_console/core/services/huggingface_client.dart';
 
 void main() {
   group('HfModel / HfFile', () {

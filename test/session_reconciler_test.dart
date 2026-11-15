@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/screens/chat_render_projection.dart';
-import 'package:hermes_android/core/services/session_reconciler.dart';
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/screens/chat_render_projection.dart';
+import 'package:ylpa_console/core/services/session_reconciler.dart';
 
 void main() {
   const reconciler = DesktopSessionReconciler();

@@ -7,12 +7,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/tool_output.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/utils/unified_diff.dart';
-import 'package:hermes_android/core/widgets/chat/tool_output_cards.dart';
-import 'package:hermes_android/core/widgets/chat_event_cards.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/tool_output.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/utils/unified_diff.dart';
+import 'package:ylpa_console/core/widgets/chat/tool_output_cards.dart';
+import 'package:ylpa_console/core/widgets/chat_event_cards.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _e = '\x1B';
 const _inlineDiff =

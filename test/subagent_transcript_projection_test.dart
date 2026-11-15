@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/models/subagent_activity.dart';
-import 'package:hermes_android/core/services/session_reconciler.dart';
-import 'package:hermes_android/core/services/subagent_activity_reducer.dart';
-import 'package:hermes_android/core/services/subagent_transcript_projection.dart';
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/models/subagent_activity.dart';
+import 'package:ylpa_console/core/services/session_reconciler.dart';
+import 'package:ylpa_console/core/services/subagent_activity_reducer.dart';
+import 'package:ylpa_console/core/services/subagent_transcript_projection.dart';
 
 void main() {
   final scope = SubagentActivityScope(

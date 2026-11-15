@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/recent_interrupt_guard.dart';
+import 'package:ylpa_console/core/services/recent_interrupt_guard.dart';
 
 void main() {
   test('send within three seconds interrupts before submitting', () async {

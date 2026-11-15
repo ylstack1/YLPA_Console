@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/global_artifacts.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/global_artifacts.dart';
 
 Session fakeArtifactSession(
   String id, {

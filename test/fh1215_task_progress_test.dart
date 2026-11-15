@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/activity_snapshot.dart';
-import 'package:hermes_android/core/models/agent_task_list.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/activity_pill.dart';
-import 'package:hermes_android/core/widgets/activity_sections.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/activity_snapshot.dart';
+import 'package:ylpa_console/core/models/agent_task_list.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/activity_pill.dart';
+import 'package:ylpa_console/core/widgets/activity_sections.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 // fh1215: the task counter on the activity pill never lingers as «5/5»:
 // it flashes «✓ 5 tareas» for about two seconds and goes; partial progress

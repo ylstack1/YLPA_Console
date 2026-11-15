@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/home/board/home_board_model.dart';
-import 'package:hermes_android/core/home/board/home_board_tiles.dart';
-import 'package:hermes_android/core/home/home_now.dart';
-import 'package:hermes_android/core/home/home_sources.dart';
-import 'package:hermes_android/core/models/session_live_status.dart';
-import 'package:hermes_android/l10n/app_localizations_es.dart';
+import 'package:ylpa_console/core/home/board/home_board_model.dart';
+import 'package:ylpa_console/core/home/board/home_board_tiles.dart';
+import 'package:ylpa_console/core/home/home_now.dart';
+import 'package:ylpa_console/core/home/home_sources.dart';
+import 'package:ylpa_console/core/models/session_live_status.dart';
+import 'package:ylpa_console/l10n/app_localizations_es.dart';
 
 import '../support/home_board_fixtures.dart';
 

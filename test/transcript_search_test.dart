@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/transcript_search.dart';
+import 'package:ylpa_console/core/utils/transcript_search.dart';
 
 Map<String, dynamic> _msg(String role, String content, {Object? id}) => {
   'role': role,

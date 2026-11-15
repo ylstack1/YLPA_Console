@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/utils/fts_snippet.dart';
-import 'package:hermes_android/core/utils/home_recent_sessions.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/utils/fts_snippet.dart';
+import 'package:ylpa_console/core/utils/home_recent_sessions.dart';
 
 String _render(List<FtsSnippetSpan> spans) => spans.join();
 

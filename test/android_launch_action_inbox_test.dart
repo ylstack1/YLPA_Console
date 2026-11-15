@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/new_session_launch_action.dart';
-import 'package:hermes_android/core/services/android_launch_action_inbox.dart';
+import 'package:ylpa_console/core/models/new_session_launch_action.dart';
+import 'package:ylpa_console/core/services/android_launch_action_inbox.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -6,8 +6,8 @@
 // · Un agente local caído no debe sugerir revisar credenciales.
 // · Un 401 remoto sí debe clasificarse como error de modelo/API.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/utils/chat_error.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/utils/chat_error.dart';
 
 void main() {
   group('classifyChatError — local agent errors', () {

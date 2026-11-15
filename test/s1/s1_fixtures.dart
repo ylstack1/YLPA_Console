@@ -9,7 +9,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/mobile_oauth.dart';
+import 'package:ylpa_console/core/services/mobile_oauth.dart';
 
 class FakeClock {
   FakeClock([DateTime? start]) : _now = start ?? DateTime.utc(2026, 10, 18, 12);

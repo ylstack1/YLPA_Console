@@ -6,17 +6,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/git_review.dart';
-import 'package:hermes_android/core/screens/git_review_screen.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
-import 'package:hermes_android/core/services/git_review_controller.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/hermes_tokens.dart';
-import 'package:hermes_android/core/theme/readable_ink.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace.dart';
-import 'package:hermes_android/core/widgets/workspace/chat_workspace_host.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/git_review.dart';
+import 'package:ylpa_console/core/screens/git_review_screen.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/services/git_review_controller.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/hermes_tokens.dart';
+import 'package:ylpa_console/core/theme/readable_ink.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace.dart';
+import 'package:ylpa_console/core/widgets/workspace/chat_workspace_host.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/fake_git_review_gateway.dart';
 

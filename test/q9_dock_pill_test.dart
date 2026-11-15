@@ -4,11 +4,11 @@
 // and every destination keeps its 48 dp target.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/tokens.dart' show HermesRadius;
-import 'package:hermes_android/core/models/dock_config.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/dock_style.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/tokens.dart' show HermesRadius;
+import 'package:ylpa_console/core/models/dock_config.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/dock_style.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 Widget _bar(
   String themeId,

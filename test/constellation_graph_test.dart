@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/memory/constellation_graph.dart';
+import 'package:ylpa_console/core/memory/constellation_graph.dart';
 
 Map<String, dynamic> _graph(List<Object?> nodes, [Object? edges]) => {
   'nodes': nodes,

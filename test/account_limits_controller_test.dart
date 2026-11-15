@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/account_usage_limits.dart';
-import 'package:hermes_android/core/services/account_limits_controller.dart';
+import 'package:ylpa_console/core/models/account_usage_limits.dart';
+import 'package:ylpa_console/core/services/account_limits_controller.dart';
 
 AccountUsageLimits _limits(double used) => AccountUsageLimits.fromGateway({
   'account_lines': ['Weekly: ${100 - used}% remaining ($used% used)'],

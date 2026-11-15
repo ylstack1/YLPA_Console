@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/services/session_deletion.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/services/session_deletion.dart';
 
 Session cronSession(String id) =>
     Session.fromJson({'id': id, 'title': 'Scheduled report', 'source': 'cron'});

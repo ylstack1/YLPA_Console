@@ -4,7 +4,7 @@
 // sessions already collided, and `String.hashCode` is not stable across
 // processes. Both now use a stable 28-bit FNV in ranges of their own.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
 
 void main() {
   test('two hundred chats get two hundred reply ids', () {

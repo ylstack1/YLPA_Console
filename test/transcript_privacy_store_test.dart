@@ -3,9 +3,9 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/transcript_privacy_state.dart';
-import 'package:hermes_android/core/services/local_transcript_store.dart';
-import 'package:hermes_android/core/services/session_deletion.dart';
+import 'package:ylpa_console/core/models/transcript_privacy_state.dart';
+import 'package:ylpa_console/core/services/local_transcript_store.dart';
+import 'package:ylpa_console/core/services/session_deletion.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

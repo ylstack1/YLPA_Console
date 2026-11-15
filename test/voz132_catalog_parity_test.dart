@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/voice_disclosure_dialog.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/widgets/voice_disclosure_dialog.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 /// Copy of the voice lane (prefix `voz132`): the direct-voice consent, the
 /// provider error wrapper and the stop-phrase notice, in the nine catalogs.

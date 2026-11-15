@@ -17,16 +17,16 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/list.dart' show HermesListGroup;
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/utils/responsive.dart';
-import 'package:hermes_android/core/widgets/dock.dart' show dockRailFootprint;
-import 'package:hermes_android/core/widgets/hermes_app_bar.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart'
+import 'package:ylpa_console/core/design/list.dart' show HermesListGroup;
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/utils/responsive.dart';
+import 'package:ylpa_console/core/widgets/dock.dart' show dockRailFootprint;
+import 'package:ylpa_console/core/widgets/hermes_app_bar.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart'
     show HermesListSection;
-import 'package:hermes_android/core/widgets/hermes_ui.dart'
+import 'package:ylpa_console/core/widgets/hermes_ui.dart'
     show HermesCard, HermesGroup, HermesNavRow, HermesPanel;
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 /// Two sibling boxes never stand closer than this (dp).
 const double minBoxGap = 4;

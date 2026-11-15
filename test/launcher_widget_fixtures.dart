@@ -6,16 +6,16 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart' show FontLoader;
-import 'package:hermes_android/core/home/launcher/launcher_widget_geometry.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_palette.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_scene.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_words.dart';
-import 'package:hermes_android/core/models/home_widget_snapshot.dart';
-import 'package:hermes_android/core/models/launcher_widget_chats.dart';
-import 'package:hermes_android/core/models/launcher_widget_cron.dart';
-import 'package:hermes_android/core/models/launcher_widget_tasks.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_geometry.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_palette.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_scene.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_words.dart';
+import 'package:ylpa_console/core/models/home_widget_snapshot.dart';
+import 'package:ylpa_console/core/models/launcher_widget_chats.dart';
+import 'package:ylpa_console/core/models/launcher_widget_cron.dart';
+import 'package:ylpa_console/core/models/launcher_widget_tasks.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 /// A fixed "now": Tuesday 2026-11-03 10:08 local time.

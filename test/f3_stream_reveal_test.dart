@@ -4,7 +4,7 @@
 // than the drain, monotonic, and the final text is the text.
 import 'package:flutter/widgets.dart' show StringCharacters;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/stream_reveal.dart';
+import 'package:ylpa_console/core/utils/stream_reveal.dart';
 
 /// Every end the reveal stops at, from nothing to the whole [content], all
 /// of it arriving at once (the floor is taken then, as the chat does).

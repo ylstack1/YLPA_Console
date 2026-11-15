@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/desktop_gateway_capabilities.dart';
+import 'package:ylpa_console/core/services/desktop_gateway_capabilities.dart';
 
 void main() {
   test('capability cache caduca y vuelve a unknown', () {

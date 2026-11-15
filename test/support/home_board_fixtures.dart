@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/home/board/home_board_data.dart';
-import 'package:hermes_android/core/home/board/home_board_kit.dart';
-import 'package:hermes_android/core/home/board/home_board_model.dart';
-import 'package:hermes_android/core/home/board/home_board_tiles.dart';
-import 'package:hermes_android/core/home/home_now.dart';
-import 'package:hermes_android/core/models/account_usage_limits.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/home/board/home_board_data.dart';
+import 'package:ylpa_console/core/home/board/home_board_kit.dart';
+import 'package:ylpa_console/core/home/board/home_board_model.dart';
+import 'package:ylpa_console/core/home/board/home_board_tiles.dart';
+import 'package:ylpa_console/core/home/home_now.dart';
+import 'package:ylpa_console/core/models/account_usage_limits.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 /// The world of the approved Home mockups (Sunday 11 October, 22:04): the
 /// main agent Hermes, the bots Forja, Fable, Astra, Radar and Argos, the

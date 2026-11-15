@@ -3,12 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/chat_inline_chips.dart';
-import 'package:hermes_android/core/widgets/chat/chat_markdown_body.dart';
-import 'package:hermes_android/core/widgets/chat/chat_sources_list.dart';
-import 'package:hermes_android/core/widgets/markdown_table.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_inline_chips.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_markdown_body.dart';
+import 'package:ylpa_console/core/widgets/chat/chat_sources_list.dart';
+import 'package:ylpa_console/core/widgets/markdown_table.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const String _efe =
     'https://efe.com/espana/2026-11-01/heridos-urda-toledo-ingresados-accidente';

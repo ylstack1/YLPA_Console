@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/connector_policy.dart';
+import 'package:ylpa_console/core/capabilities/connector_policy.dart';
 
 Map<String, dynamic> _layer(
   String kind,

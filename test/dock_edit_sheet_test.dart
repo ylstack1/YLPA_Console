@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/shell/dock_edit_sheet.dart';
-import 'package:hermes_android/core/services/ssh_profile_presence.dart';
-import 'package:hermes_android/core/shell/gesture_dock_state.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/shell/dock_edit_sheet.dart';
+import 'package:ylpa_console/core/services/ssh_profile_presence.dart';
+import 'package:ylpa_console/core/shell/gesture_dock_state.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Dock edit mode (owner request after QA 9494): pick 2–5 destinations,

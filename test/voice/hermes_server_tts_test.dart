@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/tts_engine.dart';
+import 'package:ylpa_console/core/services/voice/tts_engine.dart';
 
 /// Spec 048 / US5 — TTS del servidor Hermes (contracts/native-voice.md):
 /// `{text}` → data_url base64 → bytes al playback; errores limpios para la

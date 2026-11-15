@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/conversation/voice_conversation_runtime.dart';
-import 'package:hermes_android/core/services/voice/voice_phase.dart';
+import 'package:ylpa_console/core/services/voice/conversation/voice_conversation_runtime.dart';
+import 'package:ylpa_console/core/services/voice/voice_phase.dart';
 
 void main() {
   group('VoiceConversationRuntime', () {

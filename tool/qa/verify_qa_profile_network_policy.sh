@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-readonly EXPECTED_PACKAGE="dev.xpetalab.hermesconsole.qa"
+readonly EXPECTED_PACKAGE="com.ylpa.console.qa"
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 

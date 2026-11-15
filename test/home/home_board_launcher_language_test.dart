@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/home/board/home_board_kit.dart';
-import 'package:hermes_android/core/home/board/home_board_tiles.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_geometry.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_palette.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_text.dart';
-import 'package:hermes_android/core/home/launcher/launcher_widget_words.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/soft_tokens.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/home/board/home_board_kit.dart';
+import 'package:ylpa_console/core/home/board/home_board_tiles.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_geometry.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_palette.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_text.dart';
+import 'package:ylpa_console/core/home/launcher/launcher_widget_words.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/soft_tokens.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import '../support/design_shots.dart' show loadDesignFonts;
 import '../support/home_board_fixtures.dart';
-import 'package:hermes_android/core/home/board/home_board_model.dart';
+import 'package:ylpa_console/core/home/board/home_board_model.dart';
 
 void main() {
   setUpAll(loadDesignFonts);

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
 
 /// Blinda las Reglas 1/2/6 de notificación: qué se muestra como notificación del
 /// sistema según el primer plano y el chat que el usuario está mirando.

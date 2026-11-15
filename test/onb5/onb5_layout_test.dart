@@ -5,7 +5,7 @@
 // and light, and the keyboard never hides Connect or the focused field.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/onboarding/manual_connect_page.dart';
+import 'package:ylpa_console/core/screens/onboarding/manual_connect_page.dart';
 
 import '../support/design_shots.dart' show loadDesignFonts;
 import '../support/onboarding_fakes.dart';

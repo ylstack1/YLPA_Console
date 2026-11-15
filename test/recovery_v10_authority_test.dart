@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/desktop_session_snapshot.dart';
-import 'package:hermes_android/core/models/interactive_prompt.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/json_rpc_wire.dart';
-import 'package:hermes_android/core/services/recovery_proof.dart';
-import 'package:hermes_android/core/services/replay_coordinator.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/models/desktop_session_snapshot.dart';
+import 'package:ylpa_console/core/models/interactive_prompt.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/json_rpc_wire.dart';
+import 'package:ylpa_console/core/services/recovery_proof.dart';
+import 'package:ylpa_console/core/services/replay_coordinator.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
 
 final Object _recoveryChannel = Object();
 

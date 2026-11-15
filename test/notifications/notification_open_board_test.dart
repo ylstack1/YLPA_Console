@@ -1,7 +1,7 @@
 // A Kanban card notice carries its board to the board screen; nothing else
 // does. (Moved from an earlier notice suite: the payload is local.)
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
 
 void main() {
   test('a board travels only with its card', () {

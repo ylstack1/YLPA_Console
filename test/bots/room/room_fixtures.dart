@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
 
 /// What the room's island says now: an event's line, or the room's name at
 /// rest. The island is the header's pill (`room-header`).

@@ -4,16 +4,16 @@ import 'dart:async';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/voice/conversation/gpt_live_voice_conversation_controller.dart';
-import 'package:hermes_android/core/services/voice/conversation/voice_conversation_coordinator.dart';
-import 'package:hermes_android/core/services/voice/live/voice_chat_mode_store.dart';
-import 'package:hermes_android/core/services/voice/live/voice_live_api.dart';
-import 'package:hermes_android/core/services/voice/live/voice_live_protocol.dart';
-import 'package:hermes_android/core/services/voice/voice_phase.dart';
-import 'package:hermes_android/core/services/voice/voice_service.dart';
-import 'package:hermes_android/core/services/voice/voice_settings.dart'
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/voice/conversation/gpt_live_voice_conversation_controller.dart';
+import 'package:ylpa_console/core/services/voice/conversation/voice_conversation_coordinator.dart';
+import 'package:ylpa_console/core/services/voice/live/voice_chat_mode_store.dart';
+import 'package:ylpa_console/core/services/voice/live/voice_live_api.dart';
+import 'package:ylpa_console/core/services/voice/live/voice_live_protocol.dart';
+import 'package:ylpa_console/core/services/voice/voice_phase.dart';
+import 'package:ylpa_console/core/services/voice/voice_service.dart';
+import 'package:ylpa_console/core/services/voice/voice_settings.dart'
     show SttEngineKind;
 
 import 'package:shared_preferences/shared_preferences.dart';

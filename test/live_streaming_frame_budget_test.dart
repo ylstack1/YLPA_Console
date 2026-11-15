@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart';
-import 'package:hermes_android/core/utils/streaming_normalizer.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/utils/streaming_normalizer.dart';
 
 /// La ruta viva de streaming corre entera en CADA frame mientras el modelo
 /// escribe: si excede el presupuesto de 16,7ms a 60fps, el chat se congela

@@ -2,8 +2,8 @@
 // were plain text, so TalkBack could not jump from section to section.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/hermes_ui.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/hermes_ui.dart';
 
 void main() {
   testWidgets('a section header is a heading for TalkBack', (tester) async {

@@ -2,17 +2,17 @@
 // the right profile; the old centre redirects instead of breaking.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/capabilities/capabilities_screen.dart';
-import 'package:hermes_android/core/capabilities/capability_models.dart'
+import 'package:ylpa_console/core/capabilities/capabilities_screen.dart';
+import 'package:ylpa_console/core/capabilities/capability_models.dart'
     show CapabilityKind;
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/models/desktop_control_center.dart';
-import 'package:hermes_android/core/screens/extensions_center_screen.dart';
-import 'package:hermes_android/core/screens/extensions_tools_screen.dart';
-import 'package:hermes_android/core/services/desktop_control_gateway.dart';
-import 'package:hermes_android/core/services/shared_gateway_pool.dart';
-import 'package:hermes_android/core/services/tui_gateway_client.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/models/desktop_control_center.dart';
+import 'package:ylpa_console/core/screens/extensions_center_screen.dart';
+import 'package:ylpa_console/core/screens/extensions_tools_screen.dart';
+import 'package:ylpa_console/core/services/desktop_control_gateway.dart';
+import 'package:ylpa_console/core/services/shared_gateway_pool.dart';
+import 'package:ylpa_console/core/services/tui_gateway_client.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart';
 
 import '../support/inter_font.dart';
 import 'capabilities_fakes.dart';

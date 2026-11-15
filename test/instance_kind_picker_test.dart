@@ -3,9 +3,9 @@ import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/widgets/instance_kind_picker.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/widgets/instance_kind_picker.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'support/design_shots.dart';
 import 'support/onboarding_fakes.dart';

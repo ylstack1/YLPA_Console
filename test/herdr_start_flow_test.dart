@@ -1,7 +1,7 @@
 import 'package:fake_async/fake_async.dart'; // ignore: depend_on_referenced_packages
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/herdr_agents.dart';
-import 'package:hermes_android/core/services/herdr_status.dart';
+import 'package:ylpa_console/core/services/herdr_agents.dart';
+import 'package:ylpa_console/core/services/herdr_status.dart';
 
 import 'support/fake_herdr_server.dart';
 

@@ -2,13 +2,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/chat_screen.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/utils/latex/latex_layout.dart';
-import 'package:hermes_android/core/utils/latex/latex_parser.dart';
-import 'package:hermes_android/core/utils/markdown_math.dart';
-import 'package:hermes_android/core/widgets/latex/latex_view.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/chat_screen.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/utils/latex/latex_layout.dart';
+import 'package:ylpa_console/core/utils/latex/latex_parser.dart';
+import 'package:ylpa_console/core/utils/markdown_math.dart';
+import 'package:ylpa_console/core/widgets/latex/latex_view.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _red = Color(0xFFFF0000);
 

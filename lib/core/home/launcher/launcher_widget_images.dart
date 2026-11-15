@@ -41,14 +41,14 @@ const lwImagesSchema = 1;
 
 /// Android receivers, by subject.
 const lwProviders = <LwSubject, List<String>>{
-  LwSubject.ahora: ['com.hermesagent.hermes_android.NewSessionWidgetProvider'],
+  LwSubject.ahora: ['com.ylpa.console.NewSessionWidgetProvider'],
   LwSubject.newChat: [
-    'com.hermesagent.hermes_android.HermesCompactWidgetProvider',
-    'com.hermesagent.hermes_android.HermesControlWidgetProvider',
+    'com.ylpa.console.HermesCompactWidgetProvider',
+    'com.ylpa.console.HermesControlWidgetProvider',
   ],
-  LwSubject.cron: ['com.hermesagent.hermes_android.HermesCronWidgetProvider'],
-  LwSubject.tasks: ['com.hermesagent.hermes_android.HermesTasksWidgetProvider'],
-  LwSubject.chats: ['com.hermesagent.hermes_android.HermesChatsWidgetProvider'],
+  LwSubject.cron: ['com.ylpa.console.HermesCronWidgetProvider'],
+  LwSubject.tasks: ['com.ylpa.console.HermesTasksWidgetProvider'],
+  LwSubject.chats: ['com.ylpa.console.HermesChatsWidgetProvider'],
 };
 
 /// The sizes Android reported, as this publisher reads them.

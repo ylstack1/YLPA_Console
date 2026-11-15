@@ -4,16 +4,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/profile/bot_profile_screen.dart';
-import 'package:hermes_android/core/bots/ui/profile/profile_model_picker.dart';
-import 'package:hermes_android/core/bots/ui/roster/living_bot_face.dart';
-import 'package:hermes_android/core/models/model_active_info.dart';
-import 'package:hermes_android/core/models/model_provider.dart';
-import 'package:hermes_android/core/screens/bot_create_screen.dart';
-import 'package:hermes_android/core/services/model_catalog_cache.dart';
-import 'package:hermes_android/core/services/model_picker_loader.dart';
-import 'package:hermes_android/core/services/profile_pet_service.dart';
-import 'package:hermes_android/core/widgets/console_loader.dart';
+import 'package:ylpa_console/core/bots/ui/profile/bot_profile_screen.dart';
+import 'package:ylpa_console/core/bots/ui/profile/profile_model_picker.dart';
+import 'package:ylpa_console/core/bots/ui/roster/living_bot_face.dart';
+import 'package:ylpa_console/core/models/model_active_info.dart';
+import 'package:ylpa_console/core/models/model_provider.dart';
+import 'package:ylpa_console/core/screens/bot_create_screen.dart';
+import 'package:ylpa_console/core/services/model_catalog_cache.dart';
+import 'package:ylpa_console/core/services/model_picker_loader.dart';
+import 'package:ylpa_console/core/services/profile_pet_service.dart';
+import 'package:ylpa_console/core/widgets/console_loader.dart';
 
 import '../support/bot_roster_fakes.dart';
 import '../support/profile_model_fakes.dart';

@@ -79,7 +79,7 @@
         tools:node="remove" />
     <application
         android:name=".HermesApplication"
-        android:label="Console"
+        android:label="YLPA Console"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="false"
@@ -106,7 +106,7 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Deep link de emparejado: tocar un enlace hermes://pair (p.ej. el
+            <!-- Deep link de emparejado: tocar un enlace ylpa://pair (p.ej. el
                  que devuelve el agente o desde Hermes Desktop) abre la app ya
                  rellena. Esquema propio; no intercepta http/https. -->
             <intent-filter android:autoVerify="false">
@@ -114,8 +114,8 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="hermes" android:host="pair"/>
-                <!-- Catálogo: hermes://plugin/install?catalog=NAME y
-                     hermes://skill/install?identifier=ID abren una
+                <!-- Catálogo: ylpa://plugin/install?catalog=NAME y
+                     ylpa://skill/install?identifier=ID abren una
                      confirmación; nunca instalan solos. -->
                 <data android:scheme="hermes" android:host="plugin"/>
                 <data android:scheme="hermes" android:host="skill"/>
@@ -144,7 +144,7 @@
              voice ready; it never reads the screen. The system holds
              BIND_VOICE_INTERACTION: nothing else can bind these services. -->
         <service
-            android:name="com.hermesagent.hermes_android.HermesVoiceInteractionService"
+            android:name="com.ylpa.console.HermesVoiceInteractionService"
             android:exported="true"
             android:permission="android.permission.BIND_VOICE_INTERACTION">
             <meta-data
@@ -155,13 +155,13 @@
             </intent-filter>
         </service>
         <service
-            android:name="com.hermesagent.hermes_android.HermesVoiceInteractionSessionService"
+            android:name="com.ylpa.console.HermesVoiceInteractionSessionService"
             android:exported="true"
             android:permission="android.permission.BIND_VOICE_INTERACTION" />
         <!-- Placeholder the system requires in the assistant's metadata. No
              intent filter: not offered as a speech recogniser. -->
         <service
-            android:name="com.hermesagent.hermes_android.HermesAssistantRecognitionService"
+            android:name="com.ylpa.console.HermesAssistantRecognitionService"
             android:exported="true" />
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -180,13 +180,13 @@
              portrait on the card: a clean glyph for the transfer card and a
              dedicated orb for the voice conversation. -->
         <meta-data
-            android:name="dev.xpetalab.hermesconsole.service.NOTIFICATION_ICON"
+            android:name="com.ylpa.console.service.NOTIFICATION_ICON"
             android:resource="@drawable/ic_stat_hermes" />
         <meta-data
-            android:name="dev.xpetalab.hermesconsole.voice.NOTIFICATION_ICON_ACTIVE"
+            android:name="com.ylpa.console.voice.NOTIFICATION_ICON_ACTIVE"
             android:resource="@drawable/ic_stat_voice_orb_active" />
         <meta-data
-            android:name="dev.xpetalab.hermesconsole.voice.NOTIFICATION_ICON_PAUSED"
+            android:name="com.ylpa.console.voice.NOTIFICATION_ICON_PAUSED"
             android:resource="@drawable/ic_stat_voice_orb_paused" />
         <!-- Shared Flutter service. The opt-in listening (Settings >
              Notifications) uses remoteMessaging on API >=35 and dataSync on

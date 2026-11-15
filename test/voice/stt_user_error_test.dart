@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/stt_engine.dart';
-import 'package:hermes_android/core/services/voice/voice_client_direct.dart';
-import 'package:hermes_android/core/services/voice/voice_language.dart';
+import 'package:ylpa_console/core/services/voice/stt_engine.dart';
+import 'package:ylpa_console/core/services/voice/voice_client_direct.dart';
+import 'package:ylpa_console/core/services/voice/voice_language.dart';
 import 'package:record/record.dart';
 
 /// REVIEW-R5-B #12: the voice provider's rejection must reach the user, as

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hermes_android/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
 
 /// Exhaustive audit of ActiveChat's public/user-triggered mutation surface.
 /// `none` means ActiveChat exposes no mutation in that category.

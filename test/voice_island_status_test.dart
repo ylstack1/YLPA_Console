@@ -3,9 +3,9 @@
 // change, never per clock tick, and it fits right to left as well.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/voice_capsule.dart';
-import 'package:hermes_android/core/widgets/voice_strip.dart'
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/voice_capsule.dart';
+import 'package:ylpa_console/core/widgets/voice_strip.dart'
     show VoiceStripState;
 
 Widget _host(

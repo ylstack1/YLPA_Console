@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/model_favorites.dart';
+import 'package:ylpa_console/core/models/model_favorites.dart';
 
 void main() {
   test('starring keeps the order they were starred in; again unstars', () {

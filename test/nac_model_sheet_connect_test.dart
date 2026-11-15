@@ -6,10 +6,10 @@
 // when the host has no such way (a read-only connection).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/model_provider.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/session_model_sheet.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/models/model_provider.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/session_model_sheet.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _nous = ModelProvider(
   slug: 'nous',

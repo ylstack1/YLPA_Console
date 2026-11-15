@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/relative_time.dart';
+import 'package:ylpa_console/core/utils/relative_time.dart';
 
 import '../support/i18n131_grammar_expectations.dart';
 

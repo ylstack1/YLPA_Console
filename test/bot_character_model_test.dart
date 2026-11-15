@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/characters/bot_character.dart';
-import 'package:hermes_android/core/characters/bot_character_store.dart';
-import 'package:hermes_android/core/models/bot_visual_identity.dart';
-import 'package:hermes_android/core/widgets/hermes_bot_face.dart';
+import 'package:ylpa_console/core/characters/bot_character.dart';
+import 'package:ylpa_console/core/characters/bot_character_store.dart';
+import 'package:ylpa_console/core/models/bot_visual_identity.dart';
+import 'package:ylpa_console/core/widgets/hermes_bot_face.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

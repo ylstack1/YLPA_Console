@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/agent_preview_extractor.dart';
-import 'package:hermes_android/core/services/agent_preview_target.dart';
+import 'package:ylpa_console/core/services/agent_preview_extractor.dart';
+import 'package:ylpa_console/core/services/agent_preview_target.dart';
 
 AgentPreviewReach? _reach(String raw) => classifyAgentPreviewTarget(raw)?.reach;
 

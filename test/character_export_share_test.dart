@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/characters/character_export.dart';
+import 'package:ylpa_console/core/characters/character_export.dart';
 
 void main() {
   late Directory root;

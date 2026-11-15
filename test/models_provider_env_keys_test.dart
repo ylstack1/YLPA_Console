@@ -6,7 +6,7 @@
 // inventory. What the Models screen does with it is in
 // models_providers_test.dart.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/provider_key_groups.dart';
+import 'package:ylpa_console/core/models/provider_key_groups.dart';
 
 Map<String, Object> _env({bool gammaSet = false}) => {
   'ACME_API_KEY': {

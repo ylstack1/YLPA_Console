@@ -6,11 +6,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/modal.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/chat/quick_reaction_bar.dart';
-import 'package:hermes_android/core/widgets/dock_anchored_popover.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/design/modal.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/chat/quick_reaction_bar.dart';
+import 'package:ylpa_console/core/widgets/dock_anchored_popover.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _frame = Duration(milliseconds: 16);
 const _surface = ValueKey('surface-under-test');

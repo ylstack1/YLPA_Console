@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
-import 'package:hermes_android/core/screens/dashboard_setup_screen.dart';
-import 'package:hermes_android/core/screens/recover_access_page.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/core/screens/dashboard_setup_screen.dart';
+import 'package:ylpa_console/core/screens/recover_access_page.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../onb2q/hermes_shaped_server.dart';

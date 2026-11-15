@@ -5,11 +5,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/onboarding/manual_connect_page.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_motion.dart';
-import 'package:hermes_android/core/screens/qr_scan_screen.dart';
-import 'package:hermes_android/core/services/connection_diagnostics.dart';
+import 'package:ylpa_console/core/screens/onboarding/manual_connect_page.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_motion.dart';
+import 'package:ylpa_console/core/screens/qr_scan_screen.dart';
+import 'package:ylpa_console/core/services/connection_diagnostics.dart';
 
 import 'support/design_shots.dart';
 import 'support/onboarding_fakes.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:hermes_android/core/services/connection_status.dart';
+import 'package:ylpa_console/core/services/connection_status.dart';
 
 /// A socket the connection status registry can be driven with.
 final class FakeConnectionLink implements ConnectionLinkSource {

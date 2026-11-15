@@ -3,14 +3,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/room/room_gateway.dart';
-import 'package:hermes_android/core/bots/ui/room/room_models.dart';
-import 'package:hermes_android/core/bots/ui/room/room_widgets.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/services/artifact_export_service.dart';
-import 'package:hermes_android/core/services/generated_media_service.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_gateway.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_models.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_widgets.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/services/artifact_export_service.dart';
+import 'package:ylpa_console/core/services/generated_media_service.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 /// Room attachment actions backed by a cache, like the Dashboard ones.
 final class _CachedActions

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/hermes_drawer.dart';
+import 'package:ylpa_console/core/widgets/hermes_drawer.dart';
 
 void main() {
   test('las superficies globales habilitan el gesto lateral del drawer', () {

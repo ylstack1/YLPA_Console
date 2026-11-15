@@ -2,8 +2,8 @@
 // Fase 1 (progressLabel, lastEvent, updatedAt) y retrocompatibilidad con
 // registros anteriores que no los tienen.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/task_center_screen.dart';
-import 'package:hermes_android/core/services/run_registry.dart';
+import 'package:ylpa_console/core/screens/task_center_screen.dart';
+import 'package:ylpa_console/core/services/run_registry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

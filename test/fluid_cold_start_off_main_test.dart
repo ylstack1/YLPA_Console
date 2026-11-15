@@ -2,8 +2,8 @@
 // starts) are decoded off the main isolate above 64 KB, like the Dashboard
 // reads (N10g); small ones stay inline. The restored rows are the same.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/cold_start_store.dart';
-import 'package:hermes_android/core/services/transcript_rehydrate_cost.dart';
+import 'package:ylpa_console/core/services/cold_start_store.dart';
+import 'package:ylpa_console/core/services/transcript_rehydrate_cost.dart';
 
 class _MemoryStorage implements ColdStartStorage {
   final Map<String, String> values = {};

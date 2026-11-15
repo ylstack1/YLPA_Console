@@ -7,7 +7,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/mobile_oauth.dart';
+import 'package:ylpa_console/core/services/mobile_oauth.dart';
 
 String accessN(int n) => 'test-at-$n';
 String refreshN(int n) => 'test-rt-$n';

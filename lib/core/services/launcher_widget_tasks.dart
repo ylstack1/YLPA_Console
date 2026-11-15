@@ -16,7 +16,7 @@ import 'notifications/notification_service.dart' show NotificationOpen;
 
 /// Android receiver of the Tareas launcher widget.
 const launcherWidgetTasksProvider =
-    'com.hermesagent.hermes_android.HermesTasksWidgetProvider';
+    'com.ylpa.console.HermesTasksWidgetProvider';
 
 /// Where an open card stands; null for one that is done or archived (the
 /// widget only lists what is still to do). Same grouping as the Tareas

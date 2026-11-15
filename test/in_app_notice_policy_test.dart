@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hermes_android/core/services/notifications/notification_service.dart';
-import 'package:hermes_android/main.dart';
+import 'package:ylpa_console/core/services/notifications/notification_service.dart';
+import 'package:ylpa_console/main.dart';
 
 void main() {
   test('approval notice is persistent and keeps priority', () {

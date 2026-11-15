@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
-import 'package:hermes_android/core/models/kanban.dart';
-import 'package:hermes_android/core/models/room_member_status.dart';
-import 'package:hermes_android/core/models/room_summary.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/models/kanban.dart';
+import 'package:ylpa_console/core/models/room_member_status.dart';
+import 'package:ylpa_console/core/models/room_summary.dart';
 
 import 'room_member_status_test.dart' show statusEvent, statusRoom, statusNow;
 

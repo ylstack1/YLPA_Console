@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/read_aloud_session.dart';
-import 'package:hermes_android/core/services/voice/speech_renderer.dart';
-import 'package:hermes_android/core/services/voice/voice_settings.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/read_aloud_button.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/voice/read_aloud_session.dart';
+import 'package:ylpa_console/core/services/voice/speech_renderer.dart';
+import 'package:ylpa_console/core/services/voice/voice_settings.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/read_aloud_button.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 void main() {
   const chunks = [ReadAloudChunk('Texto.', NarrationPause.long)];

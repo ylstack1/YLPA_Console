@@ -5,7 +5,7 @@
         tools:replace="android:label">
         <!-- QA-only: renders the real launcher widgets with sample data to PNG. -->
         <activity
-            android:name="com.hermesagent.hermes_android.WidgetGalleryActivity"
+            android:name="com.ylpa.console.WidgetGalleryActivity"
             android:exported="true"
             android:label="Widget gallery"
             android:theme="@android:style/Theme.Material.NoActionBar" />

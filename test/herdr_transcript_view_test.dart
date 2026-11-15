@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/herdr_transcript.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/herdr_transcript_view.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/services/herdr_transcript.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/herdr_transcript_view.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 void main() {
   HerdrTurn steps(String key, {String command = 'ls -la'}) => HerdrTurn(

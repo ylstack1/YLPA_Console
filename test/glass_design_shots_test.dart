@@ -11,20 +11,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/config/feature_flags.dart';
-import 'package:hermes_android/core/design/hermes_design.dart';
-import 'package:hermes_android/core/screens/voice_guide_screen.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/dock_preferences_store.dart';
-import 'package:hermes_android/core/shell/dock_geometry.dart';
-import 'package:hermes_android/core/shell/dock_mode.dart';
-import 'package:hermes_android/core/shell/gesture_dock_state.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/general_dock_shell.dart';
-import 'package:hermes_android/core/widgets/hermes_app_bar.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart'
+import 'package:ylpa_console/core/config/feature_flags.dart';
+import 'package:ylpa_console/core/design/hermes_design.dart';
+import 'package:ylpa_console/core/screens/voice_guide_screen.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/dock_preferences_store.dart';
+import 'package:ylpa_console/core/shell/dock_geometry.dart';
+import 'package:ylpa_console/core/shell/dock_mode.dart';
+import 'package:ylpa_console/core/shell/gesture_dock_state.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/general_dock_shell.dart';
+import 'package:ylpa_console/core/widgets/hermes_app_bar.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart'
     show HermesSearchField, HermesSegment, HermesSegmentedControl;
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/design_shots.dart';

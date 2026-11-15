@@ -9,14 +9,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'
     show RenderObject, RenderRepaintBoundary;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/design/edges.dart' show HermesBottomScrim;
-import 'package:hermes_android/core/design/glass_strip.dart';
-import 'package:hermes_android/core/design/scrim_holes.dart';
-import 'package:hermes_android/core/design/smoked_glass.dart';
-import 'package:hermes_android/core/design/tokens.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/widgets/frosted_backdrop.dart';
-import 'package:hermes_android/core/widgets/hermes_premium_ui.dart';
+import 'package:ylpa_console/core/design/edges.dart' show HermesBottomScrim;
+import 'package:ylpa_console/core/design/glass_strip.dart';
+import 'package:ylpa_console/core/design/scrim_holes.dart';
+import 'package:ylpa_console/core/design/smoked_glass.dart';
+import 'package:ylpa_console/core/design/tokens.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/widgets/frosted_backdrop.dart';
+import 'package:ylpa_console/core/widgets/hermes_premium_ui.dart';
 
 const _root = ValueKey('scrim-holes-root');
 const _piece = ValueKey('scrim-holes-piece');

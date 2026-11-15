@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/stt_engine.dart';
-import 'package:hermes_android/core/services/voice/stt_hermes_server.dart';
-import 'package:hermes_android/core/services/voice/voice_language.dart';
+import 'package:ylpa_console/core/services/voice/stt_engine.dart';
+import 'package:ylpa_console/core/services/voice/stt_hermes_server.dart';
+import 'package:ylpa_console/core/services/voice/voice_language.dart';
 import 'package:record/record.dart';
 
 /// Backlog 1.4.x item 7: a take that is shorter than 0.3 s or has no energy

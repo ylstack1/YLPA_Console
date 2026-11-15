@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/capability_payload_sanitizer.dart';
+import 'package:ylpa_console/core/services/capability_payload_sanitizer.dart';
 
 void main() {
   const sanitizer = CapabilityPayloadSanitizer();

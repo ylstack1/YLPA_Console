@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/conversation/voice_turn_latency_log.dart';
+import 'package:ylpa_console/core/services/voice/conversation/voice_turn_latency_log.dart';
 
 void main() {
   late List<String> lines;

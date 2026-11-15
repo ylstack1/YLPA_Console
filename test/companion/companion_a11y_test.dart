@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/companion/data/companion_preferences.dart';
-import 'package:hermes_android/core/companion/data/companion_repository.dart';
-import 'package:hermes_android/core/companion/render/companion_view.dart';
-import 'package:hermes_android/core/companion/state/companion_controller.dart';
+import 'package:ylpa_console/core/companion/data/companion_preferences.dart';
+import 'package:ylpa_console/core/companion/data/companion_repository.dart';
+import 'package:ylpa_console/core/companion/render/companion_view.dart';
+import 'package:ylpa_console/core/companion/state/companion_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

@@ -5,8 +5,8 @@
 // because it needs the new constructor parameter (it cannot compile on base).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/dashboard_setup_screen.dart';
-import 'package:hermes_android/core/screens/instance_edit_screen.dart';
+import 'package:ylpa_console/core/screens/dashboard_setup_screen.dart';
+import 'package:ylpa_console/core/screens/instance_edit_screen.dart';
 
 import '../support/onboarding_fakes.dart';
 import 'c3d_support.dart';

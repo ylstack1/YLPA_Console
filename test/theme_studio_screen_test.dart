@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/theme_studio_screen.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_profile.dart';
-import 'package:hermes_android/core/theme/theme_profile_derivation.dart';
-import 'package:hermes_android/core/theme/theme_profile_store.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/theme_studio_screen.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_profile.dart';
+import 'package:ylpa_console/core/theme/theme_profile_derivation.dart';
+import 'package:ylpa_console/core/theme/theme_profile_store.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/theme_profile_fixtures.dart';

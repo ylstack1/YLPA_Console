@@ -2,16 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/ui/room/room_gateway.dart';
-import 'package:hermes_android/core/bots/ui/room/room_sheets.dart';
-import 'package:hermes_android/core/models/agent_profile.dart';
-import 'package:hermes_android/core/bots/ui/room/room_prefs.dart';
-import 'package:hermes_android/core/bots/ui/room/room_screen.dart';
-import 'package:hermes_android/core/bots/ui/room/room_models.dart';
-import 'package:hermes_android/core/bots/ui/room/room_widgets.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_gateway.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_sheets.dart';
+import 'package:ylpa_console/core/models/agent_profile.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_prefs.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_screen.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_models.dart';
+import 'package:ylpa_console/core/bots/ui/room/room_widgets.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 import 'room_fixtures.dart';
 

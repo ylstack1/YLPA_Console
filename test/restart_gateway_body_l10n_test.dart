@@ -3,7 +3,7 @@
 // can be resent, in every catalog.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _interruptWord = <String, String>{
   'es': 'Interrumpe',

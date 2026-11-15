@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/services/cold_start_store.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/services/cold_start_store.dart';
 
 import 'cs1215_cold_start_store_test.dart' show MemoryColdStartStorage;
 

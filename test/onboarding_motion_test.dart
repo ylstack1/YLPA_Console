@@ -4,12 +4,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_motion.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_scanner.dart';
-import 'package:hermes_android/core/screens/onboarding/onboarding_widgets.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
-import 'package:hermes_android/core/services/connection_diagnostics.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_motion.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_scanner.dart';
+import 'package:ylpa_console/core/screens/onboarding/onboarding_widgets.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/core/services/connection_diagnostics.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
 
 import 'support/onboarding_fakes.dart';
 

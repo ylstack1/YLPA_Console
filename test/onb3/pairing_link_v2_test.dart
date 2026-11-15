@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/pairing_link.dart';
+import 'package:ylpa_console/core/services/pairing_link.dart';
 
 String v2({
   String url = 'http%3A%2F%2F127.0.0.1%3A9119',

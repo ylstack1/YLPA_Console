@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/moa_config.dart';
+import 'package:ylpa_console/core/models/moa_config.dart';
 
 /// La pantalla `MoaRecipeScreen` depende de `DashboardClient` (red/cookies),
 /// difícil de inyectar sin refactor. Estos tests fijan la LÓGICA que la

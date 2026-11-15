@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/chat_folder_learning.dart';
+import 'package:ylpa_console/core/utils/chat_folder_learning.dart';
 
 Map<String, dynamic> _call(String tool, Object args) => {
   'role': 'assistant',

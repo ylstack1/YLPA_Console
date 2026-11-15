@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/busy_input_mode.dart';
+import 'package:ylpa_console/core/services/busy_input_mode.dart';
 
 void main() {
   test('normalizes like Hermes, including unknown or absent modes', () {

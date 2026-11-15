@@ -4,14 +4,14 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/instance_edit_screen.dart';
-import 'package:hermes_android/core/screens/dashboard_password_screen.dart';
-import 'package:hermes_android/core/screens/gateway_manager_screen.dart';
-import 'package:hermes_android/core/screens/home_dashboard_screen.dart';
-import 'package:hermes_android/core/models/kanban.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/widgets/animated_hermes_logo.dart';
-import 'package:hermes_android/core/widgets/instance_status_panel.dart'
+import 'package:ylpa_console/core/screens/instance_edit_screen.dart';
+import 'package:ylpa_console/core/screens/dashboard_password_screen.dart';
+import 'package:ylpa_console/core/screens/gateway_manager_screen.dart';
+import 'package:ylpa_console/core/screens/home_dashboard_screen.dart';
+import 'package:ylpa_console/core/models/kanban.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/widgets/animated_hermes_logo.dart';
+import 'package:ylpa_console/core/widgets/instance_status_panel.dart'
     show DashboardAuthCheck;
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';

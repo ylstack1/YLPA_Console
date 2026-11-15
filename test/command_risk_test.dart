@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/command_risk.dart';
+import 'package:ylpa_console/core/services/command_risk.dart';
 
 void main() {
   group('assessCommandRisk', () {

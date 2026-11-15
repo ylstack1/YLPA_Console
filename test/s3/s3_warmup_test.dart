@@ -4,9 +4,9 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/connection_manager.dart';
-import 'package:hermes_android/core/services/native_session_store.dart';
-import 'package:hermes_android/core/services/server_warmup.dart';
+import 'package:ylpa_console/core/services/connection_manager.dart';
+import 'package:ylpa_console/core/services/native_session_store.dart';
+import 'package:ylpa_console/core/services/server_warmup.dart';
 
 class _Clock {
   DateTime t = DateTime.utc(2026, 10, 18);

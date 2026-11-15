@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/models/session_category.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/models/session_category.dart';
 
 Session _row(String id, String source, {String title = ''}) => Session(
   id: id,

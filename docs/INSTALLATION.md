@@ -24,9 +24,9 @@ More in [server configuration](CONFIGURATION.md) and the
 ### Google Play
 
 Install the app from its
-[Google Play listing](https://play.google.com/store/apps/details?id=dev.xpetalab.hermesconsole)
+[Google Play listing](https://play.google.com/store/apps/details?id=com.ylpa.console)
 (titled "Hermes Console by XPeta Lab"). The package is
-`dev.xpetalab.hermesconsole` and Play builds use Play App Signing. Installing a
+`com.ylpa.console` and Play builds use Play App Signing. Installing a
 build with ADB does not validate the update path delivered by Google Play.
 
 ### Obtainium

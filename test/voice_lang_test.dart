@@ -5,8 +5,8 @@ import 'dart:ui' show Locale;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hermes_android/core/services/voice/voice_lang.dart';
-import 'package:hermes_android/main.dart' show AppLocales;
+import 'package:ylpa_console/core/services/voice/voice_lang.dart';
+import 'package:ylpa_console/main.dart' show AppLocales;
 
 Future<SharedPreferences> _prefs(Map<String, Object> values) async {
   SharedPreferences.setMockInitialValues(values);

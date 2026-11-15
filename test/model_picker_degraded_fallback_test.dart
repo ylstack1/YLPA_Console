@@ -5,9 +5,9 @@
 // ignore: depend_on_referenced_packages
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/model_active_info.dart';
-import 'package:hermes_android/core/models/model_provider.dart';
-import 'package:hermes_android/core/services/model_picker_loader.dart';
+import 'package:ylpa_console/core/models/model_active_info.dart';
+import 'package:ylpa_console/core/models/model_provider.dart';
+import 'package:ylpa_console/core/services/model_picker_loader.dart';
 
 ModelPickerResult _result(ModelPickerSource source, List<String> models) =>
     ModelPickerResult(

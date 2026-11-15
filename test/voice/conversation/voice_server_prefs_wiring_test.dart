@@ -3,9 +3,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/services/voice/conversation/full_duplex_barge_in_monitor.dart';
-import 'package:hermes_android/core/services/voice/stt_engine.dart';
-import 'package:hermes_android/core/services/voice/voice_server_prefs.dart';
+import 'package:ylpa_console/core/services/voice/conversation/full_duplex_barge_in_monitor.dart';
+import 'package:ylpa_console/core/services/voice/stt_engine.dart';
+import 'package:ylpa_console/core/services/voice/voice_server_prefs.dart';
 import 'package:record/record.dart';
 
 /// The profile's barge-in sensitivity and silence hold reach the Desktop

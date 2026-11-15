@@ -5,8 +5,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:hermes_android/core/services/mobile_oauth.dart';
-import 'package:hermes_android/core/services/native_password_login.dart';
+import 'package:ylpa_console/core/services/mobile_oauth.dart';
+import 'package:ylpa_console/core/services/native_password_login.dart';
 
 import 'hermes_shaped_server.dart';
 

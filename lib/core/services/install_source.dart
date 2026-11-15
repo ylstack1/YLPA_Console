@@ -8,7 +8,7 @@ enum InstallSource { googlePlay, githubObtainium, manual }
 
 abstract final class InstallSourceInfo {
   static const playListingUrl =
-      'https://play.google.com/store/apps/details?id=dev.xpetalab.hermesconsole';
+      'https://play.google.com/store/apps/details?id=com.ylpa.console';
   static const githubReleasesUrl =
       'https://github.com/xP3ta/hermes-console/releases';
 

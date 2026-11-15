@@ -3,8 +3,8 @@
 // The welcome mounted with NO simpleConnectEnabled argument must offer
 // the three cards; the constant itself must be true by default.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/config/flavor.dart';
-import 'package:hermes_android/core/screens/onboarding_screen.dart';
+import 'package:ylpa_console/core/config/flavor.dart';
+import 'package:ylpa_console/core/screens/onboarding_screen.dart';
 
 import '../support/onboarding_fakes.dart';
 

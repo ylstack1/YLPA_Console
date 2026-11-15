@@ -8,8 +8,8 @@
 // To cover a screen add a SweepScreen in support/header_sweep_screens.dart.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/widgets/hermes_app_bar.dart';
-import 'package:hermes_android/core/widgets/hermes_ui.dart' show HermesCard;
+import 'package:ylpa_console/core/widgets/hermes_app_bar.dart';
+import 'package:ylpa_console/core/widgets/hermes_ui.dart' show HermesCard;
 
 import 'support/a11y_main_screen_harness.dart';
 import 'support/header_sweep.dart';

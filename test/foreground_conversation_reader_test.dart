@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/foreground_conversation_reader.dart';
+import 'package:ylpa_console/core/screens/foreground_conversation_reader.dart';
 
 class _FakeGateway {
   final Queue<Future<bool> Function()> outcomes = Queue();

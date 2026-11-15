@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/chat_file_path_policy.dart';
-import 'package:hermes_android/core/utils/chat_inline_refs.dart';
+import 'package:ylpa_console/core/utils/chat_file_path_policy.dart';
+import 'package:ylpa_console/core/utils/chat_inline_refs.dart';
 
 List<String> _paths(
   String raw, {

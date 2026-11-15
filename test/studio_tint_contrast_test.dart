@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/characters/bot_character.dart';
-import 'package:hermes_android/core/characters/studio_catalog.dart';
-import 'package:hermes_android/core/models/bot_visual_identity.dart';
-import 'package:hermes_android/core/screens/characters/studio_canvas.dart';
-import 'package:hermes_android/core/theme/app_theme.dart';
-import 'package:hermes_android/core/theme/theme_contrast.dart';
+import 'package:ylpa_console/core/characters/bot_character.dart';
+import 'package:ylpa_console/core/characters/studio_catalog.dart';
+import 'package:ylpa_console/core/models/bot_visual_identity.dart';
+import 'package:ylpa_console/core/screens/characters/studio_canvas.dart';
+import 'package:ylpa_console/core/theme/app_theme.dart';
+import 'package:ylpa_console/core/theme/theme_contrast.dart';
 
 /// The editor tints its page (a tenth) and its canvas (a fifth and a bit)
 /// toward the body colour being chosen. Whatever colour that is, the text

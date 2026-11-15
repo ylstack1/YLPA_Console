@@ -1,23 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/bots/state/attention.dart';
-import 'package:hermes_android/core/home/board/home_board_data.dart';
-import 'package:hermes_android/core/home/home_sources.dart';
-import 'package:hermes_android/core/models/connection.dart';
-import 'package:hermes_android/core/models/cron_job.dart';
-import 'package:hermes_android/core/models/desktop_active_session.dart';
-import 'package:hermes_android/core/home/home_now.dart';
-import 'package:hermes_android/core/models/hosted_groups.dart';
-import 'package:hermes_android/core/models/interactive_prompt.dart';
-import 'package:hermes_android/core/models/kanban.dart';
-import 'package:hermes_android/core/models/session.dart';
-import 'package:hermes_android/core/models/session_live_status.dart';
-import 'package:hermes_android/core/services/active_chat_service.dart';
-import 'package:hermes_android/core/services/interactive_prompt_reducer.dart';
-import 'package:hermes_android/core/utils/home_recent_sessions.dart';
+import 'package:ylpa_console/core/bots/state/attention.dart';
+import 'package:ylpa_console/core/home/board/home_board_data.dart';
+import 'package:ylpa_console/core/home/home_sources.dart';
+import 'package:ylpa_console/core/models/connection.dart';
+import 'package:ylpa_console/core/models/cron_job.dart';
+import 'package:ylpa_console/core/models/desktop_active_session.dart';
+import 'package:ylpa_console/core/home/home_now.dart';
+import 'package:ylpa_console/core/models/hosted_groups.dart';
+import 'package:ylpa_console/core/models/interactive_prompt.dart';
+import 'package:ylpa_console/core/models/kanban.dart';
+import 'package:ylpa_console/core/models/session.dart';
+import 'package:ylpa_console/core/models/session_live_status.dart';
+import 'package:ylpa_console/core/services/active_chat_service.dart';
+import 'package:ylpa_console/core/services/interactive_prompt_reducer.dart';
+import 'package:ylpa_console/core/utils/home_recent_sessions.dart';
 
-import 'package:hermes_android/l10n/app_localizations.dart';
-import 'package:hermes_android/l10n/app_localizations_en.dart';
-import 'package:hermes_android/l10n/app_localizations_es.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
+import 'package:ylpa_console/l10n/app_localizations_en.dart';
+import 'package:ylpa_console/l10n/app_localizations_es.dart';
 
 import '../support/spec070_fixtures.dart';
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/utils/server_path.dart';
+import 'package:ylpa_console/core/utils/server_path.dart';
 
 void main() {
   test('absolute paths belong to the server, not the Android platform', () {

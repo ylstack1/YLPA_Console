@@ -6,11 +6,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/recover_access_page.dart';
-import 'package:hermes_android/core/services/hermes_setup_commands.dart';
-import 'package:hermes_android/core/services/official_dashboard_command.dart';
-import 'package:hermes_android/core/widgets/dashboard_sign_in_event.dart';
-import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:ylpa_console/core/screens/recover_access_page.dart';
+import 'package:ylpa_console/core/services/hermes_setup_commands.dart';
+import 'package:ylpa_console/core/services/official_dashboard_command.dart';
+import 'package:ylpa_console/core/widgets/dashboard_sign_in_event.dart';
+import 'package:ylpa_console/l10n/app_localizations.dart';
 
 const _unix =
     'curl -fsSL https://raw.githubusercontent.com/xP3ta/hermes-setup/main/'
